@@ -1,0 +1,11 @@
+NUM_ROWS = 134510 - 810
+NUM_DIMS = 8_575
+BATCH_SIZE = 10_000
+NP_PTS = 100
+FULL_DATA_FILE = 'data/apogee.memmap'
+SAMPLES_FILE = 'data/apogee_samples.memmap'
+DATA_FILE = 'data/data_samples.memmap'
+MIN_POINTS = 50
+MIN_RADIUS = 0.01
+MAX_DEPTH = 4
+LFD_LIMIT = 2
