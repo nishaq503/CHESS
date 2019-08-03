@@ -1,0 +1,13 @@
+.vscode
+.idea
+.venv
+.ipynb*
+*.ipynb
+data
+XDG_CACHE_HOME
+__pycache__
+papers
+*.pdf
+logs
+*.zip
+plots
