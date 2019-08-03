@@ -1,2 +1,2 @@
-# clsutering
+# Clustering
 Hierarchical Clustering
