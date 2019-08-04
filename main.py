@@ -10,6 +10,13 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
 def read_data(filename: str, num_rows: int, num_dims: int) -> np.memmap:
+    """ Read data from memmap on disk.
+
+    :param filename: filename to read.
+    :param num_rows: number of rows in memmap.
+    :param num_dims: number of columns in memmap.
+    :return: numpy.memmap object.
+    """
     return np.memmap(
         filename=filename,
         dtype='float32',
@@ -18,7 +25,15 @@ def read_data(filename: str, num_rows: int, num_dims: int) -> np.memmap:
     )
 
 
-def make_clusters(distance_function: str, clustering_depth: int, filename: str):
+def make_clusters(distance_function: str, clustering_depth: int, filename: str) -> Search:
+    """ Make new search object.
+
+    :param distance_function: distance function to use.
+    :param clustering_depth: maximum clustering depth to go to.
+    :param filename: Name of csv file in which to store how long clustering took.
+    :return: search object that was created.
+    """
+
     data: np.memmap = read_data(config.DATA_FILE, config.NUM_ROWS - 10_000, config.NUM_DIMS)
     config.MAX_DEPTH = clustering_depth
 
@@ -38,7 +53,14 @@ def make_clusters(distance_function: str, clustering_depth: int, filename: str):
     return search_object
 
 
-def read_clusters(distance_function: str, clustering_depth: int):
+def read_clusters(distance_function: str, clustering_depth: int) -> Search:
+    """ read search object from csv files.
+
+    :param distance_function: distance function that was used for the clustering.
+    :param clustering_depth: maximum depth of the clustering.
+    :return: search object that was read.
+    """
+
     data: np.memmap = read_data(config.DATA_FILE, config.NUM_ROWS - 10_000, config.NUM_DIMS)
     config.MAX_DEPTH = clustering_depth
 
@@ -51,7 +73,15 @@ def read_clusters(distance_function: str, clustering_depth: int):
     )
 
 
-def search(search_object: Search, radius: float, filename: str):
+def search(search_object: Search, radius: float, filename: str) -> None:
+    """ Perform iteratively deepening search and store results in a csv file.
+
+    :param search_object: Search object to search in.
+    :param radius: radius to use for search.
+    :param filename: name of csv to which to write search results.
+    :return:
+    """
+
     samples = read_data(config.SAMPLES_FILE, 10_000, config.NUM_DIMS)
 
     for sample in samples:
