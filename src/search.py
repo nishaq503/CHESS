@@ -11,14 +11,12 @@ class Search:
             self,
             data: np.memmap,
             distance_function: str,
-            name: str,
             reading: bool = False,
             names_file: str = None,
             info_file: str = None,
     ):
         self.data: np.memmap = data
         self.distance_function: str = distance_function
-        self.name: str = name
 
         if reading:
             self.names_file: str = names_file
