@@ -2,34 +2,34 @@ import numpy as np
 import tensorflow as tf
 
 
-def l2_norm(x: tf.Tensor, y: tf.Tensor) -> tf.Tensor:
+def tf_l2_norm(x: tf.Tensor, y: tf.Tensor) -> tf.Tensor:
     return tf.sqrt(tf.maximum(tf.reduce_sum(tf.square(tf.subtract(x, y)), axis=1), 0.0))
 
 
-def simple_l2(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+def numpy_l2_norm(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     return np.maximum(np.sqrt(np.einsum('ij,ij->i', x, x)[:, None]
                               + np.einsum('ij,ij->i', y, y)
                               - 2 * np.dot(x, y.T)),
                       0.0)
 
 
-def batch_l2_norm(x: tf.Tensor) -> tf.Tensor:
+def batch_tf_l2_norm(x: tf.Tensor) -> tf.Tensor:
     x_sq = tf.reduce_sum(tf.square(x), axis=1)
     xx, yy = tf.reshape(x_sq, shape=[-1, 1]), tf.reshape(x_sq, shape=[1, -1])
     return tf.sqrt(tf.maximum(xx + yy - 2 * tf.matmul(x, x, transpose_b=True), 0.0))
 
 
-def calculate_distance(a: np.ndarray, b: np.ndarray, distance_function: str) -> np.ndarray:
+def tf_calculate_distance(a: np.ndarray, b: np.ndarray, distance_function: str) -> np.ndarray:
     """ Calculates the distance between a and b using the distance function requested.
 
-    :param a:
-    :param b:
-    :param distance_function:
-    :return:
+    :param a: numpy array of points.
+    :param b: numpy array of points.
+    :param distance_function: 'l2', 'cos', or 'emd'.
+    :return: pairwise distances between points in a and b.
     """
 
     if distance_function == 'l2':
-        distance = l2_norm
+        distance = tf_l2_norm
     elif distance_function == 'cos':
         raise NotImplementedError('Cosine Distance not yet implemented.')
     elif distance_function == 'emd':
@@ -52,16 +52,16 @@ def calculate_distance(a: np.ndarray, b: np.ndarray, distance_function: str) -> 
     return np.asarray(result)
 
 
-def calculate_pairwise_distances(a: np.ndarray, distance_function: str) -> np.ndarray:
+def tf_calculate_pairwise_distances(a: np.ndarray, distance_function: str) -> np.ndarray:
     """ Calculates the pairwise distance between all elements of a using the distance function requested.
 
-    :param a:
-    :param distance_function:
-    :return:
+    :param a: numpy array of points.
+    :param distance_function: 'l2', 'cos', or 'emd'.
+    :return: pairwise distances between points in a.
     """
 
     if distance_function == 'l2':
-        distance = batch_l2_norm
+        distance = batch_tf_l2_norm
     elif distance_function == 'cos':
         raise NotImplementedError('Cosine Distance not yet implemented.')
     elif distance_function == 'emd':
@@ -81,17 +81,17 @@ def calculate_pairwise_distances(a: np.ndarray, distance_function: str) -> np.nd
     return np.asarray(result)
 
 
-def simple_distance(a: np.array, b: np.array, distance_function: str) -> np.array:
+def numpy_calculate_distance(a: np.array, b: np.array, distance_function: str) -> np.array:
     """ Calculates the distance between a and b using the distance function requested with numpy.
 
-        :param a:
-        :param b:
-        :param distance_function:
-        :return:
+        :param a: numpy array of points.
+        :param b: numpy array of points.
+        :param distance_function: 'l2', 'cos', or 'emd'.
+        :return: pairwise distances between points in a and b.
         """
 
     if distance_function == 'l2':
-        distance = simple_l2
+        distance = numpy_l2_norm
     elif distance_function == 'cos':
         raise NotImplementedError('Cosine Distance not yet implemented.')
     elif distance_function == 'emd':

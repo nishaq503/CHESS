@@ -2,7 +2,7 @@ import numpy as np
 
 import config
 from src.cluster import Cluster
-from src.utils import calculate_distance
+from src.utils import tf_calculate_distance
 
 
 class Search:
@@ -37,7 +37,7 @@ class Search:
         for i in range(0, np.shape(self.data)[0], config.BATCH_SIZE):
             end = min(i + config.BATCH_SIZE, np.shape(self.data)[0])
             batch = np.asarray([self.data[j] for j in range(i, end)])
-            distances = calculate_distance(query, batch, self.distance_function)
+            distances = tf_calculate_distance(query, batch, self.distance_function)
             results.extend([i + j for j, d in enumerate(distances) if d <= radius])
 
         return results

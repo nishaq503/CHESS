@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 
 import config
-from src.utils import calculate_pairwise_distances, simple_distance, calculate_distance
+from src.utils import tf_calculate_pairwise_distances, numpy_calculate_distance, tf_calculate_distance
 
 
 class Cluster:
@@ -59,10 +59,10 @@ class Cluster:
     def _calculate_pairwise_distances(self):
         if self.should_subsample:
             points = np.asarray([self.data[p] for p in self._potential_centers])
-            return calculate_pairwise_distances(a=points, distance_function=self.distance_function)
+            return tf_calculate_pairwise_distances(a=points, distance_function=self.distance_function)
         else:
             points = np.asarray([self.data[p] for p in self.points])
-            return simple_distance(a=points, b=points, distance_function=self.distance_function)
+            return numpy_calculate_distance(a=points, b=points, distance_function=self.distance_function)
 
     def _calculate_center(self):
         sum_distances = np.sum(a=self._pairwise_distances, axis=1)
@@ -74,23 +74,23 @@ class Cluster:
 
     def _calculate_radius(self):
         if self.should_subsample:
-            return max(max([max(calculate_distance(self.data[self.center], self._get_batch(i), self.distance_function))
+            return max(max([max(tf_calculate_distance(self.data[self.center], self._get_batch(i), self.distance_function))
                             for i in range(0, len(self.points), self.batch_size)]), 0.0)
         else:
             points = np.asarray([self.data[p] for p in self.points])
-            distances = simple_distance(a=self.data[self.center], b=points, distance_function=self.distance_function)
+            distances = numpy_calculate_distance(a=self.data[self.center], b=points, distance_function=self.distance_function)
             return max(max(distances), 0.0)
 
     def _calculate_lfd(self):
         if self.should_subsample:
             count = sum([sum([1 if d < self.radius / 2 else 0
-                              for d in calculate_distance(self.data[self.center],
-                                                          self._get_batch(i),
-                                                          self.distance_function)])
+                              for d in tf_calculate_distance(self.data[self.center],
+                                                             self._get_batch(i),
+                                                             self.distance_function)])
                          for i in range(0, len(self.points), self.batch_size)])
         else:
             points = np.asarray([self.data[p] for p in self.points])
-            distances = simple_distance(self.data[self.center], points, self.distance_function)
+            distances = numpy_calculate_distance(self.data[self.center], points, self.distance_function)
             count = sum([1 if d < self.radius / 2 else 0 for d in distances])
 
         return 0 if count == 0 else np.log2(len(self.points) / count)
@@ -105,7 +105,7 @@ class Cluster:
         return
 
     def can_include(self, query: np.ndarray, radius: float = 0):
-        distance = simple_distance(query, self.data[self.center], self.distance_function)
+        distance = numpy_calculate_distance(query, self.data[self.center], self.distance_function)
         return distance < (self.radius + radius)
 
     def can_be_popped(self):
@@ -132,15 +132,15 @@ class Cluster:
         if self.should_subsample:
             for i in range(0, len(self.points), self.batch_size):
                 batch = self._get_batch(i)
-                left_distances = simple_distance(self.data[left_pole], batch, self.distance_function)
-                right_distances = simple_distance(self.data[right_pole], batch, self.distance_function)
+                left_distances = numpy_calculate_distance(self.data[left_pole], batch, self.distance_function)
+                right_distances = numpy_calculate_distance(self.data[right_pole], batch, self.distance_function)
                 [(left_indexes if l < r else right_indexes).append(self.points[i + j])
                  for j, l, r in zip(range(len(batch)), left_distances, right_distances)]
 
         else:
             points = [self.data[p] for p in self.points]
-            left_distances = simple_distance(self.data[left_pole], points, self.distance_function)
-            right_distances = simple_distance(self.data[right_pole], points, self.distance_function)
+            left_distances = numpy_calculate_distance(self.data[left_pole], points, self.distance_function)
+            right_distances = numpy_calculate_distance(self.data[right_pole], points, self.distance_function)
 
             [(left_indexes if l < r else right_indexes).append(p)
              for l, r, p in zip(left_distances, right_distances, self.points)]
@@ -181,10 +181,10 @@ class Cluster:
             if self.should_subsample:
                 for i in range(0, len(self.points), self.batch_size):
                     batch = self._get_batch(i)
-                    distances = calculate_distance(query, batch, self.distance_function)
+                    distances = tf_calculate_distance(query, batch, self.distance_function)
                     hits.extend([self.points[i + j] for j, d in enumerate(distances) if d <= radius])
             else:
                 points = [self.data[p] for p in self.points]
-                distances = simple_distance(query, points, self.distance_function)
+                distances = numpy_calculate_distance(query, points, self.distance_function)
                 hits.extend([self.points[j] for j, d in enumerate(distances) if d <= radius])
         return hits
