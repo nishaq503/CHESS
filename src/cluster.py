@@ -7,8 +7,6 @@ from src.utils import calculate_pairwise_distances, simple_distance, calculate_d
 
 
 class Cluster:
-    """ Contains information relevant to a cluster. Defines the relevant methods as well. """
-
     def __init__(
             self,
             data: np.memmap,
@@ -23,21 +21,6 @@ class Cluster:
             right=None,
             reading: bool = False,
     ):
-        """ Initializes cluster.
-
-        :param data:
-        :param points:
-        :param distance_function:
-        :param name:
-        :param center:
-        :param radius:
-        :param lfd:
-        :param parent_lfd:
-        :param left:
-        :param right:
-        :param reading:
-        """
-
         self.name: str = name
         self.depth: int = len(self.name)
 
@@ -52,7 +35,7 @@ class Cluster:
         self.max_depth = config.MAX_DEPTH
         self.min_points = config.MIN_POINTS
         self.min_radius = config.MIN_RADIUS
-        self.should_subsample: bool = len(points) > config.BATCH_SIZE
+        self.should_subsample: bool = len(points) > config.NP_PTS
 
         self._potential_centers = None
         self._pairwise_distances = None
@@ -65,13 +48,10 @@ class Cluster:
             self.update()
 
     def _get_potential_centers(self):
-        """
-
-        :return:
-        """
         if self.should_subsample:
             sample_size = int(np.sqrt(len(self.points)))
-            points = np.random.shuffle(self.points.copy())
+            points = self.points.copy()
+            np.random.shuffle(points)
             return points[: sample_size + 1]
         else:
             return self.points.copy()
@@ -155,7 +135,7 @@ class Cluster:
                 left_distances = simple_distance(self.data[left_pole], batch, self.distance_function)
                 right_distances = simple_distance(self.data[right_pole], batch, self.distance_function)
                 [(left_indexes if l < r else right_indexes).append(self.points[i + j])
-                 for j, l, r in enumerate(zip(left_distances, right_distances))]
+                 for j, l, r in zip(range(len(batch)), left_distances, right_distances)]
 
         else:
             points = [self.data[p] for p in self.points]

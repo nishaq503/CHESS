@@ -6,7 +6,6 @@ from src.utils import calculate_distance
 
 
 class Search:
-    """ Implements entropy-scaling search with GPU acceleration. """
     def __init__(
             self,
             data: np.memmap,
@@ -48,7 +47,7 @@ class Search:
 
     def print_names(self, filename: str):
         with open(filename, 'w') as outfile:
-            outfile.write('name,index\n')
+            outfile.write('name,point\n')
 
             def _names_helper(cluster: Cluster):
                 if cluster.left or cluster.right:
@@ -94,7 +93,7 @@ class Search:
                     name_to_points[line[0]] = [int(line[1])]
 
         def build_dict_tree(name: str):
-            if name is name_to_points:
+            if name in name_to_points:
                 return name_to_points[name]
             else:
                 left = build_dict_tree(f'{name}1')
