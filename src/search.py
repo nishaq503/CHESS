@@ -1,3 +1,5 @@
+from typing import List
+
 import numpy as np
 
 import config
@@ -6,6 +8,8 @@ from src.utils import tf_calculate_distance
 
 
 class Search:
+    """ Implements entropy-scaling search with hierarchical clustering with GPU acceleration. """
+
     def __init__(
             self,
             data: np.memmap,
@@ -14,6 +18,14 @@ class Search:
             names_file: str = None,
             info_file: str = None,
     ):
+        """ Initializes search object.
+
+        :param data: numpy.memmap of data to search.
+        :param distance_function: distance function to use.
+        :param reading: weather the search object is to be read from file.
+        :param names_file: filename of the csv containing: cluster_name, point_index.
+        :param info_file: filename of the csv containing: name, number_of_points, center, radius, lfd, is_leaf.
+        """
         self.data: np.memmap = data
         self.distance_function: str = distance_function
 
@@ -31,7 +43,13 @@ class Search:
             self.root.make_tree()
         return
 
-    def linear_search(self, query: np.ndarray, radius: float):
+    def linear_search(self, query: np.ndarray, radius: float) -> List[int]:
+        """ Perform linear search for comparison with clustered search.
+
+        :param query: point around with to search.
+        :param radius: search radius to use.
+        :return: list of indexes of hits.
+        """
         results = []
 
         for i in range(0, np.shape(self.data)[0], config.BATCH_SIZE):
@@ -42,10 +60,19 @@ class Search:
 
         return results
 
-    def clustered_search(self, query: np.ndarray, radius: float, max_depth: int):
-        return self.root.search(query, radius, max_depth)
+    def clustered_search(self, query: np.ndarray, radius: float, search_depth: int) -> List[int]:
+        """ Perform clustered search.
 
-    def print_names(self, filename: str):
+        :param query: point around with to search.
+        :param radius: search radius to use.
+        :param search_depth: maximum depth to which to search.
+        :return: list of indexes of hits.
+        """
+        return self.root.search(query, radius, search_depth)
+
+    def print_names(self, filename: str) -> None:
+        """ Print .csv file containing: cluster_name, point_index. """
+
         with open(filename, 'w') as outfile:
             outfile.write('name,point\n')
 
@@ -60,7 +87,9 @@ class Search:
             _names_helper(self.root)
         return
 
-    def print_info(self, filename: str):
+    def print_info(self, filename: str) -> None:
+        """ Print .csv file containing: name, number_of_points, center, radius, lfd, is_leaf. """
+
         with open(filename, 'w') as outfile:
             outfile.write('name,number_of_points,center,radius,lfd,is_leaf\n')
 
@@ -76,7 +105,8 @@ class Search:
             _info_helper(self.root)
         return
 
-    def read_cluster_tree(self):
+    def read_cluster_tree(self) -> Cluster:
+        """ Read cluster_tree from csv files on disk. """
 
         name_to_points = {}
         with open(self.names_file, 'r') as infile:
@@ -92,7 +122,7 @@ class Search:
                 else:
                     name_to_points[line[0]] = [int(line[1])]
 
-        def build_dict_tree(name: str):
+        def build_dict_tree(name: str) -> List[int]:
             if name in name_to_points:
                 return name_to_points[name]
             else:
@@ -115,7 +145,7 @@ class Search:
                 [center, radius, lfd, is_leaf] = line[2:]
                 name_to_info[line[0]] = [int(center), float(radius), float(lfd), bool(is_leaf)]
 
-        def build_cluster_tree(name: str):
+        def build_cluster_tree(name: str) -> Cluster:
             if name in name_to_points:
                 left = build_cluster_tree(f'{name}1')
                 right = build_cluster_tree(f'{name}2')
@@ -133,6 +163,7 @@ class Search:
                     reading=True,
                 )
             else:
+                # noinspection PyTypeChecker
                 return None
 
         return build_cluster_tree('')

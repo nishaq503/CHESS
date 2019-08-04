@@ -234,7 +234,7 @@ class Cluster:
         :param query: point to search around.
         :param radius: search radius to consider.
         :param search_depth: maximum depth to which to search.
-        
+
         :return: list of indexes of hits.
         """
         hits = []
