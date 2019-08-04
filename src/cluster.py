@@ -48,7 +48,6 @@ class Cluster:
         self.left: Cluster = left
         self.right: Cluster = right
 
-        self.num_dims = config.NUM_DIMS
         self.batch_size = config.BATCH_SIZE
         self.max_depth = config.MAX_DEPTH
         self.min_points = config.MIN_POINTS
