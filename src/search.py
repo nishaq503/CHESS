@@ -167,3 +167,6 @@ class Search:
                 return None
 
         return build_cluster_tree('')
+
+    def compress(self):
+        pass

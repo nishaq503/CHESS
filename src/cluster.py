@@ -254,3 +254,6 @@ class Cluster:
                 distances = numpy_calculate_distance(query, points, self.df)
                 hits.extend([self.points[j] for j, d in enumerate(distances) if d <= radius])
         return hits
+
+    def compress(self):
+        pass
