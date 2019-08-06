@@ -100,6 +100,7 @@ def search(search_object: Search, radius: float, filename: str) -> None:
                 outfile.write(f'{clustered_success},{radius},{one:.6f},{two:.6f},{search_depth}\n')
 
             outfile.flush()
+            break
     return
 
 
@@ -121,5 +122,5 @@ if __name__ == '__main__':
 
     search_object_ = read_clusters(distance_function='l2', clustering_depth=20)
 
-    for r in [25_000, 50_000, 100_000]:
-        search(search_object=search_object_, radius=r, filename=search_times)
+    r = 25_000
+    search(search_object=search_object_, radius=r, filename=search_times)
