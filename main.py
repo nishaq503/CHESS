@@ -91,7 +91,7 @@ def search(search_object: Search, radius: float, filename: str) -> None:
             linear_results = search_object.linear_search(sample, radius)
             one = time() - start
 
-            for search_depth in range(4, 20):
+            for search_depth in range(4, 21):
                 start = time()
                 clustered_results = search_object.clustered_search(sample, radius, search_depth)
                 two = time() - start
