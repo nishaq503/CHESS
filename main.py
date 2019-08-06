@@ -106,13 +106,13 @@ def search(search_object: Search, radius: float, filename: str) -> None:
 if __name__ == '__main__':
     np.random.seed(1234)
 
-    times_file = f'logs/times.csv'
-    if not os.path.exists(times_file):
-        with open(times_file, 'w') as outfile_:
-            outfile_.write(f'depth,time\n')
+#    times_file = f'logs/times.csv'
+#    if not os.path.exists(times_file):
+#        with open(times_file, 'w') as outfile_:
+#            outfile_.write(f'depth,time\n')
 
-    for d in [20]:
-        make_clusters(distance_function='l2', clustering_depth=d, filename=times_file)
+#    for d in [4, 5, 6, 7, 8, 9, 10, 15, 20]:
+#        make_clusters(distance_function='l2', clustering_depth=d, filename=times_file)
 
     search_times = f'logs/searches.csv'
     if not os.path.exists(search_times):
