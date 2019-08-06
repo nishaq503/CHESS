@@ -73,52 +73,56 @@ def read_clusters(distance_function: str, clustering_depth: int) -> Search:
     )
 
 
-def search(search_object: Search, radius: float, filename: str) -> None:
+def search(search_object: Search, radius: float, filename: str, timing_file: str) -> None:
     """ Perform iteratively deepening search and store results in a csv file.
 
     :param search_object: Search object to search in.
     :param radius: radius to use for search.
     :param filename: name of csv to which to write search results.
+    :param timing_file: name of csv to which to write timestamps as search progresses.
     :return:
     """
 
     samples = read_data(config.SAMPLES_FILE, 10_000, config.NUM_DIMS)
 
-    for sample in samples:
+    with open(filename, 'a') as outfile:
+        for sample in samples:
 
-        start = time()
-        linear_results = search_object.linear_search(sample, radius)
-        one = time() - start
-
-        for search_depth in range(4, 20):
             start = time()
-            clustered_results = search_object.clustered_search(sample, radius, search_depth)
-            two = time() - start
+            linear_results = search_object.linear_search(sample, radius)
+            one = time() - start
 
-            clustered_success = set(linear_results) == set(clustered_results)
+            for search_depth in range(4, 21):
+                start = time()
+                clustered_results = search_object.clustered_search(sample, radius, search_depth, timing_file)
+                two = time() - start
 
-            with open(filename, 'a') as outfile:
+                clustered_success = set(linear_results) == set(clustered_results)
                 outfile.write(f'{clustered_success},{radius},{one:.6f},{two:.6f},{search_depth}\n')
+
+            outfile.flush()
+            break
     return
 
 
 if __name__ == '__main__':
     np.random.seed(1234)
 
-    times_file = f'logs/times.csv'
-    if not os.path.exists(times_file):
-        with open(times_file, 'w') as outfile_:
-            outfile_.write(f'depth,time\n')
+#    times_file = f'logs/times.csv'
+#    if not os.path.exists(times_file):
+#        with open(times_file, 'w') as outfile_:
+#            outfile_.write(f'depth,time\n')
 
-    for d in [4, 5, 6, 7, 8, 9, 10, 15, 20]:
-        make_clusters(distance_function='l2', clustering_depth=d, filename=times_file)
+#    for d in [4, 5, 6, 7, 8, 9, 10, 15, 20]:
+#        make_clusters(distance_function='l2', clustering_depth=d, filename=times_file)
 
-    search_times = f'logs/searches.csv'
-    if not os.path.exists(search_times):
-        with open(search_times, 'w') as outfile_:
-            outfile_.write('clustered_success,radius,linear_time,clustered_time,search_depth\n')
+    search_results = f'logs/searches.csv'
+    if not os.path.exists(search_results):
+        with open(search_results, 'w') as outfile_:
+            outfile_.write('clustered_success,depth,radius,linear_time,clustered_time,search_depth\n')
 
     search_object_ = read_clusters(distance_function='l2', clustering_depth=20)
 
-    for r in [25_000, 50_000, 100_000]:
-        search(search_object=search_object_, radius=r, filename=search_times)
+    search_times = f'logs/search_times.csv'
+    for r in [25_000]:
+        search(search_object_, r, search_results, search_times)

@@ -1,3 +1,5 @@
+from time import time
+
 import numpy as np
 import tensorflow as tf
 
@@ -19,20 +21,26 @@ def batch_tf_l2_norm(x: tf.Tensor) -> tf.Tensor:
     return tf.sqrt(tf.maximum(xx + yy - 2 * tf.matmul(x, x, transpose_b=True), 0.0))
 
 
-def tf_calculate_distance(a: np.ndarray, b: np.ndarray, distance_function: str) -> np.ndarray:
+def tf_calculate_distance(a: np.ndarray, b: np.ndarray, df: str, logfile: str = None, d: int = None) -> np.ndarray:
     """ Calculates the distance between a and b using the distance function requested.
 
     :param a: numpy array of points.
     :param b: numpy array of points.
-    :param distance_function: 'l2', 'cos', or 'emd'.
+    :param df: 'l2', 'cos', or 'emd'.
+    :param logfile: .csv to write logs in.
+    :param d: cluster_depth for logfile.
     :return: pairwise distances between points in a and b.
     """
 
-    if distance_function == 'l2':
+    if logfile:
+        with open(logfile, 'a') as outfile:
+            outfile.write(f'tf_calculate_distance,{d},{df},start,{time():.8f}\n')
+
+    if df == 'l2':
         distance = tf_l2_norm
-    elif distance_function == 'cos':
+    elif df == 'cos':
         raise NotImplementedError('Cosine Distance not yet implemented.')
-    elif distance_function == 'emd':
+    elif df == 'emd':
         raise NotImplementedError('Earth-Mover\'s-Distance not yet implemented.')
     else:
         raise ValueError('Invalid distance function given. Must be \'l2\', \'cos\', or \'emd\'.')
@@ -49,22 +57,32 @@ def tf_calculate_distance(a: np.ndarray, b: np.ndarray, distance_function: str) 
     with tf.Session() as sess:
         [result] = sess.run([distance(x, y)], feed_dict={x: a, y: b})
 
+    if logfile:
+        with open(logfile, 'a') as outfile:
+            outfile.write(f'tf_calculate_distance,{d},{df},end,{time():.8f}\n')
+
     return np.asarray(result)
 
 
-def tf_calculate_pairwise_distances(a: np.ndarray, distance_function: str) -> np.ndarray:
+def tf_calculate_pairwise_distances(a: np.ndarray, df: str, logfile: str = None, d: int = None) -> np.ndarray:
     """ Calculates the pairwise distance between all elements of a using the distance function requested.
 
     :param a: numpy array of points.
-    :param distance_function: 'l2', 'cos', or 'emd'.
+    :param df: 'l2', 'cos', or 'emd'.
+    :param logfile: .csv to write logs in.
+    :param d: cluster_depth for logfile.
     :return: pairwise distances between points in a.
     """
 
-    if distance_function == 'l2':
+    if logfile:
+        with open(logfile, 'a') as outfile:
+            outfile.write(f'tf_calculate_pairwise_distances,{d},{df},start,{time():.8f}\n')
+
+    if df == 'l2':
         distance = batch_tf_l2_norm
-    elif distance_function == 'cos':
+    elif df == 'cos':
         raise NotImplementedError('Cosine Distance not yet implemented.')
-    elif distance_function == 'emd':
+    elif df == 'emd':
         raise NotImplementedError('Earth-Mover\'s-Distance not yet implemented.')
     else:
         raise ValueError('Invalid distance function given. Must be \'l2\', \'cos\', or \'emd\'.')
@@ -78,23 +96,33 @@ def tf_calculate_pairwise_distances(a: np.ndarray, distance_function: str) -> np
     with tf.Session() as sess:
         [result] = sess.run([distance(x)], feed_dict={x: a})
 
+    if logfile:
+        with open(logfile, 'a') as outfile:
+            outfile.write(f'tf_calculate_pairwise_distances,{d},{df},end,{time():.8f}\n')
+
     return np.asarray(result)
 
 
-def numpy_calculate_distance(a: np.array, b: np.array, distance_function: str) -> np.array:
+def numpy_calculate_distance(a: np.array, b: np.array, df: str, logfile: str = None, d: int = None) -> np.array:
     """ Calculates the distance between a and b using the distance function requested with numpy.
 
         :param a: numpy array of points.
         :param b: numpy array of points.
-        :param distance_function: 'l2', 'cos', or 'emd'.
+        :param df: 'l2', 'cos', or 'emd'.
+        :param logfile: .csv to write logs in.
+        :param d: cluster_depth for logfile.
         :return: pairwise distances between points in a and b.
         """
 
-    if distance_function == 'l2':
+    if logfile:
+        with open(logfile, 'a') as outfile:
+            outfile.write(f'numpy_calculate_distance,{d},{df},start,{time():.8f}\n')
+
+    if df == 'l2':
         distance = numpy_l2_norm
-    elif distance_function == 'cos':
+    elif df == 'cos':
         raise NotImplementedError('Cosine Distance not yet implemented.')
-    elif distance_function == 'emd':
+    elif df == 'emd':
         raise NotImplementedError('Earth-Mover\'s-Distance not yet implemented.')
     else:
         raise ValueError('Invalid distance function given. Must be \'l2\', \'cos\', or \'emd\'.')
@@ -109,6 +137,10 @@ def numpy_calculate_distance(a: np.array, b: np.array, distance_function: str) -
         squeeze_b = True
 
     distances = distance(a, b)
+
+    if logfile:
+        with open(logfile, 'a') as outfile:
+            outfile.write(f'numpy_calculate_distance,{d},{df},end,{time():.8f}\n')
 
     if squeeze_a and squeeze_b:
         return distances[0][0]
