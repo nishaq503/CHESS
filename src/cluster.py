@@ -228,29 +228,30 @@ class Cluster:
             self.right.make_tree()
         return
 
-    def search(self, query: np.ndarray, radius: float, search_depth: int) -> List[int]:
+    def search(self, query: np.ndarray, radius: float, search_depth: int, logfile: str) -> List[int]:
         """ Perform clustered search starting at the current cluster.
 
         :param query: point to search around.
         :param radius: search radius to consider.
         :param search_depth: maximum depth to which to search.
+        :param logfile: .csv to write logs in.
 
         :return: list of indexes of hits.
         """
         hits = []
         if (self.depth < search_depth) and (self.left or self.right):
             if self.left.can_include(query, radius):
-                hits.extend(self.left.search(query, radius, search_depth))
+                hits.extend(self.left.search(query, radius, search_depth, logfile))
             if self.right.can_include(query, radius):
-                hits.extend(self.right.search(query, radius, search_depth))
+                hits.extend(self.right.search(query, radius, search_depth, logfile))
         else:
             if self.should_subsample:
                 for i in range(0, len(self.points), self.batch_size):
                     batch = self._get_batch(i)
-                    distances = tf_calculate_distance(query, batch, self.df)
+                    distances = tf_calculate_distance(query, batch, self.df, logfile)
                     hits.extend([self.points[i + j] for j, d in enumerate(distances) if d <= radius])
             else:
                 points = [self.data[p] for p in self.points]
-                distances = numpy_calculate_distance(query, points, self.df)
+                distances = numpy_calculate_distance(query, points, self.df, logfile)
                 hits.extend([self.points[j] for j, d in enumerate(distances) if d <= radius])
         return hits
