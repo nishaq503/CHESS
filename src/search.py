@@ -1,3 +1,6 @@
+import os
+import pickle
+import zipfile
 from typing import List
 
 import numpy as np
@@ -168,3 +171,39 @@ class Search:
                 return None
 
         return build_cluster_tree('')
+
+    def compress(self, metadata_filename: str, integer_filename: str, integer_zip: str):
+        metadata = {}
+
+        def get_metadata(node: Cluster):
+            metadata[node.name] = [self.data[node.center], node.radius, node.lfd]
+            if node.left or node.right:
+                get_metadata(node.left)
+                get_metadata(node.right)
+            return
+
+        get_metadata(self.root)
+
+        with open(metadata_filename, 'wb') as outfile:
+            pickle.dump(metadata, outfile)
+
+        if not os.path.exists(integer_filename):
+            os.makedirs(integer_filename)
+
+        def write_data(node: Cluster):
+            node.compress(integer_filename)
+            if node.left or node.right:
+                write_data(node.left)
+                write_data(node.right)
+            return
+
+        write_data(self.root)
+
+        with zipfile.ZipFile(integer_zip, 'w') as outfile:
+            [[outfile.write(os.path.join(folder, file),
+                            os.path.relpath(os.path.join(folder, file), integer_filename),
+                            compress_type=zipfile.ZIP_DEFLATED)
+              for file in files]
+             for folder, sub_folders, files in os.walk(integer_filename)]
+
+        return

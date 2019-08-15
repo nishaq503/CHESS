@@ -1,5 +1,7 @@
+import pickle
 from typing import List
 
+import gc
 import numpy as np
 
 import config
@@ -238,20 +240,44 @@ class Cluster:
 
         :return: list of indexes of hits.
         """
-        hits = []
+        results = []
         if (self.depth < search_depth) and (self.left or self.right):
             if self.left.can_include(query, radius):
-                hits.extend(self.left.search(query, radius, search_depth, logfile))
+                hits = self.left.search(query, radius, search_depth, logfile)
+                results.extend(hits)
+                del hits
             if self.right.can_include(query, radius):
-                hits.extend(self.right.search(query, radius, search_depth, logfile))
+                hits = self.right.search(query, radius, search_depth, logfile)
+                results.extend(hits)
+                del hits
+            gc.collect()
         else:
             if self.should_subsample:
                 for i in range(0, len(self.points), self.batch_size):
                     batch = self._get_batch(i)
-                    distances = tf_calculate_distance(query, batch, self.df, logfile)
-                    hits.extend([self.points[i + j] for j, d in enumerate(distances) if d <= radius])
+                    distances = tf_calculate_distance(query, batch, self.df, logfile, self.depth)
+                    hits = [self.points[i + j] for j, d in enumerate(distances) if d <= radius]
+                    results.extend(hits)
+                    del hits
+                    gc.collect()
             else:
                 points = [self.data[p] for p in self.points]
-                distances = numpy_calculate_distance(query, points, self.df, logfile)
-                hits.extend([self.points[j] for j, d in enumerate(distances) if d <= radius])
-        return hits
+                distances = numpy_calculate_distance(query, points, self.df, logfile, self.depth)
+                hits = [self.points[j] for j, d in enumerate(distances) if d <= radius]
+                results.extend(hits)
+                del hits
+                gc.collect()
+        return results
+
+    def compress(self, filename):
+        if self.left or self.right:
+            return
+
+        step = 10 ** (config.H_MAGNITUDE / (-2.5))
+        center = self.data[self.center]
+        points = [np.array(np.ceil((self.data[p] - center) / step), dtype=np.int64) for p in self.points]
+
+        filename = f'{filename}/{self.name}.pickle'
+        with open(filename, 'wb') as outfile:
+            pickle.dump(points, outfile)
+        return
