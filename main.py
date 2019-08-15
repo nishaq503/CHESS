@@ -1,6 +1,7 @@
 import os
 from time import time
 
+import gc
 import numpy as np
 
 import config
@@ -85,44 +86,51 @@ def search(search_object: Search, radius: float, filename: str, timing_file: str
 
     samples = read_data(config.SAMPLES_FILE, 10_000, config.NUM_DIMS)
 
-    with open(filename, 'a') as outfile:
-        for sample in samples:
+    for sample in samples:
 
+        start = time()
+        linear_results = search_object.linear_search(sample, radius)
+        one = time() - start
+
+        for search_depth in range(4, 21):
             start = time()
-            linear_results = search_object.linear_search(sample, radius)
-            one = time() - start
-
-            for search_depth in range(4, 21):
-                start = time()
-                clustered_results = search_object.clustered_search(sample, radius, search_depth, timing_file)
-                two = time() - start
-
-                clustered_success = set(linear_results) == set(clustered_results)
-                outfile.write(f'{clustered_success},{radius},{one:.6f},{two:.6f},{search_depth}\n')
-
-            outfile.flush()
-            break
+            clustered_results = search_object.clustered_search(sample, radius, search_depth, timing_file)
+            two = time() - start
+            success = set(linear_results) == set(clustered_results)
+            with open(filename, 'a') as outfile:
+                outfile.write(f'{success},{radius},{len(linear_results)},{one:.6f},{two:.6f},{search_depth}\n')
+                outfile.flush()
+            del clustered_results
+            gc.collect()
+        break
     return
 
 
 if __name__ == '__main__':
     np.random.seed(1234)
+    distance_function_ = 'l2'
+    clustering_depth_ = 20
 
-#    times_file = f'logs/times.csv'
-#    if not os.path.exists(times_file):
-#        with open(times_file, 'w') as outfile_:
-#            outfile_.write(f'depth,time\n')
+    #    times_file = f'logs/times.csv'
+    #    if not os.path.exists(times_file):
+    #        with open(times_file, 'w') as outfile_:
+    #            outfile_.write(f'depth,time\n')
 
-#    for d in [4, 5, 6, 7, 8, 9, 10, 15, 20]:
-#        make_clusters(distance_function='l2', clustering_depth=d, filename=times_file)
+    #    for d in [4, 5, 6, 7, 8, 9, 10, 15, 20]:
+    #        make_clusters(distance_function='l2', clustering_depth=d, filename=times_file)
 
-    search_results = f'logs/searches.csv'
+    search_results = f'logs/searches_{distance_function_}_{clustering_depth_}.csv'
     if not os.path.exists(search_results):
         with open(search_results, 'w') as outfile_:
-            outfile_.write('clustered_success,depth,radius,linear_time,clustered_time,search_depth\n')
+            outfile_.write('clustered_success,radius,output_size,linear_time,clustered_time,search_depth\n')
 
-    search_object_ = read_clusters(distance_function='l2', clustering_depth=20)
+    search_object_ = read_clusters(distance_function=distance_function_, clustering_depth=clustering_depth_)
 
-    search_times = f'logs/search_times.csv'
-    for r in [25_000]:
+    search_times = f'logs/search_times_{distance_function_}_{clustering_depth_}.csv'
+    for r in [2_000]:
         search(search_object_, r, search_results, search_times)
+
+    # metadata_filename = f'compressed/encoding_metadata_{distance_function_}_{clustering_depth_}.pickle'
+    # integer_filename = f'compressed/integer_encodings_{distance_function_}_{clustering_depth_}'
+    # integer_zip = f'compressed/integer_encodings_{distance_function_}_{clustering_depth_}.zip'
+    # search_object_.compress(metadata_filename, integer_filename, integer_zip)
