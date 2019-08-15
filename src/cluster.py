@@ -269,6 +269,17 @@ class Cluster:
                 gc.collect()
         return results
 
+    def better_search(self, query: np.ndarray, radius: float, search_depth: int) -> List[str]:
+        results = []
+        if (self.depth < search_depth) and (self.left or self.right):
+            if self.left.can_include(query, radius):
+                results.extend(self.left.better_search(query, radius, search_depth))
+            if self.right.can_include(query, radius):
+                results.extend(self.right.better_search(query, radius, search_depth))
+        else:
+            results.append(self.name)
+        return results
+
     def compress(self, filename):
         if self.left or self.right:
             return

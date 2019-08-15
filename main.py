@@ -106,6 +106,33 @@ def search(search_object: Search, radius: float, filename: str, timing_file: str
     return
 
 
+def better_search(search_object: Search, radius: float, filename: str, timing_file: str) -> None:
+    samples = read_data(config.SAMPLES_FILE, 10_000, config.NUM_DIMS)
+    for sample in samples:
+
+        start = time()
+        linear_results = search_object.linear_search(sample, radius)
+        one = time() - start
+
+        for search_depth in range(4, 21):
+            start = time()
+            clustered_results, num_clusters = search_object.better_clustered_search(sample,
+                                                                                    radius,
+                                                                                    search_depth,
+                                                                                    timing_file)
+            two = time() - start
+            success = set(linear_results) == set(clustered_results)
+            with open(filename, 'a') as outfile:
+                outfile.write(f'{radius},{len(clustered_results)},{num_clusters}'
+                              f',{one:.6f},{two:.6f},{search_depth}\n')
+                outfile.flush()
+            del clustered_results
+            gc.collect()
+            # break
+        break
+    return
+
+
 if __name__ == '__main__':
     np.random.seed(1234)
     distance_function_ = 'l2'
@@ -122,13 +149,14 @@ if __name__ == '__main__':
     search_results = f'logs/searches_{distance_function_}_{clustering_depth_}.csv'
     if not os.path.exists(search_results):
         with open(search_results, 'w') as outfile_:
-            outfile_.write('clustered_success,radius,output_size,linear_time,clustered_time,search_depth\n')
+            outfile_.write('radius,output_size,clusters_searched'
+                           ',linear_time,clustered_time,search_depth\n')
 
     search_object_ = read_clusters(distance_function=distance_function_, clustering_depth=clustering_depth_)
 
     search_times = f'logs/search_times_{distance_function_}_{clustering_depth_}.csv'
-    for r in [2_000]:
-        search(search_object_, r, search_results, search_times)
+    for r in [5_000]:
+        better_search(search_object_, r, search_results, search_times)
 
     # metadata_filename = f'compressed/encoding_metadata_{distance_function_}_{clustering_depth_}.pickle'
     # integer_filename = f'compressed/integer_encodings_{distance_function_}_{clustering_depth_}'
