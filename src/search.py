@@ -1,7 +1,7 @@
 import os
 import pickle
 import zipfile
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 
@@ -44,7 +44,21 @@ class Search:
                 name='',
             )
             self.root.make_tree()
+
+        self.cluster_dict_ = self._get_cluster_dict()
         return
+
+    def _get_cluster_dict(self):
+        cluster_dict = {}
+
+        def in_order(node: Cluster):
+            cluster_dict[node.name] = node
+            if node.left or node.right:
+                in_order(node.left)
+                in_order(node.right)
+
+        in_order(self.root)
+        return cluster_dict
 
     def linear_search(self, query: np.ndarray, radius: float) -> List[int]:
         """ Perform linear search for comparison with clustered search.
@@ -63,16 +77,26 @@ class Search:
 
         return results
 
-    def clustered_search(self, query: np.ndarray, radius: float, search_depth: int, logfile: str) -> List[int]:
+    def clustered_search(self, query: np.ndarray, radius: float, search_depth: int) -> Tuple[List[int], int]:
         """ Perform clustered search.
 
         :param query: point around with to search.
         :param radius: search radius to use.
         :param search_depth: maximum depth to which to search.
-        :param logfile: .csv to write logs in.
         :return: list of indexes of hits.
         """
-        return self.root.search(query, radius, search_depth, logfile)
+        clusters = self.root.search(query, radius, search_depth)
+        clustered_space = [self.cluster_dict_[c].points for c in clusters]
+        search_space = [p for points in clustered_space for p in points]
+
+        results = []
+        for i in range(0, len(search_space), config.BATCH_SIZE):
+            end = min(i + config.BATCH_SIZE, len(search_space))
+            batch = np.asarray([self.data[search_space[p]] for p in range(i, end)])
+            distances = tf_calculate_distance(query, batch, self.distance_function)
+            hits = [i + j for j, d in enumerate(distances) if d <= radius]
+            results.extend([search_space[h] for h in hits])
+        return results, len(clusters)
 
     def print_names(self, filename: str) -> None:
         """ Print .csv file containing: cluster_name, point_index. """
