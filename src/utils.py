@@ -21,6 +21,14 @@ def batch_tf_l2_norm(x: tf.Tensor) -> tf.Tensor:
     return tf.sqrt(tf.maximum(xx + yy - 2 * tf.matmul(x, x, transpose_b=True), 0.0))
 
 
+def tf_cosine_distance(x: tf.Tensor, y: tf.Tensor) -> tf.Tensor:
+    norm_x = tf.maximum(tf.sqrt(tf.reduce_sum(tf.multiply(x, x))), 1e-5)
+    norm_y = tf.maximum(tf.sqrt(tf.reduce_sum(tf.multiply(y, y))), 1e-5)
+    x_normalized, y_normalized = tf.divide(x, norm_x), tf.divide(y, norm_y)
+    similarity = tf.multiply(x_normalized, tf.transpose(y_normalized))
+    return tf.maximum(1.0 - similarity, 0.0)
+
+
 def tf_calculate_distance(a: np.ndarray, b: np.ndarray, df: str, logfile: str = None, d: int = None) -> np.ndarray:
     """ Calculates the distance between a and b using the distance function requested.
 
@@ -39,7 +47,7 @@ def tf_calculate_distance(a: np.ndarray, b: np.ndarray, df: str, logfile: str = 
     if df == 'l2':
         distance = tf_l2_norm
     elif df == 'cos':
-        raise NotImplementedError('Cosine Distance not yet implemented.')
+        distance = tf_cosine_distance
     elif df == 'emd':
         raise NotImplementedError('Earth-Mover\'s-Distance not yet implemented.')
     else:
