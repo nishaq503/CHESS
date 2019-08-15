@@ -104,7 +104,8 @@ class Search:
             end = min(i + config.BATCH_SIZE, len(search_space))
             batch = np.asarray([self.data[search_space[p]] for p in range(i, end)])
             distances = tf_calculate_distance(query, batch, self.distance_function)
-            results.extend([i + j for j, d in enumerate(distances) if d <= radius])
+            hits = [i + j for j, d in enumerate(distances) if d <= radius]
+            results.extend([search_space[h] for h in hits])
         return results, len(clusters)
 
     def print_names(self, filename: str) -> None:
