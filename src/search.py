@@ -77,25 +77,15 @@ class Search:
 
         return results
 
-    def clustered_search(self, query: np.ndarray, radius: float, search_depth: int, logfile: str) -> List[int]:
+    def clustered_search(self, query: np.ndarray, radius: float, search_depth: int) -> Tuple[List[int], int]:
         """ Perform clustered search.
 
         :param query: point around with to search.
         :param radius: search radius to use.
         :param search_depth: maximum depth to which to search.
-        :param logfile: .csv to write logs in.
         :return: list of indexes of hits.
         """
-        return self.root.search(query, radius, search_depth, logfile)
-
-    def better_clustered_search(
-            self,
-            query: np.ndarray,
-            radius: float,
-            search_depth: int,
-            logfile: str
-    ) -> Tuple[List[int], int]:
-        clusters = self.root.better_search(query, radius, search_depth)
+        clusters = self.root.search(query, radius, search_depth)
         clustered_space = [self.cluster_dict_[c].points for c in clusters]
         search_space = [p for points in clustered_space for p in points]
 

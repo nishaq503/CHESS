@@ -230,52 +230,21 @@ class Cluster:
             self.right.make_tree()
         return
 
-    def search(self, query: np.ndarray, radius: float, search_depth: int, logfile: str) -> List[int]:
+    def search(self, query: np.ndarray, radius: float, search_depth: int) -> List[str]:
         """ Perform clustered search starting at the current cluster.
 
         :param query: point to search around.
         :param radius: search radius to consider.
         :param search_depth: maximum depth to which to search.
-        :param logfile: .csv to write logs in.
 
         :return: list of indexes of hits.
         """
         results = []
         if (self.depth < search_depth) and (self.left or self.right):
             if self.left.can_include(query, radius):
-                hits = self.left.search(query, radius, search_depth, logfile)
-                results.extend(hits)
-                del hits
+                results.extend(self.left.search(query, radius, search_depth))
             if self.right.can_include(query, radius):
-                hits = self.right.search(query, radius, search_depth, logfile)
-                results.extend(hits)
-                del hits
-            gc.collect()
-        else:
-            if self.should_subsample:
-                for i in range(0, len(self.points), self.batch_size):
-                    batch = self._get_batch(i)
-                    distances = tf_calculate_distance(query, batch, self.df, logfile, self.depth)
-                    hits = [self.points[i + j] for j, d in enumerate(distances) if d <= radius]
-                    results.extend(hits)
-                    del hits
-                    gc.collect()
-            else:
-                points = [self.data[p] for p in self.points]
-                distances = numpy_calculate_distance(query, points, self.df, logfile, self.depth)
-                hits = [self.points[j] for j, d in enumerate(distances) if d <= radius]
-                results.extend(hits)
-                del hits
-                gc.collect()
-        return results
-
-    def better_search(self, query: np.ndarray, radius: float, search_depth: int) -> List[str]:
-        results = []
-        if (self.depth < search_depth) and (self.left or self.right):
-            if self.left.can_include(query, radius):
-                results.extend(self.left.better_search(query, radius, search_depth))
-            if self.right.can_include(query, radius):
-                results.extend(self.right.better_search(query, radius, search_depth))
+                results.extend(self.right.search(query, radius, search_depth))
         else:
             results.append(self.name)
         return results
