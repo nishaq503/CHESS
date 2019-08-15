@@ -3,6 +3,8 @@ from time import time
 import numpy as np
 import tensorflow as tf
 
+import config
+
 
 def tf_l2_norm(x: tf.Tensor, y: tf.Tensor) -> tf.Tensor:
     return tf.sqrt(tf.maximum(tf.reduce_sum(tf.square(tf.subtract(x, y)), axis=1), 0.0))
@@ -31,6 +33,8 @@ def tf_calculate_distance(a: np.ndarray, b: np.ndarray, df: str, logfile: str = 
     :param d: cluster_depth for logfile.
     :return: pairwise distances between points in a and b.
     """
+
+    config.DF_CALLS += 1
 
     if logfile:
         with open(logfile, 'a') as outfile:
@@ -74,6 +78,8 @@ def tf_calculate_pairwise_distances(a: np.ndarray, df: str, logfile: str = None,
     :return: pairwise distances between points in a.
     """
 
+    config.DF_CALLS += 1
+
     if logfile:
         with open(logfile, 'a') as outfile:
             outfile.write(f'tf_calculate_pairwise_distances,{d},{df},start,{time():.8f}\n')
@@ -113,6 +119,8 @@ def numpy_calculate_distance(a: np.array, b: np.array, df: str, logfile: str = N
         :param d: cluster_depth for logfile.
         :return: pairwise distances between points in a and b.
         """
+
+    config.DF_CALLS += 1
 
     if logfile:
         with open(logfile, 'a') as outfile:

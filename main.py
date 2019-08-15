@@ -82,6 +82,8 @@ def benchmark_search(search_object: Search, radius: float, filename: str) -> Non
     :return:
     """
     samples = read_data(config.SAMPLES_FILE, 10_000, config.NUM_DIMS)
+    number_searched = 0
+
     for sample in samples:
 
         start = time()
@@ -89,14 +91,19 @@ def benchmark_search(search_object: Search, radius: float, filename: str) -> Non
         one = time() - start
 
         for search_depth in range(4, 21):
+            config.DF_CALLS = 0
             start = time()
             clustered_results, num_clusters = search_object.clustered_search(sample, radius, search_depth)
             two = time() - start
             success = set(linear_results) == set(clustered_results)
             with open(filename, 'a') as outfile:
-                outfile.write(f'{success},{radius},{len(clustered_results)},{num_clusters},'
-                              f'{one:.6f},{two:.6f},{search_depth}\n')
+                outfile.write(f'{success},{radius},{search_depth},{len(clustered_results)},{num_clusters},'
+                              f'{one:.6f},{two:.6f},{config.DF_CALLS}\n')
                 outfile.flush()
+
+        number_searched += 1
+        if number_searched >= 30:
+            break
     return
 
 
@@ -116,13 +123,13 @@ if __name__ == '__main__':
     search_results = f'logs/searches_{distance_function_}_{clustering_depth_}.csv'
     if not os.path.exists(search_results):
         with open(search_results, 'w') as outfile_:
-            outfile_.write('success,radius,output_size,clusters_searched,'
-                           'linear_time,clustered_time,search_depth\n')
+            outfile_.write('success,radius,search_depth,output_size,clusters_searched,'
+                           'linear_time,clustered_time,df_calls\n')
 
     search_object_ = read_clusters(distance_function=distance_function_, clustering_depth=clustering_depth_)
 
     search_times = f'logs/search_times_{distance_function_}_{clustering_depth_}.csv'
-    for r in [1_250, 2_500, 5_000, 10_000, 20_000]:
+    for r in [2_500, 5_000, 10_000]:
         benchmark_search(search_object_, r, search_results)
 
     # metadata_filename = f'compressed/encoding_metadata_{distance_function_}_{clustering_depth_}.pickle'
