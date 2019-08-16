@@ -122,10 +122,10 @@ if __name__ == '__main__':
 
     search_object_ = read_clusters(distance_function=distance_function_, clustering_depth=clustering_depth_)
 
-    metadata_filename = f'compressed/encoding_metadata_{distance_function_}_{clustering_depth_}.pickle'
-    integer_filename = f'compressed/integer_encodings_{distance_function_}_{clustering_depth_}'
-    integer_zip = f'compressed/integer_encodings_{distance_function_}_{clustering_depth_}.zip'
-    search_object_.compress(metadata_filename, integer_filename, integer_zip)
+    # metadata_filename = f'compressed/encoding_metadata_{distance_function_}_{clustering_depth_}.pickle'
+    # integer_filename = f'compressed/integer_encodings_{distance_function_}_{clustering_depth_}'
+    # integer_zip = f'compressed/integer_encodings_{distance_function_}_{clustering_depth_}.zip'
+    # search_object_.compress(metadata_filename, integer_filename, integer_zip)
 
     search_results = f'logs/searches_{distance_function_}_{clustering_depth_}.csv'
     if not os.path.exists(search_results):
