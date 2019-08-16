@@ -31,7 +31,6 @@ def tf_cosine_distance(x: tf.Tensor, y: tf.Tensor) -> tf.Tensor:
 
 
 def numpy_cosine_distance(x: np.ndarray, y: np.ndarray) -> np.ndarray:
-    x_norm = np.linalg.norm(x, axis=1)
     x_normalized = x.T / np.linalg.norm(x, axis=1)
     y_normalized = y.T / np.linalg.norm(y, axis=1)
     product = np.matmul(x_normalized.T, y_normalized)
