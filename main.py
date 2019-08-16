@@ -42,7 +42,7 @@ def make_clusters(distance_function: str, clustering_depth: int, filename: str) 
     end = time()
 
     with open(filename, 'a') as outfile:
-        outfile.write(f'{clustering_depth},{end - start:.6f}\n')
+        outfile.write(f'{clustering_depth},{end - start:.6f},{distance_function}\n')
 
     names_file = f'logs/names_{distance_function}_{clustering_depth}_{config.LFD_LIMIT}.csv'
     search_object.print_names(filename=names_file)
@@ -102,35 +102,36 @@ def benchmark_search(search_object: Search, radius: float, filename: str) -> Non
                 outfile.flush()
 
         number_searched += 1
-        if number_searched >= 30:
+        if number_searched >= 1:
             break
     return
 
 
 if __name__ == '__main__':
     np.random.seed(1234)
-    distance_function_ = 'l2'
+    distance_function_ = 'cos'
     clustering_depth_ = 20
 
-    #    times_file = f'logs/times.csv'
-    #    if not os.path.exists(times_file):
-    #        with open(times_file, 'w') as outfile_:
-    #            outfile_.write(f'depth,time\n')
+    times_file = f'logs/times.csv'
+    if not os.path.exists(times_file):
+        with open(times_file, 'w') as outfile_:
+            outfile_.write(f'depth,time,distance_function\n')
 
-    #    for d in [4, 5, 6, 7, 8, 9, 10, 15, 20]:
-    #        make_clusters(distance_function='l2', clustering_depth=d, filename=times_file)
+    for d in [4, 5, 6, 7, 8, 9, 10, 15, 20]:
+        make_clusters(distance_function=distance_function_, clustering_depth=d, filename=times_file)
+        break
 
-    search_results = f'logs/searches_{distance_function_}_{clustering_depth_}.csv'
-    if not os.path.exists(search_results):
-        with open(search_results, 'w') as outfile_:
-            outfile_.write('success,radius,search_depth,output_size,clusters_searched,'
-                           'linear_time,clustered_time,df_calls\n')
-
-    search_object_ = read_clusters(distance_function=distance_function_, clustering_depth=clustering_depth_)
-
-    search_times = f'logs/search_times_{distance_function_}_{clustering_depth_}.csv'
-    for r in [2_500, 5_000, 10_000]:
-        benchmark_search(search_object_, r, search_results)
+    # search_results = f'logs/searches_{distance_function_}_{clustering_depth_}.csv'
+    # if not os.path.exists(search_results):
+    #     with open(search_results, 'w') as outfile_:
+    #         outfile_.write('success,radius,search_depth,output_size,clusters_searched,'
+    #                        'linear_time,clustered_time,df_calls\n')
+    #
+    # search_object_ = read_clusters(distance_function=distance_function_, clustering_depth=clustering_depth_)
+    #
+    # search_times = f'logs/search_times_{distance_function_}_{clustering_depth_}.csv'
+    # for r in [2_500, 5_000, 10_000]:
+    #     benchmark_search(search_object_, r, search_results)
 
     # metadata_filename = f'compressed/encoding_metadata_{distance_function_}_{clustering_depth_}.pickle'
     # integer_filename = f'compressed/integer_encodings_{distance_function_}_{clustering_depth_}'
