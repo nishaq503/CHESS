@@ -23,6 +23,21 @@ def batch_tf_l2_norm(x: tf.Tensor) -> tf.Tensor:
     return tf.sqrt(tf.maximum(xx + yy - 2 * tf.matmul(x, x, transpose_b=True), 0.0))
 
 
+def tf_cosine_distance(x: tf.Tensor, y: tf.Tensor) -> tf.Tensor:
+    x_normalized = tf.nn.l2_normalize(x, axis=1)
+    y_normalized = tf.nn.l2_normalize(y, axis=1)
+    product = tf.matmul(x_normalized, y_normalized, transpose_b=True)
+    return 1 - product
+
+
+def numpy_cosine_distance(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    x_norm = np.linalg.norm(x, axis=1)
+    x_normalized = x.T / np.linalg.norm(x, axis=1)
+    y_normalized = y.T / np.linalg.norm(y, axis=1)
+    product = np.matmul(x_normalized.T, y_normalized)
+    return 1 - product
+
+
 def tf_calculate_distance(a: np.ndarray, b: np.ndarray, df: str, logfile: str = None, d: int = None) -> np.ndarray:
     """ Calculates the distance between a and b using the distance function requested.
 
@@ -43,7 +58,7 @@ def tf_calculate_distance(a: np.ndarray, b: np.ndarray, df: str, logfile: str = 
     if df == 'l2':
         distance = tf_l2_norm
     elif df == 'cos':
-        raise NotImplementedError('Cosine Distance not yet implemented.')
+        distance = tf_cosine_distance
     elif df == 'emd':
         raise NotImplementedError('Earth-Mover\'s-Distance not yet implemented.')
     else:
@@ -87,7 +102,7 @@ def tf_calculate_pairwise_distances(a: np.ndarray, df: str, logfile: str = None,
     if df == 'l2':
         distance = batch_tf_l2_norm
     elif df == 'cos':
-        raise NotImplementedError('Cosine Distance not yet implemented.')
+        def distance(x_): return tf_cosine_distance(x_, x_)
     elif df == 'emd':
         raise NotImplementedError('Earth-Mover\'s-Distance not yet implemented.')
     else:
@@ -129,7 +144,7 @@ def numpy_calculate_distance(a: np.array, b: np.array, df: str, logfile: str = N
     if df == 'l2':
         distance = numpy_l2_norm
     elif df == 'cos':
-        raise NotImplementedError('Cosine Distance not yet implemented.')
+        distance = numpy_cosine_distance
     elif df == 'emd':
         raise NotImplementedError('Earth-Mover\'s-Distance not yet implemented.')
     else:
