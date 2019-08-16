@@ -100,9 +100,8 @@ def benchmark_search(search_object: Search, radius: float, filename: str) -> Non
                 outfile.write(f'{success},{radius},{search_depth},{len(clustered_results)},{num_clusters},'
                               f'{one:.6f},{two:.6f},{config.DF_CALLS}\n')
                 outfile.flush()
-
         number_searched += 1
-        if number_searched >= 1:
+        if number_searched >= 29:
             break
     return
 
@@ -117,23 +116,24 @@ if __name__ == '__main__':
         with open(times_file, 'w') as outfile_:
             outfile_.write(f'depth,time,distance_function\n')
 
-    for d in [4, 5, 6, 7, 8, 9, 10, 15, 20]:
+    for d in [20]:  # [4, 5, 6, 7, 8, 9, 10, 15, 20]:
         make_clusters(distance_function=distance_function_, clustering_depth=d, filename=times_file)
         break
 
-    # search_results = f'logs/searches_{distance_function_}_{clustering_depth_}.csv'
-    # if not os.path.exists(search_results):
-    #     with open(search_results, 'w') as outfile_:
-    #         outfile_.write('success,radius,search_depth,output_size,clusters_searched,'
-    #                        'linear_time,clustered_time,df_calls\n')
-    #
-    # search_object_ = read_clusters(distance_function=distance_function_, clustering_depth=clustering_depth_)
-    #
-    # search_times = f'logs/search_times_{distance_function_}_{clustering_depth_}.csv'
-    # for r in [2_500, 5_000, 10_000]:
-    #     benchmark_search(search_object_, r, search_results)
+    search_object_ = read_clusters(distance_function=distance_function_, clustering_depth=clustering_depth_)
 
-    # metadata_filename = f'compressed/encoding_metadata_{distance_function_}_{clustering_depth_}.pickle'
-    # integer_filename = f'compressed/integer_encodings_{distance_function_}_{clustering_depth_}'
-    # integer_zip = f'compressed/integer_encodings_{distance_function_}_{clustering_depth_}.zip'
-    # search_object_.compress(metadata_filename, integer_filename, integer_zip)
+    metadata_filename = f'compressed/encoding_metadata_{distance_function_}_{clustering_depth_}.pickle'
+    integer_filename = f'compressed/integer_encodings_{distance_function_}_{clustering_depth_}'
+    integer_zip = f'compressed/integer_encodings_{distance_function_}_{clustering_depth_}.zip'
+    search_object_.compress(metadata_filename, integer_filename, integer_zip)
+
+    search_results = f'logs/searches_{distance_function_}_{clustering_depth_}.csv'
+    if not os.path.exists(search_results):
+        with open(search_results, 'w') as outfile_:
+            outfile_.write('success,radius,search_depth,output_size,clusters_searched,'
+                           'linear_time,clustered_time,df_calls\n')
+
+    search_times = f'logs/search_times_{distance_function_}_{clustering_depth_}.csv'
+    for r in [i * (10**-3) for i in [1, 5, 10]]:
+        benchmark_search(search_object_, r, search_results)
+

@@ -27,14 +27,14 @@ def tf_cosine_distance(x: tf.Tensor, y: tf.Tensor) -> tf.Tensor:
     x_normalized = tf.nn.l2_normalize(x, axis=1)
     y_normalized = tf.nn.l2_normalize(y, axis=1)
     product = tf.matmul(x_normalized, y_normalized, transpose_b=True)
-    return 1 - product
+    return tf.maximum(1 - product, 1e-16)
 
 
 def numpy_cosine_distance(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     x_normalized = x.T / np.linalg.norm(x, axis=1)
     y_normalized = y.T / np.linalg.norm(y, axis=1)
     product = np.matmul(x_normalized.T, y_normalized)
-    return 1 - product
+    return np.maximum(1 - product, 1e-16)
 
 
 def tf_calculate_distance(a: np.ndarray, b: np.ndarray, df: str, logfile: str = None, d: int = None) -> np.ndarray:
@@ -67,19 +67,31 @@ def tf_calculate_distance(a: np.ndarray, b: np.ndarray, df: str, logfile: str = 
     y = tf.placeholder(dtype=tf.float64, shape=[None, None])
 
     a, b = np.asarray(a), np.asarray(b)
+    squeeze_a, squeeze_b = False, False
     if a.ndim == 1:
         a = np.expand_dims(a, 0)
+        squeeze_a = True
     if b.ndim == 1:
         b = np.expand_dims(b, 0)
+        squeeze_b = True
 
     with tf.Session() as sess:
-        [result] = sess.run([distance(x, y)], feed_dict={x: a, y: b})
+        [distances] = sess.run([distance(x, y)], feed_dict={x: a, y: b})
+
+    distances = np.asarray(distances)
+    if df == 'cos':
+        if squeeze_a and squeeze_b:
+            return distances[0][0]
+        elif squeeze_a:
+            return distances[0]
+        elif squeeze_b:
+            return distances.T[0]
 
     if logfile:
         with open(logfile, 'a') as outfile:
             outfile.write(f'tf_calculate_distance,{d},{df},end,{time():.8f}\n')
 
-    return np.asarray(result)
+    return distances
 
 
 def tf_calculate_pairwise_distances(a: np.ndarray, df: str, logfile: str = None, d: int = None) -> np.ndarray:
