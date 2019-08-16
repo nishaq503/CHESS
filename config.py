@@ -8,6 +8,6 @@ DATA_FILE = 'data/data_samples.memmap'
 MIN_POINTS = 10
 MIN_RADIUS = 1e-16
 MAX_DEPTH = 20
-LFD_LIMIT = 5
+LFD_LIMIT = 2
 H_MAGNITUDE = 12.2
 DF_CALLS = 0
