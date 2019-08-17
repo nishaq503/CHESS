@@ -1,8 +1,9 @@
 import os
+
 import numpy as np
-from src.utils import tf_calculate_distance, numpy_calculate_distance, tf_calculate_pairwise_distances
 
 import config
+from src.utils import numpy_calculate_distance
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 

@@ -1,7 +1,6 @@
 import pickle
 from typing import List
 
-import gc
 import numpy as np
 
 import config

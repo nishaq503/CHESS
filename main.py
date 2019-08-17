@@ -9,17 +9,18 @@ from src.search import Search
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
-def read_data(filename: str, num_rows: int, num_dims: int) -> np.memmap:
+def read_data(filename: str, num_rows: int, num_dims: int, dtype: str = 'float32') -> np.memmap:
     """ Read data from memmap on disk.
 
     :param filename: filename to read.
     :param num_rows: number of rows in memmap.
     :param num_dims: number of columns in memmap.
+    :param dtype: data type of memmap.
     :return: numpy.memmap object.
     """
     return np.memmap(
         filename=filename,
-        dtype='float32',
+        dtype=dtype,
         mode='r',
         shape=(num_rows, num_dims),
     )
@@ -34,7 +35,10 @@ def make_clusters(distance_function: str, clustering_depth: int, filename: str) 
     :return: search object that was created.
     """
 
-    data: np.memmap = read_data(config.DATA_FILE, config.NUM_ROWS - 10_000, config.NUM_DIMS)
+    data: np.memmap = read_data(config.GREENGENES_DATA_LARGE_SAMPLES,
+                                config.LARGE_DATA_LEN,
+                                config.SEQ_LEN,
+                                dtype='int8')
     config.MAX_DEPTH = clustering_depth
 
     start = time()
@@ -108,7 +112,7 @@ def benchmark_search(search_object: Search, radius: float, filename: str) -> Non
 
 if __name__ == '__main__':
     np.random.seed(1234)
-    distance_function_ = 'l2'
+    distance_function_ = 'hamming'
     clustering_depth_ = 20
 
     times_file = f'logs/times.csv'
@@ -116,7 +120,7 @@ if __name__ == '__main__':
         with open(times_file, 'w') as outfile_:
             outfile_.write(f'depth,time,distance_function\n')
 
-    for d in [3]:  # [4, 5, 6, 7, 8, 9, 10, 15, 20]:
+    for d in [20, 30]:  # [4, 5, 6, 7, 8, 9, 10, 15, 20]:
         make_clusters(distance_function=distance_function_, clustering_depth=d, filename=times_file)
         break
 
