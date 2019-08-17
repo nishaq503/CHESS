@@ -35,8 +35,8 @@ def make_clusters(distance_function: str, clustering_depth: int, filename: str) 
     :return: search object that was created.
     """
 
-    data: np.memmap = read_data(config.GREENGENES_DATA_LARGE_SAMPLES,
-                                config.LARGE_DATA_LEN,
+    data: np.memmap = read_data(config.GREENGENES_DATA_SMALL_SAMPLES,
+                                config.SMALL_DATA_LEN,
                                 config.SEQ_LEN,
                                 dtype='int8')
     config.MAX_DEPTH = clustering_depth
@@ -120,7 +120,7 @@ if __name__ == '__main__':
         with open(times_file, 'w') as outfile_:
             outfile_.write(f'depth,time,distance_function\n')
 
-    for d in [20, 30]:  # [4, 5, 6, 7, 8, 9, 10, 15, 20]:
+    for d in [4]:  # [4, 5, 6, 7, 8, 9, 10, 15, 20]:
         make_clusters(distance_function=distance_function_, clustering_depth=d, filename=times_file)
         break
 
