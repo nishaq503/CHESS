@@ -2,31 +2,49 @@ import os
 import numpy as np
 from src.utils import tf_calculate_distance, numpy_calculate_distance, tf_calculate_pairwise_distances
 
+import config
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
-def check_df(df: str, batch: bool = False):
-    x = np.asarray([3, 6, 9])
-    y = np.asarray([[1, 2, 3], [2, 3, 4], [5, 5, 5]])
+def check_hamming(df: str, batch: bool = False):
+    characters = ['S', 'H', 'N', 'Y', 'G', 'V', '-', 'W', 'R', 'K', 'T', 'D', 'M', '.', 'B', 'A', 'C']
+    characters_dict = {c: i for i, c in enumerate(characters)}
 
-    print('x:\n', x)
-    print('y:\n', y)
+    counter = 0
+    data = []
+    with open(config.GREENGENES_FASTA_SMALL, 'r') as infile:
+        while True:
+            line1 = infile.readline()
+            if not line1:
+                break
+            line2 = infile.readline()
+            if not line2:
+                break
+            counter += 1
+            if 'unaligned' in line2:
+                continue
+            sequence = [characters_dict[c] for c in line2[:-1]]
+            if len(sequence) != 7682:
+                continue
+            data.append(sequence)
+            if counter >= 10:
+                break
 
+    data = np.asarray(data, dtype=np.int8)
     if batch:
-        tf_distances = tf_calculate_pairwise_distances(y, df)
-        np_distances = numpy_calculate_distance(y, y, df)
+        distances = numpy_calculate_distance(data, data, df)
     else:
-        tf_distances = tf_calculate_distance(x, y, df)
-        np_distances = numpy_calculate_distance(x, y, df)
-    tf_distances = np.asarray(tf_distances)
+        seq = data[0]
+        rest = data[1:]
+        distances = numpy_calculate_distance(seq, rest, df)
 
-    print('tf:\n', tf_distances)
-    print('np:\n', np_distances)
+    print(distances)
 
     return
 
 
 if __name__ == '__main__':
     # check_df('l2')
-    # check_df('cos')
-    check_df('cos', batch=True)
+    check_hamming('hamming')
+    # check_hamming('hamming', batch=True)

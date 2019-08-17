@@ -37,6 +37,14 @@ def numpy_cosine_distance(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     return np.maximum(1 - product, 1e-16)
 
 
+def batch_hamming(x: np.ndarray) -> np.ndarray:
+    return (x[:, None, :] != x).sum(2)
+
+
+def hamming(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    return (x != y[:, None, :]).sum(2)
+
+
 def tf_calculate_distance(a: np.ndarray, b: np.ndarray, df: str, logfile: str = None, d: int = None) -> np.ndarray:
     """ Calculates the distance between a and b using the distance function requested.
 
@@ -58,10 +66,10 @@ def tf_calculate_distance(a: np.ndarray, b: np.ndarray, df: str, logfile: str = 
         distance = tf_l2_norm
     elif df == 'cos':
         distance = tf_cosine_distance
-    elif df == 'emd':
-        raise NotImplementedError('Earth-Mover\'s-Distance not yet implemented.')
+    elif df == 'hamming':
+        distance = hamming
     else:
-        raise ValueError('Invalid distance function given. Must be \'l2\', \'cos\', or \'emd\'.')
+        raise ValueError('Invalid distance function given. Must be \'l2\', \'cos\', or \'hamming\'.')
 
     x = tf.placeholder(dtype=tf.float64, shape=[None, None])
     y = tf.placeholder(dtype=tf.float64, shape=[None, None])
@@ -75,8 +83,11 @@ def tf_calculate_distance(a: np.ndarray, b: np.ndarray, df: str, logfile: str = 
         b = np.expand_dims(b, 0)
         squeeze_b = True
 
-    with tf.Session() as sess:
-        [distances] = sess.run([distance(x, y)], feed_dict={x: a, y: b})
+    if df in ['l2', 'cos']:
+        with tf.Session() as sess:
+            [distances] = sess.run([distance(x, y)], feed_dict={x: a, y: b})
+    else:
+        distances = distance(a, b)
 
     distances = np.asarray(distances)
     if df == 'cos':
@@ -86,6 +97,13 @@ def tf_calculate_distance(a: np.ndarray, b: np.ndarray, df: str, logfile: str = 
             return distances[0]
         elif squeeze_b:
             return distances.T[0]
+    elif df == 'hamming':
+        if squeeze_a and squeeze_b:
+            return distances[0][0]
+        elif squeeze_a:
+            return distances.T[0]
+        elif squeeze_b:
+            return distances[0]
 
     if logfile:
         with open(logfile, 'a') as outfile:
@@ -114,10 +132,10 @@ def tf_calculate_pairwise_distances(a: np.ndarray, df: str, logfile: str = None,
         distance = batch_tf_l2_norm
     elif df == 'cos':
         def distance(x_): return tf_cosine_distance(x_, x_)
-    elif df == 'emd':
-        raise NotImplementedError('Earth-Mover\'s-Distance not yet implemented.')
+    elif df == 'hamming':
+        distance = batch_hamming
     else:
-        raise ValueError('Invalid distance function given. Must be \'l2\', \'cos\', or \'emd\'.')
+        raise ValueError('Invalid distance function given. Must be \'l2\', \'cos\', or \'hamming\'.')
 
     a = np.asarray(a)
     if a.ndim == 1:
@@ -125,14 +143,17 @@ def tf_calculate_pairwise_distances(a: np.ndarray, df: str, logfile: str = None,
 
     x = tf.placeholder(dtype=tf.float64, shape=[None, None])
 
-    with tf.Session() as sess:
-        [result] = sess.run([distance(x)], feed_dict={x: a})
+    if df in ['l2', 'cos']:
+        with tf.Session() as sess:
+            [distances] = sess.run([distance(x)], feed_dict={x: a})
+    else:
+        distances = distance(a)
 
     if logfile:
         with open(logfile, 'a') as outfile:
             outfile.write(f'tf_calculate_pairwise_distances,{d},{df},end,{time():.8f}\n')
 
-    return np.asarray(result)
+    return np.asarray(distances)
 
 
 def numpy_calculate_distance(a: np.array, b: np.array, df: str, logfile: str = None, d: int = None) -> np.array:
@@ -156,10 +177,10 @@ def numpy_calculate_distance(a: np.array, b: np.array, df: str, logfile: str = N
         distance = numpy_l2_norm
     elif df == 'cos':
         distance = numpy_cosine_distance
-    elif df == 'emd':
-        raise NotImplementedError('Earth-Mover\'s-Distance not yet implemented.')
+    elif df == 'hamming':
+        distance = hamming
     else:
-        raise ValueError('Invalid distance function given. Must be \'l2\', \'cos\', or \'emd\'.')
+        raise ValueError('Invalid distance function given. Must be \'l2\', \'cos\', or \'hamming\'.')
 
     a, b = np.array(a, dtype=np.float128), np.array(b, dtype=np.float128)
     squeeze_a, squeeze_b = False, False
@@ -176,11 +197,19 @@ def numpy_calculate_distance(a: np.array, b: np.array, df: str, logfile: str = N
         with open(logfile, 'a') as outfile:
             outfile.write(f'numpy_calculate_distance,{d},{df},end,{time():.8f}\n')
 
-    if squeeze_a and squeeze_b:
-        return distances[0][0]
-    elif squeeze_a:
-        return distances[0]
-    elif squeeze_b:
-        return distances.T[0]
+    if df == 'hamming':
+        if squeeze_a and squeeze_b:
+            return distances[0][0]
+        elif squeeze_a:
+            return distances.T[0]
+        elif squeeze_b:
+            return distances[0]
+    else:
+        if squeeze_a and squeeze_b:
+            return distances[0][0]
+        elif squeeze_a:
+            return distances[0]
+        elif squeeze_b:
+            return distances.T[0]
 
     return distances
