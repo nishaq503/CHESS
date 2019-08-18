@@ -77,12 +77,13 @@ def benchmark_search(queries: np.memmap, search_object: Search, radius: float, f
     :param filename: name of csv to which to write search results.
     :return:
     """
+    number_searched = 0
     for sample in queries:
         start = time()
         linear_results = search_object.linear_search(sample, radius)
         one = time() - start
 
-        for search_depth in range(5, config.MAX_DEPTH + 1, 5):
+        for search_depth in range(5, config.MAX_DEPTH + 1, 1):
             config.DF_CALLS = 0
             start = time()
             results, num_clusters, fraction = search_object.clustered_search(sample, radius, search_depth)
@@ -92,13 +93,16 @@ def benchmark_search(queries: np.memmap, search_object: Search, radius: float, f
                 outfile.write(f'{success},{radius},{search_depth},{len(results)},{num_clusters},'
                               f'{one:.6f},{two:.6f},{fraction}<{config.DF_CALLS}\n')
                 outfile.flush()
+        number_searched += 1
+        if number_searched >= 100:
+            break
     return
 
 
 if __name__ == '__main__':
     np.random.seed(1234)
     df_ = 'hamming'
-    depth_ = 50
+    depth_ = 20
 
     data_: np.memmap = read_data(filename=config.GREENGENES_DATA_LARGE_SAMPLES,
                                  num_rows=config.LARGE_DATA_LEN,
@@ -135,6 +139,6 @@ if __name__ == '__main__':
                            'linear_time,clustered_time,fraction_searched,df_calls\n')
 
     search_times = f'logs/search_times_{df_}_{depth_}.csv'
-    radii = [int(0.01 * config.SEQ_LEN), int(0.02 * config.SEQ_LEN)]
+    radii = [int(0.005 * config.SEQ_LEN),  int(0.01 * config.SEQ_LEN), int(0.02 * config.SEQ_LEN)]
     for r in radii:
         benchmark_search(queries=queries_, search_object=search_object_, radius=r, filename=search_results)

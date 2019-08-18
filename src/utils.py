@@ -92,14 +92,14 @@ def tf_calculate_distance(a: np.ndarray, b: np.ndarray, df: str, logfile: str = 
     distances = np.asarray(distances)
     if df == 'cos':
         if squeeze_a and squeeze_b:
-            return distances[0][0]
+            return distances[0]
         elif squeeze_a:
             return distances[0]
         elif squeeze_b:
             return distances.T[0]
     elif df == 'hamming':
         if squeeze_a and squeeze_b:
-            return distances[0][0]
+            return distances[0]
         elif squeeze_a:
             return distances.T[0]
         elif squeeze_b:
@@ -198,14 +198,14 @@ def numpy_calculate_distance(a: np.array, b: np.array, df: str, logfile: str = N
 
     if df == 'hamming':
         if squeeze_a and squeeze_b:
-            return distances[0][0]
+            return distances[0]
         elif squeeze_a:
             return distances.T[0]
         elif squeeze_b:
             return distances[0]
     else:
         if squeeze_a and squeeze_b:
-            return distances[0][0]
+            return distances[0]
         elif squeeze_a:
             return distances[0]
         elif squeeze_b:
