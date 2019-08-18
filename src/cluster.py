@@ -150,7 +150,7 @@ class Cluster:
         :return:
         """
         distance = numpy_calculate_distance(query, self.data[self.center], self.df)
-        return distance < (self.radius + radius)
+        return distance <= (self.radius + radius)
 
     def can_be_popped(self) -> bool:
         """ check if the cluster can be popped.

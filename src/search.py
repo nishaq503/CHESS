@@ -77,7 +77,7 @@ class Search:
 
         return results
 
-    def clustered_search(self, query: np.ndarray, radius: float, search_depth: int) -> Tuple[List[int], int]:
+    def clustered_search(self, query: np.ndarray, radius: float, search_depth: int) -> Tuple[List[int], int, float]:
         """ Perform clustered search.
 
         :param query: point around with to search.
@@ -88,6 +88,7 @@ class Search:
         clusters = self.root.search(query, radius, search_depth)
         clustered_space = [self.cluster_dict_[c].points for c in clusters]
         search_space = [p for points in clustered_space for p in points]
+        fraction_searched = len(search_space) / np.shape(self.data)[0]
 
         results = []
         for i in range(0, len(search_space), config.BATCH_SIZE):
@@ -96,7 +97,7 @@ class Search:
             distances = tf_calculate_distance(query, batch, self.distance_function)
             hits = [i + j for j, d in enumerate(distances) if d <= radius]
             results.extend([search_space[h] for h in hits])
-        return results, len(clusters)
+        return results, len(clusters), fraction_searched
 
     def print_names(self, filename: str) -> None:
         """ Print .csv file containing: cluster_name, point_index. """

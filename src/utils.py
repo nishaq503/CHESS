@@ -56,8 +56,6 @@ def tf_calculate_distance(a: np.ndarray, b: np.ndarray, df: str, logfile: str = 
     :return: pairwise distances between points in a and b.
     """
 
-    config.DF_CALLS += 1
-
     if logfile:
         with open(logfile, 'a') as outfile:
             outfile.write(f'tf_calculate_distance,{d},{df},start,{time():.8f}\n')
@@ -82,6 +80,8 @@ def tf_calculate_distance(a: np.ndarray, b: np.ndarray, df: str, logfile: str = 
     if b.ndim == 1:
         b = np.expand_dims(b, 0)
         squeeze_b = True
+
+    config.DF_CALLS += np.shape(a)[0] * np.shape(b)[0]
 
     if df in ['l2', 'cos']:
         with tf.Session() as sess:
@@ -122,8 +122,6 @@ def tf_calculate_pairwise_distances(a: np.ndarray, df: str, logfile: str = None,
     :return: pairwise distances between points in a.
     """
 
-    config.DF_CALLS += 1
-
     if logfile:
         with open(logfile, 'a') as outfile:
             outfile.write(f'tf_calculate_pairwise_distances,{d},{df},start,{time():.8f}\n')
@@ -140,6 +138,8 @@ def tf_calculate_pairwise_distances(a: np.ndarray, df: str, logfile: str = None,
     a = np.asarray(a)
     if a.ndim == 1:
         a = np.expand_dims(a, 0)
+
+    config.DF_CALLS += np.shape(a)[0] * np.shape(a)[0]
 
     x = tf.placeholder(dtype=tf.float64, shape=[None, None])
 
@@ -167,8 +167,6 @@ def numpy_calculate_distance(a: np.array, b: np.array, df: str, logfile: str = N
         :return: pairwise distances between points in a and b.
         """
 
-    config.DF_CALLS += 1
-
     if logfile:
         with open(logfile, 'a') as outfile:
             outfile.write(f'numpy_calculate_distance,{d},{df},start,{time():.8f}\n')
@@ -191,6 +189,7 @@ def numpy_calculate_distance(a: np.array, b: np.array, df: str, logfile: str = N
         b = np.expand_dims(b, 0)
         squeeze_b = True
 
+    config.DF_CALLS += np.shape(a)[0] * np.shape(b)[0]
     distances = distance(a, b)
 
     if logfile:
