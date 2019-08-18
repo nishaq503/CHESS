@@ -94,7 +94,6 @@ def benchmark_search(queries: np.memmap, search_object: Search, radius: float, f
                               f'{one:.6f},{two:.6f},{fraction:.6f},{config.DF_CALLS}\n')
                 outfile.flush()
         number_searched += 1
-        break
         if number_searched >= 30:
             break
     return
