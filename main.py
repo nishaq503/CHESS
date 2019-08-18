@@ -83,7 +83,7 @@ def benchmark_search(queries: np.memmap, search_object: Search, radius: float, f
         linear_results = search_object.linear_search(sample, radius)
         one = time() - start
 
-        for search_depth in range(5, config.MAX_DEPTH + 1, 1):
+        for search_depth in range(4, config.MAX_DEPTH + 1, 1):
             config.DF_CALLS = 0
             start = time()
             results, num_clusters, fraction = search_object.clustered_search(sample, radius, search_depth)
@@ -91,39 +91,40 @@ def benchmark_search(queries: np.memmap, search_object: Search, radius: float, f
             success = set(linear_results) == set(results)
             with open(filename, 'a') as outfile:
                 outfile.write(f'{success},{radius},{search_depth},{len(results)},{num_clusters},'
-                              f'{one:.6f},{two:.6f},{fraction}<{config.DF_CALLS}\n')
+                              f'{one:.6f},{two:.6f},{fraction:.6f},{config.DF_CALLS}\n')
                 outfile.flush()
         number_searched += 1
-        if number_searched >= 100:
+        break
+        if number_searched >= 30:
             break
     return
 
 
 if __name__ == '__main__':
     np.random.seed(1234)
-    df_ = 'hamming'
+    df_ = 'cos'
     depth_ = 20
 
-    data_: np.memmap = read_data(filename=config.GREENGENES_DATA_LARGE_SAMPLES,
-                                 num_rows=config.LARGE_DATA_LEN,
-                                 num_dims=config.SEQ_LEN,
-                                 dtype=np.int8)
+    data_: np.memmap = read_data(filename=config.DATA_FILE,
+                                 num_rows=config.NUM_ROWS - 10_000,
+                                 num_dims=config.NUM_DIMS,
+                                 dtype='float32')
 
-    queries_: np.memmap = read_data(filename=config.GREENGENES_DATA_LARGE_QUERIES,
+    queries_: np.memmap = read_data(filename=config.SAMPLES_FILE,
                                     num_rows=10_000,
-                                    num_dims=config.SEQ_LEN,
-                                    dtype=np.int8)
+                                    num_dims=config.NUM_DIMS,
+                                    dtype='float32')
 
     config.MAX_DEPTH = depth_
 
-    times_file = f'logs/times.csv'
-    if not os.path.exists(times_file):
-        with open(times_file, 'w') as outfile_:
-            outfile_.write(f'depth,time,distance_function\n')
-
-    for d in [depth_]:  # [4, 5, 6, 7, 8, 9, 10, 15, 20]:
-        make_clusters(data=data_, df=df_, depth=d, filename=times_file)
-        break
+    # times_file = f'logs/times.csv'
+    # if not os.path.exists(times_file):
+    #     with open(times_file, 'w') as outfile_:
+    #         outfile_.write(f'depth,time,distance_function\n')
+    #
+    # for d in [depth_]:  # [4, 5, 6, 7, 8, 9, 10, 15, 20]:
+    #     make_clusters(data=data_, df=df_, depth=d, filename=times_file)
+    #     break
 
     search_object_ = read_clusters(data=data_, df=df_, depth=depth_)
 
@@ -139,6 +140,8 @@ if __name__ == '__main__':
                            'linear_time,clustered_time,fraction_searched,df_calls\n')
 
     search_times = f'logs/search_times_{df_}_{depth_}.csv'
-    radii = [int(0.005 * config.SEQ_LEN),  int(0.01 * config.SEQ_LEN), int(0.02 * config.SEQ_LEN)]
+    # radii = [int(0.01 * config.SEQ_LEN), int(0.02 * config.SEQ_LEN), int(0.05 * config.SEQ_LEN)]
+    # radii = [2000, 4000]
+    radii = [0.001, 0.005, 0.01]
     for r in radii:
         benchmark_search(queries=queries_, search_object=search_object_, radius=r, filename=search_results)
