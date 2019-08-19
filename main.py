@@ -141,6 +141,6 @@ if __name__ == '__main__':
     search_times = f'logs/search_times_{df_}_{depth_}.csv'
     # radii = [int(0.01 * config.SEQ_LEN), int(0.02 * config.SEQ_LEN), int(0.05 * config.SEQ_LEN)]
     # radii = [2000, 4000]
-    radii = [0.001, 0.002]
+    radii = [0.025, 0.05, 0.1]
     for r in radii:
         benchmark_search(queries=queries_, search_object=search_object_, radius=r, filename=search_results)
