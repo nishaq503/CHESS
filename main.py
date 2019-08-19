@@ -95,7 +95,6 @@ def benchmark_search(queries: np.memmap, search_object: Search, radius: float, f
                               f'{one:.6f},{two:.6f},{fraction:.6f},{config.DF_CALLS}\n')
                 outfile.flush()
         number_searched += 1
-        break
         if number_searched >= 30:
             break
     return
@@ -154,7 +153,7 @@ if __name__ == '__main__':
     # integer_zip = f'compressed/integer_encodings_{distance_function_}_{clustering_depth_}.zip'
     # search_object_.compress(metadata_filename, integer_filename, integer_zip)
 
-    search_results = f'logs/flawed_searches_{df_}_{new_depth_}.csv'
+    search_results = f'logs/searches_{df_}_{new_depth_}.csv'
     if not os.path.exists(search_results):
         with open(search_results, 'w') as outfile_:
             outfile_.write('success,radius,search_depth,output_size,number_missed,clusters_searched,'
