@@ -49,7 +49,7 @@ class Cluster:
         self.right: Cluster = right
 
         self.batch_size = config.BATCH_SIZE
-        self.max_depth = config.MAX_DEPTH
+        self.max_depth = max(config.MAX_DEPTH, len(name))
         self.min_points = config.MIN_POINTS
         self.min_radius = config.MIN_RADIUS
         self.should_subsample: bool = len(points) > config.NP_PTS

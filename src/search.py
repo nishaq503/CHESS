@@ -1,7 +1,7 @@
 import os
 import pickle
 import zipfile
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 import numpy as np
 
@@ -45,7 +45,7 @@ class Search:
             )
             self.root.make_tree()
 
-        self.cluster_dict_ = self._get_cluster_dict()
+        self.cluster_dict_: Dict[str: Cluster] = self._get_cluster_dict()
         return
 
     def _get_cluster_dict(self):
@@ -199,14 +199,15 @@ class Search:
 
     def cluster_deeper(self, new_depth: int):
         old_depth = self.cluster_dict_[''].max_depth
-        for name, cluster in self.cluster_dict_.items():
-            cluster.max_depth = new_depth
-            cluster.update(internals_only=True)
+        for i in range(old_depth, new_depth):
+            for name, cluster in self.cluster_dict_.items():
+                cluster.max_depth = i + 1
 
-            if len(cluster.name) == old_depth:
-                cluster.make_tree()
+                if len(cluster.name) == i:
+                    cluster.update(internals_only=True)
+                    cluster.pop()
 
-        self.cluster_dict_ = self._get_cluster_dict()
+            self.cluster_dict_ = self._get_cluster_dict()
         return
 
     def compress(self, metadata_filename: str, integer_filename: str, integer_zip: str):
