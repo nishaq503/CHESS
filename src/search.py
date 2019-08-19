@@ -172,7 +172,7 @@ class Search:
 
                 line = line.split(',')
                 [center, radius, lfd, is_leaf] = line[2:]
-                name_to_info[line[0]] = [int(center), float(radius), float(lfd), bool(is_leaf)]
+                name_to_info[line[0]] = [int(center), np.float64(radius), float(lfd), bool(is_leaf)]
 
         def build_cluster_tree(name: str) -> Cluster:
             if name in name_to_points:

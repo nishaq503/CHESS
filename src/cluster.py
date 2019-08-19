@@ -17,7 +17,7 @@ class Cluster:
             distance_function: str,
             name: str,
             center: int = None,
-            radius: float = None,
+            radius: np.float64 = None,
             lfd: float = None,
             parent_lfd: float = 0.0,
             left=None,
