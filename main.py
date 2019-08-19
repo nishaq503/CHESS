@@ -89,8 +89,9 @@ def benchmark_search(queries: np.memmap, search_object: Search, radius: float, f
             results, num_clusters, fraction = search_object.clustered_search(sample, radius, search_depth)
             two = time() - start
             success = set(linear_results) == set(results)
+            num_missed = len(linear_results) - len(results)
             with open(filename, 'a') as outfile:
-                outfile.write(f'{success},{radius},{search_depth},{len(results)},{num_clusters},'
+                outfile.write(f'{success},{radius},{search_depth},{len(results)},{num_missed},{num_clusters},'
                               f'{one:.6f},{two:.6f},{fraction:.6f},{config.DF_CALLS}\n')
                 outfile.flush()
         number_searched += 1
@@ -135,7 +136,7 @@ if __name__ == '__main__':
     search_results = f'logs/searches_{df_}_{depth_}.csv'
     if not os.path.exists(search_results):
         with open(search_results, 'w') as outfile_:
-            outfile_.write('success,radius,search_depth,output_size,clusters_searched,'
+            outfile_.write('success,radius,search_depth,output_size,number_missed,clusters_searched,'
                            'linear_time,clustered_time,fraction_searched,df_calls\n')
 
     search_times = f'logs/search_times_{df_}_{depth_}.csv'
