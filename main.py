@@ -83,7 +83,7 @@ def benchmark_search(queries: np.memmap, search_object: Search, radius: float, f
         linear_results = search_object.linear_search(sample, radius)
         one = time() - start
 
-        for search_depth in range(4, config.MAX_DEPTH + 1, 1):
+        for search_depth in range(config.MAX_DEPTH, config.MAX_DEPTH + 1, 1):
             config.DF_CALLS = 0
             start = time()
             results, num_clusters, fraction = search_object.clustered_search(sample, radius, search_depth)
@@ -100,10 +100,31 @@ def benchmark_search(queries: np.memmap, search_object: Search, radius: float, f
     return
 
 
+def deepen_clustering(search_object: Search, new_depth: int, filename: str) -> Search:
+    old_depth = search_object.root.max_depth
+    df = search_object.distance_function
+
+    start = time()
+    search_object.cluster_deeper(new_depth=new_depth)
+    end = time()
+
+    with open(filename, 'a') as outfile:
+        outfile.write(f'{old_depth},{new_depth},{end - start:.6f},{df}\n')
+
+    names_file = f'logs/names_{df}_{new_depth}_{config.LFD_LIMIT}.csv'
+    search_object.print_names(filename=names_file)
+
+    info_file = f'logs/info_{df}_{new_depth}_{config.LFD_LIMIT}.csv'
+    search_object.print_info(filename=info_file)
+
+    return search_object
+
+
 if __name__ == '__main__':
     np.random.seed(1234)
     df_ = 'cos'
-    depth_ = 20
+    old_depth_ = 20
+    new_depth_ = 30
 
     data_: np.memmap = read_data(filename=config.DATA_FILE,
                                  num_rows=config.NUM_ROWS - 10_000,
@@ -115,33 +136,34 @@ if __name__ == '__main__':
                                     num_dims=config.NUM_DIMS,
                                     dtype='float32')
 
-    config.MAX_DEPTH = depth_
+    config.MAX_DEPTH = old_depth_
 
-    # times_file = f'logs/times.csv'
-    # if not os.path.exists(times_file):
-    #     with open(times_file, 'w') as outfile_:
-    #         outfile_.write(f'depth,time,distance_function\n')
+    times_file = f'logs/new_depths.csv'
+    if not os.path.exists(times_file):
+        with open(times_file, 'w') as outfile_:
+            outfile_.write(f'old_depth,new_depth,time,distance_function\n')
     #
     # for d in [depth_]:  # [4, 5, 6, 7, 8, 9, 10, 15, 20]:
     #     make_clusters(data=data_, df=df_, depth=d, filename=times_file)
     #     break
 
-    search_object_ = read_clusters(data=data_, df=df_, depth=depth_)
+    search_object_ = read_clusters(data=data_, df=df_, depth=old_depth_)
+    search_object_ = deepen_clustering(search_object=search_object_, new_depth=new_depth_, filename=times_file)
 
     # metadata_filename = f'compressed/encoding_metadata_{distance_function_}_{clustering_depth_}.pickle'
     # integer_filename = f'compressed/integer_encodings_{distance_function_}_{clustering_depth_}'
     # integer_zip = f'compressed/integer_encodings_{distance_function_}_{clustering_depth_}.zip'
     # search_object_.compress(metadata_filename, integer_filename, integer_zip)
 
-    search_results = f'logs/searches_{df_}_{depth_}.csv'
-    if not os.path.exists(search_results):
-        with open(search_results, 'w') as outfile_:
-            outfile_.write('success,radius,search_depth,output_size,number_missed,clusters_searched,'
-                           'linear_time,clustered_time,fraction_searched,df_calls\n')
-
-    search_times = f'logs/search_times_{df_}_{depth_}.csv'
-    # radii = [int(0.01 * config.SEQ_LEN), int(0.02 * config.SEQ_LEN), int(0.05 * config.SEQ_LEN)]
-    # radii = [2000, 4000]
-    radii = [0.0025, 0.005, 0.01]
-    for r in radii:
-        benchmark_search(queries=queries_, search_object=search_object_, radius=r, filename=search_results)
+    # search_results = f'logs/searches_{df_}_{depth_}.csv'
+    # if not os.path.exists(search_results):
+    #     with open(search_results, 'w') as outfile_:
+    #         outfile_.write('success,radius,search_depth,output_size,number_missed,clusters_searched,'
+    #                        'linear_time,clustered_time,fraction_searched,df_calls\n')
+    #
+    # search_times = f'logs/search_times_{df_}_{depth_}.csv'
+    # # radii = [int(0.01 * config.SEQ_LEN), int(0.02 * config.SEQ_LEN), int(0.05 * config.SEQ_LEN)]
+    # # radii = [2000, 4000]
+    # radii = [0.0001, 0.0025, 0.005, 0.01]
+    # for r in radii:
+    #     benchmark_search(queries=queries_, search_object=search_object_, radius=r, filename=search_results)

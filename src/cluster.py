@@ -132,14 +132,15 @@ class Cluster:
 
         return 0 if count == 0 else np.log2(len(self.points) / count)
 
-    def update(self) -> None:
+    def update(self, internals_only: bool = False) -> None:
         """ Updates the relevant private variables of the cluster. """
         self._potential_centers: List[int] = self._get_potential_centers()
         self._pairwise_distances: np.ndarray = self._calculate_pairwise_distances()
 
-        self.center: int = self._calculate_center()
-        self.radius: float = self._calculate_radius()
-        self.lfd: float = self._calculate_lfd()
+        if not internals_only:
+            self.center: int = self._calculate_center()
+            self.radius: float = self._calculate_radius()
+            self.lfd: float = self._calculate_lfd()
         return
 
     def can_include(self, query: np.ndarray, radius: float = 0) -> bool:

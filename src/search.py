@@ -197,6 +197,18 @@ class Search:
 
         return build_cluster_tree('')
 
+    def cluster_deeper(self, new_depth: int):
+        old_depth = self.cluster_dict_[''].max_depth
+        for name, cluster in self.cluster_dict_.items():
+            cluster.max_depth = new_depth
+            cluster.update(internals_only=True)
+
+            if len(cluster.name) == old_depth:
+                cluster.make_tree()
+
+        self.cluster_dict_ = self._get_cluster_dict()
+        return
+
     def compress(self, metadata_filename: str, integer_filename: str, integer_zip: str):
         metadata = {}
 
