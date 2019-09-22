@@ -1,20 +1,14 @@
 import time
 
+import imageio
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
+from mpl_toolkits.mplot3d import axes3d,Axes3D
 
 import config
-
-
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-
-import imageio
-from itertools import cycle
-import os
-
 
 
 def read_data(filename: str, num_rows: int, num_dims: int, dtype) -> np.memmap:
@@ -94,14 +88,25 @@ def plot_points(df, colors, fig_name, azimuth_start):
     ax.scatter(d1, d2, d3, c=colors)
     plt.axis('off')
 
+    plot_names = []
     for azimuth in range(azimuth_start, azimuth_start + 30, 5):
         ax.view_init(elev=10., azim=azimuth)
         plt.savefig(f'data/astro_movie/{fig_name}_{azimuth}d.png')
-    return
+        plot_names.append(f'data/astro_movie/{fig_name}_{azimuth}d.png')
+
+    return plot_names
 
 
 def next_azimuth(current_azimuth):
     return (current_azimuth + 30) % 360
+
+
+def append_images_to_gif(image_names, writer, quarter):
+    for name in image_names:
+        image = imageio.imread(name)
+        image = image[quarter: 3 * quarter, quarter + 50: 3 * quarter + 50, :]
+        writer.append_data(image)
+    return
 
 
 def make_astro_gif():
@@ -116,48 +121,45 @@ def make_astro_gif():
     leaf_subset = leaf_names[:100]
     astro_tsne['color'] = 0
 
-    idx = 0
-    azimuth = 0
-    for i, leaf in enumerate(leaf_subset):
-        c = 1
-        colors = [0 for _ in range(astro_tsne.shape[0])]
-        colors = get_color_list(astro_tsne, leaf, c, colors)
-        c += 1
-        plot_points(astro_tsne, colors, f'{idx}', azimuth)
-        azimuth = next_azimuth(azimuth)
-        idx += 1
-        leaf_name = leaf
-        while leaf_name != '':
-            sibling_name = get_sibling(leaf_name)
-            colors = get_color_list(astro_tsne, sibling_name, c, colors)
+    with imageio.get_writer('astro.gif', mode='I') as writer:
+        idx = 0
+        azimuth = 0
+        for i, leaf in enumerate(leaf_subset):
+            c = 1
+            colors = [0 for _ in range(astro_tsne.shape[0])]
+            colors = get_color_list(astro_tsne, leaf, c, colors)
             c += 1
-            plot_points(astro_tsne, colors, f'{idx}', azimuth)
+            plot_names = plot_points(astro_tsne, colors, f'{idx}', azimuth)
             azimuth = next_azimuth(azimuth)
+
+            quarter = np.shape(imageio.imread(plot_names[0]))[0] // 4
+
+            append_images_to_gif(plot_names, writer, quarter)
+            plt.close('all')
+
             idx += 1
-            parent_name = leaf_name[:-1]
-            colors = get_color_list(astro_tsne, sibling_name, c, colors)
-            c += 1
-            plot_points(astro_tsne, colors, f'{idx}', azimuth)
-            azimuth = next_azimuth(azimuth)
-            idx += 1
-            leaf_name = parent_name
+            leaf_name = leaf
+            while leaf_name != '':
+                sibling_name = get_sibling(leaf_name)
+                colors = get_color_list(astro_tsne, sibling_name, c, colors)
+                c += 1
+                plot_names = plot_points(astro_tsne, colors, f'{idx}', azimuth)
+                append_images_to_gif(plot_names, writer, quarter)
+                plt.close('all')
 
-    image_names = [f'data/astro_movie/{i}_{azimuth}d.png'
-                   for i in range(idx)
-                   for azimuth in range(0, 360, 5)]
+                azimuth = next_azimuth(azimuth)
+                idx += 1
+                parent_name = leaf_name[:-1]
+                colors = get_color_list(astro_tsne, sibling_name, c, colors)
+                c += 1
+                plot_names = plot_points(astro_tsne, colors, f'{idx}', azimuth)
+                append_images_to_gif(plot_names, writer, quarter)
+                plt.close('all')
 
-    image_0 = imageio.imread(image_names[0])
-    im_len = np.shape(image_0)[0]
-    quarter = im_len // 4
-
-    image_0 = image_0[quarter: 3 * quarter, quarter + 50: 3 * quarter + 50, :]
-    imageio.imwrite('data/astro_movie/new_0.png', image_0)
-
-    names = os.listdir("data/astro_movie/")
-    names = [f'data/astro_movie/{name}' for name in names]
-    images = [imageio.imread(name) for name in image_names if name in names]
-    images_small = [im[quarter: 3 * quarter, quarter + 50: 3 * quarter + 50, :] for im in images]
-    imageio.mimsave('astro.gif', images_small)
+                azimuth = next_azimuth(azimuth)
+                idx += 1
+                leaf_name = parent_name
+            return
 
 
 if __name__ == '__main__':

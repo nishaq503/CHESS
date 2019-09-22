@@ -14,5 +14,5 @@ plots
 compressed
 movie
 samples
-astro_0.gif astro_1.gif
-mnist.gif mnist_new.gif
+astro_*.gif
+mnist*.gif
