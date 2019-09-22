@@ -161,4 +161,4 @@ def make_astro_gif():
 
 
 if __name__ == '__main__':
-    write_tsne_vector()
+    make_astro_gif()
