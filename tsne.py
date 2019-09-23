@@ -8,8 +8,11 @@ import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from mpl_toolkits.mplot3d import axes3d, Axes3D
-
+from PIL import Image
 import config
+
+
+Image.MAX_IMAGE_PIXELS = None
 
 
 def read_data(filename: str, num_rows: int, num_dims: int, dtype) -> np.memmap:
@@ -83,7 +86,7 @@ def plot_points(df, colors, fig_name, azimuth_start):
     d2 = df['tsne_1'].values
     d3 = df['tsne_2'].values
     plt.clf()
-    fig = plt.figure(figsize=(100, 100))
+    fig = plt.figure(figsize=(80, 80))
     ax = fig.gca(projection='3d')
 
     ax.scatter(d1, d2, d3, c=colors)
@@ -92,10 +95,19 @@ def plot_points(df, colors, fig_name, azimuth_start):
     plot_names = []
     for azimuth in range(azimuth_start, azimuth_start + 30, 5):
         ax.view_init(elev=10., azim=azimuth)
-        plt.savefig(f'data/astro_movie/{fig_name}_{azimuth}d.png')
-        plot_names.append(f'data/astro_movie/{fig_name}_{azimuth}d.png')
 
-    return plot_names
+        file_name = f'data/astro_movie/{fig_name}.jpg'
+        plt.savefig(fname=file_name, quality=95, optimize=True)
+
+        image = imageio.imread(file_name)
+        quarter = np.shape(image)[0] // 4
+        image = image[quarter: 3 * quarter, quarter + 50: 3 * quarter + 50, :]
+        imageio.imwrite(file_name, image)
+
+        plot_names.append(file_name)
+        fig_name += 1
+
+    return plot_names, fig_name
 
 
 def next_azimuth(current_azimuth):
@@ -120,48 +132,48 @@ def make_astro_gif():
 
     leaf_names = list(set(list(astro_tsne['name'].values)))
     np.random.shuffle(leaf_names)
-    leaf_subset = leaf_names[:100]
+    leaf_subset = leaf_names[:20]
     astro_tsne['color'] = 0
 
-    with imageio.get_writer('astro.gif', mode='I') as writer:
-        idx = 0
-        azimuth = 0
-        for i, leaf in enumerate(leaf_subset):
-            c = 1
-            colors = [0 for _ in range(astro_tsne.shape[0])]
-            colors = get_color_list(astro_tsne, leaf, c, colors)
+    # with imageio.get_writer('astro.gif', mode='I') as writer:
+    idx = 0
+    azimuth = 0
+    fig_name = 0
+    for i, leaf in enumerate(leaf_subset):
+        c = 1
+        colors = [0 for _ in range(astro_tsne.shape[0])]
+        colors = get_color_list(astro_tsne, leaf, c, colors)
+        c += 1
+        plot_names, fig_name = plot_points(astro_tsne, colors, fig_name, azimuth)
+        azimuth = next_azimuth(azimuth)
+
+        # quarter = np.shape(imageio.imread(plot_names[0]))[0] // 4
+
+        # append_images_to_gif(plot_names, quarter)
+        plt.close('all')
+
+        idx += 1
+        leaf_name = leaf
+        while leaf_name != '':
+            sibling_name = get_sibling(leaf_name)
+            colors = get_color_list(astro_tsne, sibling_name, c, colors)
             c += 1
-            plot_names = plot_points(astro_tsne, colors, f'{idx}', azimuth)
-            azimuth = next_azimuth(azimuth)
-
-            quarter = np.shape(imageio.imread(plot_names[0]))[0] // 4
-
-            append_images_to_gif(plot_names, writer, quarter)
+            plot_names, fig_name = plot_points(astro_tsne, colors, fig_name, azimuth)
+            # append_images_to_gif(plot_names, quarter)
             plt.close('all')
 
+            azimuth = next_azimuth(azimuth)
             idx += 1
-            leaf_name = leaf
-            while leaf_name != '':
-                sibling_name = get_sibling(leaf_name)
-                colors = get_color_list(astro_tsne, sibling_name, c, colors)
-                c += 1
-                plot_names = plot_points(astro_tsne, colors, f'{idx}', azimuth)
-                append_images_to_gif(plot_names, writer, quarter)
-                plt.close('all')
+            parent_name = leaf_name[:-1]
+            colors = get_color_list(astro_tsne, sibling_name, c, colors)
+            c += 1
+            plot_names, fig_name = plot_points(astro_tsne, colors, fig_name, azimuth)
+            # append_images_to_gif(plot_names, quarter)
+            plt.close('all')
 
-                azimuth = next_azimuth(azimuth)
-                idx += 1
-                parent_name = leaf_name[:-1]
-                colors = get_color_list(astro_tsne, sibling_name, c, colors)
-                c += 1
-                plot_names = plot_points(astro_tsne, colors, f'{idx}', azimuth)
-                append_images_to_gif(plot_names, writer, quarter)
-                plt.close('all')
-
-                azimuth = next_azimuth(azimuth)
-                idx += 1
-                leaf_name = parent_name
-            return
+            azimuth = next_azimuth(azimuth)
+            idx += 1
+            leaf_name = parent_name
 
 
 if __name__ == '__main__':
