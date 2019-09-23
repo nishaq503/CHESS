@@ -1,4 +1,5 @@
 import time
+import os
 
 import imageio
 import matplotlib.pyplot as plt
@@ -6,7 +7,7 @@ import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
-from mpl_toolkits.mplot3d import axes3d,Axes3D
+from mpl_toolkits.mplot3d import axes3d, Axes3D
 
 import config
 
@@ -106,6 +107,7 @@ def append_images_to_gif(image_names, writer, quarter):
         image = imageio.imread(name)
         image = image[quarter: 3 * quarter, quarter + 50: 3 * quarter + 50, :]
         writer.append_data(image)
+    [os.remove(name) for name in image_names]
     return
 
 
