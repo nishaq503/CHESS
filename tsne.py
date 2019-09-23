@@ -1,16 +1,17 @@
 import time
-import os
 
+import cv2
 import imageio
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
 from mpl_toolkits.mplot3d import axes3d, Axes3D
 from PIL import Image
-import config
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+from tqdm import tqdm
 
+import config
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -114,15 +115,7 @@ def next_azimuth(current_azimuth):
     return (current_azimuth + 30) % 360
 
 
-def append_images_to_gif(image_names, writer):
-    for name in image_names:
-        image = imageio.imread(name)
-        writer.append_data(image)
-    [os.remove(name) for name in image_names]
-    return
-
-
-def make_astro_gif():
+def write_astro_plots():
     astro_tsne = pd.read_csv('data/tsne_astro.csv',
                              dtype={'tsne_0': float,
                                     'tsne_1': float,
@@ -145,8 +138,6 @@ def make_astro_gif():
             c += 1
             plot_names, fig_name = plot_points(astro_tsne, colors, fig_name, azimuth)
             azimuth = next_azimuth(azimuth)
-
-            # append_images_to_gif(plot_names, writer)
             plt.close('all')
 
             idx += 1
@@ -156,7 +147,6 @@ def make_astro_gif():
                 colors = get_color_list(astro_tsne, sibling_name, c, colors)
                 c += 1
                 plot_names, fig_name = plot_points(astro_tsne, colors, fig_name, azimuth)
-                # append_images_to_gif(plot_names, writer)
                 plt.close('all')
 
                 azimuth = next_azimuth(azimuth)
@@ -165,7 +155,6 @@ def make_astro_gif():
                 colors = get_color_list(astro_tsne, sibling_name, c, colors)
                 c += 1
                 plot_names, fig_name = plot_points(astro_tsne, colors, fig_name, azimuth)
-                # append_images_to_gif(plot_names, writer)
                 plt.close('all')
 
                 azimuth = next_azimuth(azimuth)
@@ -173,5 +162,23 @@ def make_astro_gif():
                 leaf_name = parent_name
 
 
+def make_gif():
+    num_images = 4536
+    fps = 15
+    image_names = [f'data/astro_movie/{i}.jpg' for i in range(num_images)]
+    video_name = f'data/nishaq/astro_movie_{fps}fps.avi'
+    width = 4000
+    height = 4000
+    fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
+    video = cv2.VideoWriter(video_name, fourcc, fps, (width, height))
+
+    for name in tqdm(image_names):
+        image = cv2.imread(name)
+        video.write(image)
+        cv2.destroyAllWindows()
+    video.release()
+    return
+
+
 if __name__ == '__main__':
-    make_astro_gif()
+    make_gif()
