@@ -100,7 +100,7 @@ def benchmark_search(queries: np.memmap, search_object: Search, radius: float, f
     return
 
 
-def deepen_clustering(search_object: Search, new_depth: int, filename: str) -> Search:
+def benchmark_deeper_clustering(search_object: Search, new_depth: int, filename: str) -> Search:
     old_depth = search_object.root.max_depth
     df = search_object.distance_function
 
@@ -117,6 +117,20 @@ def deepen_clustering(search_object: Search, new_depth: int, filename: str) -> S
 
         info_file = f'logs/info_{df}_{i + 1}_{config.LFD_LIMIT}.csv'
         search_object.print_info(filename=info_file)
+
+    return search_object
+
+
+def deepen_clustering(search_object: Search, new_depth: int, filename: str) -> Search:
+    df = search_object.distance_function
+
+    search_object.cluster_deeper(new_depth=new_depth)
+
+    names_file = f'logs/names_{df}_{new_depth}_{config.LFD_LIMIT}.csv'
+    search_object.print_names(filename=names_file)
+
+    info_file = f'logs/info_{df}_{new_depth}_{config.LFD_LIMIT}.csv'
+    search_object.print_info(filename=info_file)
 
     return search_object
 
@@ -146,7 +160,7 @@ if __name__ == '__main__':
 
     make_clusters(data=data_, df=df_, depth=old_depth_, filename=times_file)
     search_object_ = read_clusters(data=data_, df=df_, depth=old_depth_)
-    search_object_ = deepen_clustering(search_object=search_object_, new_depth=new_depth_, filename=times_file)
+    search_object_ = benchmark_deeper_clustering(search_object=search_object_, new_depth=new_depth_, filename=times_file)
 
     # metadata_filename = f'compressed/encoding_metadata_{distance_function_}_{clustering_depth_}.pickle'
     # integer_filename = f'compressed/integer_encodings_{distance_function_}_{clustering_depth_}'

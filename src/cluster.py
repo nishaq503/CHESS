@@ -162,7 +162,7 @@ class Cluster:
             len(self.points) > self.min_points,
             self.radius > self.min_radius,
             self.depth < self.max_depth,
-            self.lfd < config.LFD_LIMIT or self.lfd > self.parent_lfd,
+            # self.lfd < config.LFD_LIMIT or self.lfd > self.parent_lfd,
         ))
 
     def pop(self) -> None:
