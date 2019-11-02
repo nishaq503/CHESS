@@ -137,19 +137,19 @@ def deepen_clustering(search_object: Search, new_depth: int, filename: str) -> S
 
 if __name__ == '__main__':
     np.random.seed(1234)
-    df_ = 'l2'
+    df_ = 'hamming'
     old_depth_ = 5
     new_depth_ = 100
 
-    data_: np.memmap = read_data(filename=config.DATA_FILE,
-                                 num_rows=config.NUM_ROWS - 10_000,
-                                 num_dims=config.NUM_DIMS,
-                                 dtype='float32')
+    data_: np.memmap = read_data(filename=config.GREENGENES_DATA_LARGE_SAMPLES,
+                                 num_rows=config.LARGE_DATA_LEN,
+                                 num_dims=config.SEQ_LEN,
+                                 dtype=np.int8)
 
-    queries_: np.memmap = read_data(filename=config.SAMPLES_FILE,
+    queries_: np.memmap = read_data(filename=config.GREENGENES_DATA_LARGE_QUERIES,
                                     num_rows=10_000,
-                                    num_dims=config.NUM_DIMS,
-                                    dtype='float32')
+                                    num_dims=config.SEQ_LEN,
+                                    dtype=np.int8)
 
     config.MAX_DEPTH = old_depth_
 
