@@ -27,16 +27,16 @@ def read_data(filename: str, num_rows: int, num_dims: int, dtype) -> np.memmap:
 
 
 def get_data_and_queries(dataset: str):
-    df = 'l2'
-    data = read_data(filename=config.DATA_FILE,
-                     num_rows=config.NUM_ROWS - 10_000,
-                     num_dims=config.NUM_DIMS,
-                     dtype='float32')
-
-    queries = read_data(filename=config.SAMPLES_FILE,
-                        num_rows=10_000,
-                        num_dims=config.NUM_DIMS,
-                        dtype='float32')
+    # df = 'l2'
+    # data = read_data(filename=config.DATA_FILE,
+    #                  num_rows=config.NUM_ROWS - 10_000,
+    #                  num_dims=config.NUM_DIMS,
+    #                  dtype='float32')
+    #
+    # queries = read_data(filename=config.SAMPLES_FILE,
+    #                     num_rows=10_000,
+    #                     num_dims=config.NUM_DIMS,
+    #                     dtype='float32')
 
     if dataset == 'GreenGenes':
         df = 'hamming'
