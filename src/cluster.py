@@ -102,9 +102,9 @@ class Cluster:
             raise ValueError(f'got a problem with cluster {self.name},'
                              f' with {len(self.points)} points which are {self.points}.')
 
-    def _get_batch(self, start):
+    def _get_batch(self, start, poles):
         num_points = min(start + self.batch_size, len(self.points)) - start
-        return np.asarray([self.data[p] for p in self.points[start: start + num_points]])
+        return np.asarray([self.data[p] for p in self.points[start: start + num_points] if p not in poles])
 
     def _calculate_radius(self) -> float:
         """ Calculate the radius of the cluster.
@@ -112,7 +112,7 @@ class Cluster:
         :return: cluster radius.
         """
         if self.should_subsample:
-            return max(max([max(tf_calculate_distance(self.data[self.center], self._get_batch(i), self.df))
+            return max(max([max(tf_calculate_distance(self.data[self.center], self._get_batch(i, {}), self.df))
                             for i in range(0, len(self.points), self.batch_size)]), 0.0)
         else:
             points = np.asarray([self.data[p] for p in self.points])
@@ -127,7 +127,7 @@ class Cluster:
         if self.should_subsample:
             count = sum([sum([1 if d < self.radius / 2 else 0
                               for d in tf_calculate_distance(self.data[self.center],
-                                                             self._get_batch(i),
+                                                             self._get_batch(i, {}),
                                                              self.df)])
                          for i in range(0, len(self.points), self.batch_size)])
         else:
@@ -195,17 +195,14 @@ class Cluster:
 
         if self.should_subsample:
             for i in range(0, len(self.points), self.batch_size):
-                batch = self._get_batch(i)
-                batch = [b for b in batch
-                         if not (b == self.data[left_pole] or b == self.data[right_pole])]
+                batch = self._get_batch(i, {left_pole, right_pole})
                 left_distances = numpy_calculate_distance(self.data[left_pole], batch, self.df)
                 right_distances = numpy_calculate_distance(self.data[right_pole], batch, self.df)
                 [(left_indexes if l < r else right_indexes).append(self.points[i + j])
                  for j, l, r in zip(range(len(batch)), left_distances, right_distances)]
 
         else:
-            points = [self.data[p] for p in self.points
-                      if not (p == self.data[left_pole] or p == self.data[right_pole])]
+            points = [self.data[p] for p in self.points if p not in {left_pole, right_pole}]
             left_distances = numpy_calculate_distance(self.data[left_pole], points, self.df)
             right_distances = numpy_calculate_distance(self.data[right_pole], points, self.df)
 
