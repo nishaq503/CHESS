@@ -170,8 +170,8 @@ def deepen_clustering(search_object: Search, new_depth: int) -> Search:
 if __name__ == '__main__':
     np.random.seed(1234)
 
-    old_depth_ = 5
-    new_depth_ = 7
+    old_depth_ = 7
+    new_depth_ = 100
     config.MAX_DEPTH = old_depth_
 
     df_, data_, queries_ = get_data_and_queries(dataset='astro_cos')
@@ -181,12 +181,12 @@ if __name__ == '__main__':
         with open(times_file, 'w') as outfile_:
             outfile_.write(f'old_depth,new_depth,time,distance_function\n')
 
-    make_clusters(data=data_, df=df_, depth=old_depth_, filename=times_file)
+    # make_clusters(data=data_, df=df_, depth=old_depth_, filename=times_file)
     search_object_ = read_clusters(data=data_, df=df_, depth=old_depth_)
-    search_object_ = benchmark_deeper_clustering(search_object=search_object_,
-                                                 new_depth=new_depth_,
-                                                 filename=times_file)
-    # search_object_ = deepen_clustering(search_object_, new_depth_)
+    # search_object_ = benchmark_deeper_clustering(search_object=search_object_,
+    #                                              new_depth=new_depth_,
+    #                                              filename=times_file)
+    search_object_ = deepen_clustering(search_object_, new_depth_)
 
     # metadata_filename = f'compressed/encoding_metadata_{distance_function_}_{clustering_depth_}.pickle'
     # integer_filename = f'compressed/integer_encodings_{distance_function_}_{clustering_depth_}'
