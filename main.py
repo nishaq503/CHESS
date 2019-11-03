@@ -110,15 +110,18 @@ def benchmark_search(queries: np.memmap, search_object: Search, radius: float, f
         linear_results = search_object.linear_search(sample, radius)
         one = time() - start
 
-        for search_depth in range(10, config.MAX_DEPTH + 1, 5):
+        search_depths = list(range(0, 10, 2))
+        # search_depths.extend([i for i in range(10, config.MAX_DEPTH + 1, 5)])
+
+        for d in search_depths:
             config.DF_CALLS = 0
             start = time()
-            results, num_clusters, fraction = search_object.clustered_search(sample, radius, search_depth)
+            results, num_clusters, fraction = search_object.clustered_search(sample, radius, d)
             two = time() - start
             success = set(linear_results) == set(results)
             num_missed = len(linear_results) - len(results)
             with open(filename, 'a') as outfile:
-                outfile.write(f'{success},{radius},{search_depth},{len(results)},{num_missed},{num_clusters},'
+                outfile.write(f'{success},{radius},{d},{len(results)},{num_missed},{num_clusters},'
                               f'{one:.6f},{two:.6f},{fraction:.6f},{config.DF_CALLS}\n')
                 outfile.flush()
         number_searched += 1
