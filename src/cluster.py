@@ -94,8 +94,12 @@ class Cluster:
 
         :return: index of center of cluster.
         """
-        sum_distances = np.sum(self._pairwise_distances, axis=1)
-        return self._potential_centers[int(np.argmin(sum_distances))]
+        try:
+            sum_distances = np.sum(self._pairwise_distances, axis=1)
+            return self._potential_centers[int(np.argmin(sum_distances))]
+        except np.AxisError:
+            raise ValueError(f'got a problem with cluster {self.name},'
+                             f' with {len(self.points)} points which are {self.points}.')
 
     def _get_batch(self, start):
         num_points = min(start + self.batch_size, len(self.points)) - start
