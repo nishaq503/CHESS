@@ -191,18 +191,19 @@ class Cluster:
         left_pole = self._potential_centers[max_col]
         right_pole = self._potential_centers[max_row]
 
-        left_indexes, right_indexes = [], []
+        left_indexes, right_indexes = [left_pole], [right_pole]
 
         if self.should_subsample:
             for i in range(0, len(self.points), self.batch_size):
                 batch = self._get_batch(i)
+                batch = [b for b in batch if b not in [left_pole, right_pole]]
                 left_distances = numpy_calculate_distance(self.data[left_pole], batch, self.df)
                 right_distances = numpy_calculate_distance(self.data[right_pole], batch, self.df)
                 [(left_indexes if l < r else right_indexes).append(self.points[i + j])
                  for j, l, r in zip(range(len(batch)), left_distances, right_distances)]
 
         else:
-            points = [self.data[p] for p in self.points]
+            points = [self.data[p] for p in self.points if p not in [left_pole, right_pole]]
             left_distances = numpy_calculate_distance(self.data[left_pole], points, self.df)
             right_distances = numpy_calculate_distance(self.data[right_pole], points, self.df)
 
