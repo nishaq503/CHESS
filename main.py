@@ -165,8 +165,8 @@ def deepen_clustering(search_object: Search, new_depth: int) -> Search:
 if __name__ == '__main__':
     np.random.seed(1234)
 
-    old_depth_ = 28
-    new_depth_ = 30
+    old_depth_ = 30
+    new_depth_ = 100
     config.MAX_DEPTH = old_depth_
 
     df_, data_, queries_ = get_data_and_queries(dataset='GreenGenes')
