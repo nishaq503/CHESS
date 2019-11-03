@@ -57,12 +57,13 @@ class Cluster:
         self._potential_centers = None
         self._pairwise_distances = None
 
-        if reading:
-            self.center: int = center
-            self.radius: float = radius
-            self.lfd: float = lfd
-        else:
-            self.update()
+        if len(self.points) > 0:
+            if reading:
+                self.center: int = center
+                self.radius: float = radius
+                self.lfd: float = lfd
+            else:
+                self.update()
 
     def _get_potential_centers(self) -> List[int]:
         """ If the cluster contains too many points, subsample square_root as many points as potential centers.
