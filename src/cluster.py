@@ -57,12 +57,13 @@ class Cluster:
         self._potential_centers = None
         self._pairwise_distances = None
 
-        if reading:
-            self.center: int = center
-            self.radius: float = radius
-            self.lfd: float = lfd
-        else:
-            self.update()
+        if len(self.points) > 0:
+            if reading:
+                self.center: int = center
+                self.radius: float = radius
+                self.lfd: float = lfd
+            else:
+                self.update()
 
     def _get_potential_centers(self) -> List[int]:
         """ If the cluster contains too many points, subsample square_root as many points as potential centers.
@@ -94,12 +95,16 @@ class Cluster:
 
         :return: index of center of cluster.
         """
-        sum_distances = np.sum(self._pairwise_distances, axis=1)
-        return self._potential_centers[int(np.argmin(sum_distances))]
+        try:
+            sum_distances = np.sum(self._pairwise_distances, axis=1)
+            return self._potential_centers[int(np.argmin(sum_distances))]
+        except np.AxisError:
+            raise ValueError(f'got a problem with cluster {self.name},'
+                             f' with {len(self.points)} points which are {self.points}.')
 
-    def _get_batch(self, start):
+    def _get_batch(self, start, poles):
         num_points = min(start + self.batch_size, len(self.points)) - start
-        return np.asarray([self.data[p] for p in self.points[start: start + num_points]])
+        return np.asarray([self.data[p] for p in self.points[start: start + num_points] if p not in poles])
 
     def _calculate_radius(self) -> float:
         """ Calculate the radius of the cluster.
@@ -107,7 +112,7 @@ class Cluster:
         :return: cluster radius.
         """
         if self.should_subsample:
-            return max(max([max(tf_calculate_distance(self.data[self.center], self._get_batch(i), self.df))
+            return max(max([max(tf_calculate_distance(self.data[self.center], self._get_batch(i, {}), self.df))
                             for i in range(0, len(self.points), self.batch_size)]), 0.0)
         else:
             points = np.asarray([self.data[p] for p in self.points])
@@ -122,7 +127,7 @@ class Cluster:
         if self.should_subsample:
             count = sum([sum([1 if d < self.radius / 2 else 0
                               for d in tf_calculate_distance(self.data[self.center],
-                                                             self._get_batch(i),
+                                                             self._get_batch(i, {}),
                                                              self.df)])
                          for i in range(0, len(self.points), self.batch_size)])
         else:
@@ -186,18 +191,18 @@ class Cluster:
         left_pole = self._potential_centers[max_col]
         right_pole = self._potential_centers[max_row]
 
-        left_indexes, right_indexes = [], []
+        left_indexes, right_indexes = [left_pole], [right_pole]
 
         if self.should_subsample:
             for i in range(0, len(self.points), self.batch_size):
-                batch = self._get_batch(i)
+                batch = self._get_batch(i, {left_pole, right_pole})
                 left_distances = numpy_calculate_distance(self.data[left_pole], batch, self.df)
                 right_distances = numpy_calculate_distance(self.data[right_pole], batch, self.df)
                 [(left_indexes if l < r else right_indexes).append(self.points[i + j])
                  for j, l, r in zip(range(len(batch)), left_distances, right_distances)]
 
         else:
-            points = [self.data[p] for p in self.points]
+            points = [self.data[p] for p in self.points if p not in {left_pole, right_pole}]
             left_distances = numpy_calculate_distance(self.data[left_pole], points, self.df)
             right_distances = numpy_calculate_distance(self.data[right_pole], points, self.df)
 

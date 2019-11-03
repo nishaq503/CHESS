@@ -8,15 +8,15 @@ from src.utils import numpy_calculate_distance
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
-def check_hamming(df: str, batch: bool = False):
-    a = np.asarray([1, 2, 3], dtype=np.int8)
-    distances = numpy_calculate_distance(a, a, df)
-    print(distances)
+def calculate_center():
+    """ Calculate the geometric median of the potential centers. This is the center of the cluster.
 
-    return
+    :return: index of center of cluster.
+    """
+    pairwise_distances = np.asarray([0, 1, 2])
+    print(pairwise_distances.ndim)
+    return np.sum(pairwise_distances)
 
 
 if __name__ == '__main__':
-    # check_df('l2')
-    check_hamming('hamming')
-    # check_hamming('hamming', batch=True)
+    print(calculate_center())

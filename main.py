@@ -27,16 +27,16 @@ def read_data(filename: str, num_rows: int, num_dims: int, dtype) -> np.memmap:
 
 
 def get_data_and_queries(dataset: str):
-    df = 'l2'
-    data = read_data(filename=config.DATA_FILE,
-                     num_rows=config.NUM_ROWS - 10_000,
-                     num_dims=config.NUM_DIMS,
-                     dtype='float32')
-
-    queries = read_data(filename=config.SAMPLES_FILE,
-                        num_rows=10_000,
-                        num_dims=config.NUM_DIMS,
-                        dtype='float32')
+    # df = 'l2'
+    # data = read_data(filename=config.DATA_FILE,
+    #                  num_rows=config.NUM_ROWS - 10_000,
+    #                  num_dims=config.NUM_DIMS,
+    #                  dtype='float32')
+    #
+    # queries = read_data(filename=config.SAMPLES_FILE,
+    #                     num_rows=10_000,
+    #                     num_dims=config.NUM_DIMS,
+    #                     dtype='float32')
 
     if dataset == 'GreenGenes':
         df = 'hamming'
@@ -168,11 +168,11 @@ def deepen_clustering(search_object: Search, new_depth: int) -> Search:
 if __name__ == '__main__':
     np.random.seed(1234)
 
-    old_depth_ = 100
+    old_depth_ = 30
     new_depth_ = 100
     config.MAX_DEPTH = old_depth_
 
-    df_, data_, queries_ = get_data_and_queries('astro')
+    df_, data_, queries_ = get_data_and_queries(dataset='GreenGenes')
 
     times_file = f'logs/times.csv'
     if not os.path.exists(times_file):
@@ -181,25 +181,25 @@ if __name__ == '__main__':
 
     # make_clusters(data=data_, df=df_, depth=old_depth_, filename=times_file)
     search_object_ = read_clusters(data=data_, df=df_, depth=old_depth_)
-    # search_object_ = benchmark_deeper_clustering(search_object=search_object_,
-    #                                              new_depth=new_depth_, filename=times_file)
+    search_object_ = benchmark_deeper_clustering(search_object=search_object_,
+                                                 new_depth=new_depth_, filename=times_file)
 
     # metadata_filename = f'compressed/encoding_metadata_{distance_function_}_{clustering_depth_}.pickle'
     # integer_filename = f'compressed/integer_encodings_{distance_function_}_{clustering_depth_}'
     # integer_zip = f'compressed/integer_encodings_{distance_function_}_{clustering_depth_}.zip'
     # search_object_.compress(metadata_filename, integer_filename, integer_zip)
 
-    search_results = f'logs/searches_{df_}_{new_depth_}.csv'
-    if not os.path.exists(search_results):
-        with open(search_results, 'w') as outfile_:
-            outfile_.write('success,radius,search_depth,output_size,number_missed,clusters_searched,'
-                           'linear_time,clustered_time,fraction_searched,df_calls\n')
-
-    # search_times = f'logs/search_times_{df_}_{new_depth_}.csv'
-    radii = {
-        'hamming': [int(0.001 * config.SEQ_LEN), int(0.01 * config.SEQ_LEN), int(0.02 * config.SEQ_LEN)],
-        'l2': [2000, 4000],
-        'cos': [0.0025, 0.005, 0.01],
-    }
-    for r in radii[df_]:
-        benchmark_search(queries=queries_, search_object=search_object_, radius=r, filename=search_results)
+    # search_results = f'logs/searches_{df_}_{new_depth_}.csv'
+    # if not os.path.exists(search_results):
+    #     with open(search_results, 'w') as outfile_:
+    #         outfile_.write('success,radius,search_depth,output_size,number_missed,clusters_searched,'
+    #                        'linear_time,clustered_time,fraction_searched,df_calls\n')
+    #
+    # # search_times = f'logs/search_times_{df_}_{new_depth_}.csv'
+    # radii = {
+    #     'hamming': [int(0.001 * config.SEQ_LEN), int(0.01 * config.SEQ_LEN), int(0.02 * config.SEQ_LEN)],
+    #     'l2': [2000, 4000],
+    #     'cos': [0.0025, 0.005, 0.01],
+    # }
+    # for r in radii[df_]:
+    #     benchmark_search(queries=queries_, search_object=search_object_, radius=r, filename=search_results)
