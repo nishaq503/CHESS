@@ -62,6 +62,10 @@ class Cluster:
                 self.center: int = center
                 self.radius: float = radius
                 self.lfd: float = lfd
+            elif len(self.points) == 1:
+                self.center: int = self.points[0]
+                self.radius: float = 0.0
+                self.lfd: float = 0.0
             else:
                 self.update()
 

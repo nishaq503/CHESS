@@ -180,7 +180,7 @@ def deepen_clustering(search_object: Search, new_depth: int) -> Search:
 if __name__ == '__main__':
     np.random.seed(1234)
 
-    old_depth_ = 5
+    old_depth_ = 24
     new_depth_ = 100
     config.MAX_DEPTH = old_depth_
 
