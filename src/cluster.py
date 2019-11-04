@@ -42,7 +42,7 @@ class Cluster:
         self.depth: int = len(self.name)
 
         self.data: np.memmap = data
-        self.points: List[int] = points
+        self.points: List[int] = list(set(points))
         self.df: str = distance_function
         self.parent_lfd: float = parent_lfd
         self.left: Cluster = left
