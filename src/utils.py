@@ -190,7 +190,10 @@ def numpy_calculate_distance(a: np.array, b: np.array, df: str, logfile: str = N
         squeeze_b = True
 
     config.DF_CALLS += np.shape(a)[0] * np.shape(b)[0]
-    distances = distance(a, b)
+    try:
+        distances = distance(a, b)
+    except:
+        raise ValueError(f'had a problem with arrays {a.shape} and {b.shape}.\na:\n{a}\n b:\n{b}')
 
     if logfile:
         with open(logfile, 'a') as outfile:
