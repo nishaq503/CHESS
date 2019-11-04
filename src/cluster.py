@@ -194,12 +194,13 @@ class Cluster:
 
         left_pole = self._potential_centers[max_col]
         right_pole = self._potential_centers[max_row]
+        poles = {left_pole, right_pole}
 
         left_indexes, right_indexes = [left_pole], [right_pole]
 
         if self.should_subsample:
             for i in range(0, len(self.points), self.batch_size):
-                batch = self._get_batch(i, {left_pole, right_pole})
+                batch = self._get_batch(i, poles)
                 if len(batch) == 0:
                     raise ValueError(f'got batch of len 0 in cluster {self.name}. '
                                      f'Had {len(self.points)} which are {self.points}')
@@ -209,10 +210,11 @@ class Cluster:
                  for j, l, r in zip(range(len(batch)), left_distances, right_distances)]
 
         else:
-            points = [self.data[p] for p in self.points if p not in {left_pole, right_pole}]
+            points = [self.data[p] for p in self.points if p not in poles]
             if len(points) == 0:
                 raise ValueError(f'got points of len 0 in cluster {self.name}. '
-                                 f'Had {len(self.points)} which are {self.points}')
+                                 f'Had {len(self.points)} which are {self.points}, '
+                                 f'Poles were {poles}.')
             left_distances = numpy_calculate_distance(self.data[left_pole], points, self.df)
             right_distances = numpy_calculate_distance(self.data[right_pole], points, self.df)
 
