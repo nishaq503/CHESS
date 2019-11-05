@@ -122,22 +122,23 @@ def benchmark_search(queries: np.memmap, search_object: Search, radius: float, f
         linear_results = search_object.linear_search(sample, radius)
         one = time() - start
 
-        search_depths = list(range(0, 10, 2))
+        # search_depths = list(range(0, 10, 2))
         # search_depths.extend([i for i in range(10, config.MAX_DEPTH + 1, 5)])
+        search_depths = [50]
 
         for d in search_depths:
             config.DF_CALLS = 0
             start = time()
             results, num_clusters, fraction = search_object.clustered_search(sample, radius, d)
             two = time() - start
-            success = set(linear_results) == set(results)
+            success_rate = (len(set(results)) / len(set(linear_results)))
             num_missed = len(linear_results) - len(results)
             with open(filename, 'a') as outfile:
-                outfile.write(f'{success},{radius},{d},{len(results)},{num_missed},{num_clusters},'
+                outfile.write(f'{success_rate},{radius},{d},{len(results)},{num_missed},{num_clusters},'
                               f'{one:.6f},{two:.6f},{fraction:.6f},{config.DF_CALLS}\n')
                 outfile.flush()
         number_searched += 1
-        if number_searched >= 30:
+        if number_searched >= 5:
             break
     return
 
@@ -180,8 +181,8 @@ def deepen_clustering(search_object: Search, new_depth: int) -> Search:
 if __name__ == '__main__':
     np.random.seed(1234)
 
-    old_depth_ = 24
-    new_depth_ = 100
+    old_depth_ = 50
+    new_depth_ = 50
     config.MAX_DEPTH = old_depth_
 
     df_, data_, queries_ = get_data_and_queries(dataset='GreenGenes')
@@ -193,9 +194,9 @@ if __name__ == '__main__':
 
     # make_clusters(data=data_, df=df_, depth=old_depth_, filename=times_file)
     search_object_ = read_clusters(data=data_, df=df_, depth=old_depth_)
-    search_object_ = benchmark_deeper_clustering(search_object=search_object_,
-                                                 new_depth=new_depth_,
-                                                 filename=times_file)
+    # search_object_ = benchmark_deeper_clustering(search_object=search_object_,
+    #                                              new_depth=new_depth_,
+    #                                              filename=times_file)
     # search_object_ = deepen_clustering(search_object_, new_depth_)
 
     # metadata_filename = f'compressed/encoding_metadata_{distance_function_}_{clustering_depth_}.pickle'
@@ -203,17 +204,17 @@ if __name__ == '__main__':
     # integer_zip = f'compressed/integer_encodings_{distance_function_}_{clustering_depth_}.zip'
     # search_object_.compress(metadata_filename, integer_filename, integer_zip)
 
-    # search_results = f'logs/searches_{df_}_{new_depth_}.csv'
-    # if not os.path.exists(search_results):
-    #     with open(search_results, 'w') as outfile_:
-    #         outfile_.write('success,radius,search_depth,output_size,number_missed,clusters_searched,'
-    #                        'linear_time,clustered_time,fraction_searched,df_calls\n')
-    #
-    # # search_times = f'logs/search_times_{df_}_{new_depth_}.csv'
-    # radii = {
-    #     'hamming': [int(0.001 * config.SEQ_LEN), int(0.01 * config.SEQ_LEN), int(0.02 * config.SEQ_LEN)],
-    #     'l2': [2000, 4000],
-    #     'cos': [0.0025, 0.005, 0.01],
-    # }
-    # for r in radii[df_]:
-    #     benchmark_search(queries=queries_, search_object=search_object_, radius=r, filename=search_results)
+    search_results = f'logs/searches_{df_}_{new_depth_}.csv'
+    if not os.path.exists(search_results):
+        with open(search_results, 'w') as outfile_:
+            outfile_.write('success,radius,search_depth,output_size,number_missed,clusters_searched,'
+                           'linear_time,clustered_time,fraction_searched,df_calls\n')
+
+    search_times = f'logs/search_times_{df_}_{new_depth_}.csv'
+    radii = {
+        'hamming': [int(0.01 * config.SEQ_LEN), int(0.02 * config.SEQ_LEN), int(0.05 * config.SEQ_LEN)],
+        'l2': [2000, 4000],
+        'cos': [0.0025, 0.005, 0.01],
+    }
+    for r in radii[df_]:
+        benchmark_search(queries=queries_, search_object=search_object_, radius=r, filename=search_results)
