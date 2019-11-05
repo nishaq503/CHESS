@@ -122,9 +122,9 @@ def benchmark_search(queries: np.memmap, search_object: Search, radius: float, f
         linear_results = search_object.linear_search(sample, radius)
         one = time() - start
 
-        search_depths = list(range(0, 10, 2))
-        search_depths.extend([i for i in range(10, config.MAX_DEPTH + 1, 5)])
-        # search_depths = [50]
+        # search_depths = list(range(0, 10, 2))
+        search_depths = []
+        search_depths.extend([i for i in range(0, config.MAX_DEPTH + 1, 2)])
 
         for d in search_depths:
             config.DF_CALLS = 0
@@ -138,7 +138,7 @@ def benchmark_search(queries: np.memmap, search_object: Search, radius: float, f
                               f'{one:.6f},{two:.6f},{fraction:.6f},{config.DF_CALLS}\n')
                 outfile.flush()
         number_searched += 1
-        if number_searched >= 5:
+        if number_searched >= 10:
             break
     return
 
@@ -181,11 +181,11 @@ def deepen_clustering(search_object: Search, new_depth: int) -> Search:
 if __name__ == '__main__':
     np.random.seed(1234)
 
-    old_depth_ = 9
+    old_depth_ = 50
     new_depth_ = 50
     config.MAX_DEPTH = old_depth_
 
-    df_, data_, queries_ = get_data_and_queries(dataset='GreenGenes')
+    df_, data_, queries_ = get_data_and_queries(dataset='astro_cos')
 
     times_file = f'logs/times.csv'
     if not os.path.exists(times_file):
@@ -194,9 +194,9 @@ if __name__ == '__main__':
 
     # make_clusters(data=data_, df=df_, depth=old_depth_, filename=times_file)
     search_object_ = read_clusters(data=data_, df=df_, depth=old_depth_)
-    search_object_ = benchmark_deeper_clustering(search_object=search_object_,
-                                                 new_depth=new_depth_,
-                                                 filename=times_file)
+    # search_object_ = benchmark_deeper_clustering(search_object=search_object_,
+    #                                              new_depth=new_depth_,
+    #                                              filename=times_file)
     # search_object_ = deepen_clustering(search_object_, new_depth_)
 
     # metadata_filename = f'compressed/encoding_metadata_{distance_function_}_{clustering_depth_}.pickle'
