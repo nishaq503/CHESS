@@ -15,18 +15,18 @@ GREENGENES_FASTA_SMALL = 'data/GreenGenes/43_000.fasta'
 GREENGENES_DATA_SMALL_SAMPLES = 'data/GreenGenes/43_000_samples.memmap'
 GREENGENES_DATA_SMALL_QUERIES = 'data/GreenGenes/43_000_queries.memmap'
 
-# GREENGENES_FASTA_MID = 'data/GreenGenes/108_000.fasta'
-# GREENGENES_DATA_MID_SAMPLES = 'data/GreenGenes/108_000_samples.memmap'
-# GREENGENES_DATA_MID_QUERIES = 'data/GreenGenes/108_000_queries.memmap'
+GREENGENES_FASTA_MID = 'data/GreenGenes/108_000.fasta'
+GREENGENES_DATA_MID_SAMPLES = 'data/GreenGenes/108_000_samples.memmap'
+GREENGENES_DATA_MID_QUERIES = 'data/GreenGenes/108_000_queries.memmap'
+
+# GREENGENES_FASTA_LARGE = 'data/GreenGenes/1_mil.fasta'
+# GREENGENES_DATA_LARGE_SAMPLES = 'data/GreenGenes/1_mil_samples.memmap'
+# GREENGENES_DATA_LARGE_QUERIES = 'data/GreenGenes/1_mil_queries.memmap'
 
 # for ark
-GREENGENES_FASTA_MID = '/data/nishaq/GreenGenes/108_000.fasta'
-GREENGENES_DATA_MID_SAMPLES = '/data/nishaq/GreenGenes/108_000_samples.memmap'
-GREENGENES_DATA_MID_QUERIES = '/data/nishaq/GreenGenes/108_000_queries.memmap'
-
-GREENGENES_FASTA_LARGE = 'data/GreenGenes/1_mil.fasta'
-GREENGENES_DATA_LARGE_SAMPLES = 'data/GreenGenes/1_mil_samples.memmap'
-GREENGENES_DATA_LARGE_QUERIES = 'data/GreenGenes/1_mil_queries.memmap'
+GREENGENES_FASTA_LARGE = '/data/nishaq/GreenGenes/1_mil.fasta'
+GREENGENES_DATA_LARGE_SAMPLES = '/data/nishaq/GreenGenes/1_mil_samples.memmap'
+GREENGENES_DATA_LARGE_QUERIES = '/data/nishaq/GreenGenes/1_mil_queries.memmap'
 
 SMALL_DATA_LEN = 32_162 - 1_000
 MID_DATA_LEN = 89_513 - 5_000
