@@ -124,7 +124,7 @@ def benchmark_search(queries: np.memmap, search_object: Search, radius: float, f
 
         # search_depths = list(range(0, 10, 2))
         search_depths = []
-        search_depths.extend([i for i in range(0, config.MAX_DEPTH + 1, 2)])
+        search_depths.extend([i for i in range(0, config.MAX_DEPTH + 1, 5)])
 
         for d in search_depths:
             config.DF_CALLS = 0
