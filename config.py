@@ -24,9 +24,9 @@ GREENGENES_DATA_MID_QUERIES = 'data/GreenGenes/108_000_queries.memmap'
 # GREENGENES_DATA_LARGE_QUERIES = 'data/GreenGenes/1_mil_queries.memmap'
 
 # for ark
-GREENGENES_FASTA_LARGE = '/data/nishaq/GreenGenes/1_mil.fasta'
-GREENGENES_DATA_LARGE_SAMPLES = '/data/nishaq/GreenGenes/1_mil_samples.memmap'
-GREENGENES_DATA_LARGE_QUERIES = '/data/nishaq/GreenGenes/1_mil_queries.memmap'
+GREENGENES_FASTA_LARGE = '/scratch/nishaq/GreenGenes/1_mil.fasta'
+GREENGENES_DATA_LARGE_SAMPLES = '/scratch/nishaq/GreenGenes/1_mil_samples.memmap'
+GREENGENES_DATA_LARGE_QUERIES = '/scratch/nishaq/GreenGenes/1_mil_queries.memmap'
 
 SMALL_DATA_LEN = 32_162 - 1_000
 MID_DATA_LEN = 89_513 - 5_000
