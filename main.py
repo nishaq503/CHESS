@@ -124,14 +124,17 @@ def benchmark_search(queries: np.memmap, search_object: Search, radius: float, f
 
         # search_depths = list(range(0, 10, 2))
         search_depths = []
-        search_depths.extend(list(range(0, config.MAX_DEPTH + 1, 5)))
+        search_depths.extend(list(range(0, config.MAX_DEPTH + 1, 10)))
 
         for d in search_depths:
             config.DF_CALLS = 0
             start = time()
             results, num_clusters, fraction = search_object.clustered_search(sample, radius, d)
             two = time() - start
-            false_negative_rate = 1 - (len(set(results)) / len(set(linear_results)))
+            if len(linear_results) > 0:
+                false_negative_rate = 1 - (len(set(results)) / len(set(linear_results)))
+            else:
+                false_nefative_rate = 2
             num_missed = len(linear_results) - len(results)
             with open(filename, 'a') as outfile:
                 outfile.write(f'{false_negative_rate},{radius},{d},{len(results)},{num_missed},{num_clusters},'
