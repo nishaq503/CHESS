@@ -243,7 +243,10 @@ class Cluster:
             self.depth < globals.MAX_DEPTH,
         ))
 
-    def pop(self):
+    def pop(
+            self,
+            update: bool = False,
+    ):
         """
         Pop this cluster into left and right children.
 
@@ -253,13 +256,15 @@ class Cluster:
             * Treat those two as the left and right poles.
             * Partition the points in this cluster by the pole that the points are closer to.
             * Assign the partitioned points to the left and right child clusters appropriately.
+
+        :param update: weather or not up update internals before popping cluster.
         """
 
         if self.left or self.right or (not self.can_be_popped()):
             return
 
-        center = self.data[self.center]
-        center = np.expand_dims(center, 0)
+        if update:
+            self.update(internals_only=True)
 
         max_pair_index = np.argmax(self._pairwise_distances)
         max_col = max_pair_index // len(self._potential_centers)
