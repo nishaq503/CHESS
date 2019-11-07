@@ -99,7 +99,7 @@ class Search:
             )
             self.root.make_tree()
 
-        self._cluster_dict: Dict[str: Cluster] = self._get_cluster_dict()
+        self.cluster_dict: Dict[str: Cluster] = self._get_cluster_dict()
 
     def _get_cluster_dict(self):
         cluster_dict: Dict[str: Cluster] = {}
@@ -153,6 +153,7 @@ class Search:
             query: np.ndarray,
             radius: float,
             search_depth: int,
+            count_calls: bool = False,
     ) -> Tuple[List[int], int, float]:
         """
         Perform clustered search to required depth.
@@ -160,6 +161,7 @@ class Search:
         :param query: point around which to search.
         :param radius: search radius to use.
         :param search_depth: maximum depth to which to search.
+        :param count_calls: weather or not to count distance calls for benchmarking.
         :return: List of indexes in self.data of hits, number of clusters searched, fraction of dataset searched.
         """
         query = np.expand_dims(query, 0)
@@ -167,14 +169,14 @@ class Search:
         clusters = self.root.search(query, radius, search_depth)
         potential_hits = [p
                           for c in clusters
-                          for points in self._cluster_dict[c].points
+                          for points in self.cluster_dict[c].points
                           for p in points]
 
         results = []
 
         for i in range(0, len(potential_hits), globals.BATCH_SIZE):
             batch = self._get_batch(potential_hits, i)
-            distances = calculate_distances(query, batch, self.metric)[0, :]
+            distances = calculate_distances(query, batch, self.metric, count_calls=count_calls)[0, :]
             hits = [i + j for j, d in enumerate(distances) if d <= radius]
             results.extend([potential_hits[h] for h in hits])
 
@@ -304,12 +306,12 @@ class Search:
             self,
             new_depth: int,
     ):
-        old_depth = max(list(map(len, self._cluster_dict.keys())))
+        old_depth = max(list(map(len, self.cluster_dict.keys())))
 
         [cluster.pop(update=True)
          for i in range(old_depth, new_depth)
-         for name, cluster in self._cluster_dict.items()
+         for name, cluster in self.cluster_dict.items()
          if len(cluster.name) == i]
 
-        self._cluster_dict = self._get_cluster_dict()
+        self.cluster_dict = self._get_cluster_dict()
         return

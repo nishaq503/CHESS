@@ -1,7 +1,9 @@
 from time import time
 
-from src.search import Search, get_data_and_queries
+import numpy as np
+
 from src import globals
+from src.search import Search, get_data_and_queries
 
 
 def make_clusters(
@@ -112,3 +114,50 @@ def deepen_clustering(
         print_summary(depth=new_depth, names=names_file, info=info_file)
 
     return search_object
+
+
+def benchmark_search(
+        search_object: Search,
+        queries: np.memmap,
+        num_queries: int,
+        radius: float,
+        search_benchmarks_filename: str,
+):
+    """
+    Perform iteratively-deepening clustered-search and store benchmarks in a .csv file.
+
+    :param search_object: search-object to run benchmarks on.
+    :param queries: queries to search around.
+    :param num_queries: number of queries to get benchmarks for.
+    :param radius: search-radius to use for each query.
+    :param search_benchmarks_filename: name of .csv file to write benchmarks to.
+    """
+    max_depth = max(list(map(len, search_object.cluster_dict.keys())))
+    search_depths = list(range(0, max_depth, 1))
+    search_queries = queries[:num_queries, :]
+
+    for query in search_queries:
+        start = time()
+        linear_results = search_object.linear_search(query=query, radius=radius)
+        linear_time = start - time()
+
+        for depth in search_depths:
+            globals.DF_CALLS = 0
+
+            start = time()
+            results, num_clusters, fraction_searched = search_object.search(query, radius, depth, True)
+            chess_time = start - time()
+
+            correctness = (set(linear_results) == set(results)) and (len(linear_results) == len(results))
+            if len(linear_results) > 0:
+                false_negative_rate = 1 - (len(set(results)) / len(set(linear_results)))
+            else:
+                false_negative_rate = 0
+
+            speedup_factor = linear_time / chess_time if chess_time > 0 else np.inf
+
+            with open(search_benchmarks_filename, 'a') as outfile:
+                outfile.write(f'{depth},{radius},{correctness},{false_negative_rate},{len(results)},{num_clusters},'
+                              f'{fraction_searched},{globals.DF_CALLS},{linear_time},{chess_time},{speedup_factor}\n')
+                outfile.flush()
+    return
