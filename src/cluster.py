@@ -239,7 +239,7 @@ class Cluster:
         return all((
             len(self.points) > globals.MIN_POINTS,
             self.radius > globals.MIN_RADIUS,
-            self.depth <= globals.MAX_DEPTH,
+            self.depth < globals.MAX_DEPTH,
         ))
 
     def pop(
@@ -271,8 +271,6 @@ class Cluster:
 
         left_pole_index = self._potential_centers[max_col]
         right_pole_index = self._potential_centers[max_row]
-        poles = [left_pole_index, right_pole_index]
-        print(self.depth, self.name, len(self.points), poles)
 
         left_pole, right_pole = self.data[left_pole_index], self.data[right_pole_index]
         left_pole, right_pole = np.expand_dims(left_pole, 0), np.expand_dims(right_pole, 0)

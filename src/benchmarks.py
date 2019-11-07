@@ -94,17 +94,17 @@ def deepen_clustering(
         search_object.print_info()
 
     if iterative:
-        for i in range(old_depth, new_depth):
-            globals.MAX_DEPTH = i + 1
+        for i in range(old_depth + 1, new_depth + 1):
+            globals.MAX_DEPTH = i
             start = time()
-            search_object.cluster_deeper(new_depth=i + 1)
+            search_object.cluster_deeper(new_depth=i)
             end = time()
 
             if timing_filename is not None:
                 with open(timing_filename, 'a') as outfile:
-                    outfile.write(f'{search_object.dataset},{search_object.metric},{i},{i + 1},{end - start:.6f}\n')
+                    outfile.write(f'{search_object.dataset},{search_object.metric},{i - 1},{i},{end - start:.6f}\n')
 
-            print_summary(depth=i + 1, names=names_file, info=info_file)
+            print_summary(depth=i, names=names_file, info=info_file)
 
     else:
         globals.MAX_DEPTH = new_depth
