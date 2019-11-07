@@ -225,7 +225,6 @@ class Cluster:
         """
         center = self.data[self.center]
         center = np.expand_dims(center, 0)
-        query = np.expand_dims(query, 0)
         distance = calculate_distances(center, query, self.metric)[0, 0]
 
         return distance <= (self.radius + radius)

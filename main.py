@@ -12,7 +12,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 if __name__ == '__main__':
     np.random.seed(42)
 
-    initial_depth = 5
+    initial_depth = 1
     globals.MAX_DEPTH = initial_depth
 
     dataset = 'APOGEE'
@@ -23,12 +23,12 @@ if __name__ == '__main__':
         with open(timing_filename, 'a') as outfile:
             outfile.write(f'dataset,metric,starting_depth,ending_depth,time_taken(s)\n')
 
-    # make_clusters(
-    #     dataset=dataset,
-    #     metric=metric,
-    #     depth=initial_depth,
-    #     timing_filename=timing_filename,
-    # )
+    make_clusters(
+        dataset=dataset,
+        metric=metric,
+        depth=initial_depth,
+        timing_filename=timing_filename,
+    )
 
     search_object = read_clusters(
         dataset=dataset,
@@ -36,16 +36,14 @@ if __name__ == '__main__':
         depth=initial_depth,
     )
 
-    # max_depth = 5
-    # search_object = deepen_clustering(
-    #     search_object=search_object,
-    #     old_depth=initial_depth,
-    #     new_depth=max_depth,
-    #     iterative=True,
-    #     timing_filename=timing_filename,
-    # )
-    # (f'{depth},{radius},{correctness},{false_negative_rate},{len(results)},{num_clusters},'
-    # f'{fraction_searched},{globals.DF_CALLS},{linear_time},{chess_time},{speedup_factor}\n')
+    max_depth = 10
+    search_object = deepen_clustering(
+        search_object=search_object,
+        old_depth=initial_depth,
+        new_depth=max_depth,
+        iterative=True,
+        timing_filename=timing_filename,
+    )
 
     search_benchmarks_filename = f'logs/search_benchmarks_{dataset}_{metric}.csv'
     if not os.path.exists(search_benchmarks_filename):

@@ -135,11 +135,10 @@ class Search:
         :param radius: search radius to use.
         :return: list of indexes in self.data of hits.
         """
+        check_input_array(query)
+
         results = []
         points = list(range(self.data.shape[0]))
-
-        query = np.expand_dims(query, 0)
-        check_input_array(query)
 
         for i in range(0, self.data.shape[0], globals.BATCH_SIZE):
             batch = self._get_batch(points, i)
@@ -164,13 +163,12 @@ class Search:
         :param count_calls: weather or not to count distance calls for benchmarking.
         :return: List of indexes in self.data of hits, number of clusters searched, fraction of dataset searched.
         """
-        query = np.expand_dims(query, 0)
         check_input_array(query)
+
         clusters = self.root.search(query, radius, search_depth)
         potential_hits = [p
                           for c in clusters
-                          for points in self.cluster_dict[c].points
-                          for p in points]
+                          for p in self.cluster_dict[c].points]
 
         results = []
 
@@ -259,11 +257,13 @@ class Search:
                     name_to_points[cluster_name] = [point]
 
         def _build_dict_tree(name: str) -> List[int]:
-            if name not in name_to_points.keys():
+            if name in name_to_points.keys():
+                return name_to_points[name]
+            else:
                 left = _build_dict_tree(f'{name}0')
                 right = _build_dict_tree(f'{name}1')
                 name_to_points[name] = left.copy() + right.copy()
-            return name_to_points[name]
+                return name_to_points[name]
 
         _build_dict_tree('')
 
@@ -296,7 +296,7 @@ class Search:
                 radius=name_to_info[name][1],
                 local_fractal_dimension=name_to_info[name][0],
                 left=_build_tree(f'{name}0'),
-                right=_build_tree(f'{name}0'),
+                right=_build_tree(f'{name}1'),
                 reading=True,
             ) if name in name_to_points else None
 

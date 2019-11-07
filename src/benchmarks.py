@@ -3,6 +3,7 @@ from time import time
 import numpy as np
 
 from src import globals
+from src.distance_functions import check_input_array
 from src.search import Search, get_data_and_queries
 
 
@@ -137,16 +138,19 @@ def benchmark_search(
     search_queries = queries[:num_queries, :]
 
     for query in search_queries:
+        query = np.expand_dims(query, 0)
+        check_input_array(query)
+
         start = time()
         linear_results = search_object.linear_search(query=query, radius=radius)
-        linear_time = start - time()
+        linear_time = time() - start
 
         for depth in search_depths:
             globals.DF_CALLS = 0
 
             start = time()
             results, num_clusters, fraction_searched = search_object.search(query, radius, depth, True)
-            chess_time = start - time()
+            chess_time = time() - start
 
             correctness = (set(linear_results) == set(results)) and (len(linear_results) == len(results))
             if len(linear_results) > 0:
@@ -158,6 +162,7 @@ def benchmark_search(
 
             with open(search_benchmarks_filename, 'a') as outfile:
                 outfile.write(f'{depth},{radius},{correctness},{false_negative_rate},{len(results)},{num_clusters},'
-                              f'{fraction_searched},{globals.DF_CALLS},{linear_time},{chess_time},{speedup_factor}\n')
+                              f'{fraction_searched},{globals.DF_CALLS},{linear_time},{chess_time},'
+                              f'{speedup_factor:.3f}\n')
                 outfile.flush()
     return
