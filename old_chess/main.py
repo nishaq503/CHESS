@@ -3,8 +3,8 @@ from time import time
 
 import numpy as np
 
-import config
-from src.search import Search
+from old_chess import config
+from old_chess.src.search import Search
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 

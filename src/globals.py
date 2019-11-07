@@ -1,20 +1,24 @@
 import numpy as np
 
-APOGEE_FULL = '/data/nishaq/APOGEE/apogee_full.memmap'
-APOGEE_DATA = '/data/nishaq/APOGEE/apogee_data.memmap'
-APOGEE_QUERIES = '/data/nishaq/APOGEE/apogee_queries.memmap'
+APOGEE_FULL = '/scratch/nishaq/APOGEE/apogee_full.memmap'
+APOGEE_DATA = '/scratch/nishaq/APOGEE/apogee_data.memmap'
+APOGEE_QUERIES = '/scratch/nishaq/APOGEE/apogee_queries.memmap'
 APOGEE_NUM_ROWS = 134_510 - 810
 APOGEE_NUM_QUERIES = 10_000
 APOGEE_NUM_DIMS = 8_575
+APOGEE_DATA_SHAPE = (APOGEE_NUM_ROWS - APOGEE_NUM_QUERIES, APOGEE_NUM_DIMS)
+APOGEE_QUERIES_SHAPE = (APOGEE_NUM_QUERIES, APOGEE_NUM_DIMS)
 APOGEE_DTYPE = 'float32'
 H_MAGNITUDE = 12.2
 
-GREENGENES_FULL = '/data/nishaq/GreenGenes/gg_full.memmap'
-GREENGENES_DATA = '/data/nishaq/GreenGenes/gg_data.memmap'
-GREENGENES_QUERIES = '/data/nishaq/GreenGenes/gg_queries.memmap'
+GREENGENES_FULL = '/scratch/nishaq/GreenGenes/gg_full.memmap'
+GREENGENES_DATA = '/scratch/nishaq/GreenGenes/gg_data.memmap'
+GREENGENES_QUERIES = '/scratch/nishaq/GreenGenes/gg_queries.memmap'
 GREENGENES_NUM_ROWS = 1_027_383
 GREENGENES_NUM_QUERIES = 10_000
 GREENGENES_NUM_DIMS = 7_682
+GREENGENES_DATA_SHAPE = (GREENGENES_NUM_ROWS - GREENGENES_NUM_QUERIES, GREENGENES_NUM_DIMS)
+GREENGENES_QUERIES_SHAPE = (GREENGENES_NUM_QUERIES, GREENGENES_NUM_DIMS)
 GREENGENES_DTYPE = np.int8
 
 BATCH_SIZE = 10_000

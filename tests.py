@@ -44,6 +44,19 @@ class TestDistanceFunctions(unittest.TestCase):
         distances = calculate_distances(x, y, metric)
         np.testing.assert_almost_equal(distances, correct_distances, decimal=0)
 
+    def test_distance_shapes(self):
+        x = np.asarray([[1, 1]])
+        y = np.asarray([[1, 1], [2, 2], [3, 3]])
+        metric = 'euclidean'
+
+        distances = calculate_distances(x, y, metric)[0, :]
+        self.assertEqual(distances.ndim, 1)
+        self.assertEqual(distances.shape, (y.shape[0],))
+
+        distances = calculate_distances(y, x, metric)[:, 0]
+        self.assertEqual(distances.ndim, 1)
+        self.assertEqual(distances.shape, (y.shape[0],))
+
 
 def sandbox():
     x = np.asarray([[1, 1]])
@@ -54,5 +67,5 @@ def sandbox():
 
 
 if __name__ == '__main__':
-    # unittest.main()
-    sandbox()
+    unittest.main()
+    # sandbox()

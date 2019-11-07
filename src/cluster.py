@@ -120,24 +120,20 @@ class Cluster:
             self,
             points: List[int],
             start_index: int,
-            poles: List[int],
     ) -> np.ndarray:
         """
         Gets a batch of points from the given points list.
         Batch size is globals.BATCH_SIZE.
         Batch starts at index start_index in points list.
-        batch excludes points in poles list.
 
         :param points: list of indexes in self.data from which to draw the batch.
         :param start_index: index in points from where to start drawing the batch.
-        :param poles: points to exclude when drawing the batch.
 
         :return numpy array of points in the batch:
         """
         num_points = min(start_index + globals.BATCH_SIZE, len(points)) - start_index
         return np.asarray([self.data[p]
-                           for p in points[start_index: start_index + num_points]
-                           if p not in poles])
+                           for p in points[start_index: start_index + num_points]])
 
     def _calculate_radius(self) -> float:
         """
@@ -146,11 +142,14 @@ class Cluster:
 
         :return: radius of cluster.
         """
+        center = self.data[self.center]
+        center = np.expand_dims(center, 0)
+
         if len(self.points) > globals.BATCH_SIZE:
             return max(
-                max([max(calculate_distances(self.data[self.center],
-                                             self._get_batch(self.points, i, []),
-                                             self.metric))
+                max([max(calculate_distances(center,
+                                             self._get_batch(self.points, i),
+                                             self.metric)[0, :])
                      for i in range(0, len(self.points), globals.BATCH_SIZE)]
                     ),
                 0.0
@@ -158,9 +157,9 @@ class Cluster:
         else:
             return max(
                 max(calculate_distances(
-                        self.data[self.center],
-                        self._get_batch(self.points, 0, []),
-                        self.metric)),
+                        center,
+                        self._get_batch(self.points, 0),
+                        self.metric)[0, :]),
                 0.0
             )
 
@@ -181,15 +180,15 @@ class Cluster:
                 [sum(
                     [1 if d <= self.radius / 2 else 0
                      for d in calculate_distances(center,
-                                                  self._get_batch(self.points, i, []),
-                                                  self.metric)]
+                                                  self._get_batch(self.points, i),
+                                                  self.metric)[0, :]]
                 ) for i in range(0, len(self.points), globals.BATCH_SIZE)]
             )
         else:
             count = sum([1 if d <= self.radius / 2 else 0
                          for d in calculate_distances(center,
-                                                      self._get_batch(self.points, 0, []),
-                                                      self.metric)])
+                                                      self._get_batch(self.points, 0),
+                                                      self.metric)[0, :]])
         return 0 if count == 0 else np.log2(len(self.points) / count)
 
     def update(
@@ -240,7 +239,7 @@ class Cluster:
         return all((
             len(self.points) > globals.MIN_POINTS,
             self.radius > globals.MIN_RADIUS,
-            self.depth < globals.MAX_DEPTH,
+            self.depth <= globals.MAX_DEPTH,
         ))
 
     def pop(
@@ -273,24 +272,25 @@ class Cluster:
         left_pole_index = self._potential_centers[max_col]
         right_pole_index = self._potential_centers[max_row]
         poles = [left_pole_index, right_pole_index]
+        print(self.depth, self.name, len(self.points), poles)
 
         left_pole, right_pole = self.data[left_pole_index], self.data[right_pole_index]
         left_pole, right_pole = np.expand_dims(left_pole, 0), np.expand_dims(right_pole, 0)
 
-        left_indexes, right_indexes = [left_pole_index], [right_pole_index]
+        left_indexes, right_indexes = [], []
 
         def partition(points: np.ndarray, i):
-            left_distances = calculate_distances(left_pole, points, self.metric)[0]
-            right_distances = calculate_distances(right_pole, points, self.metric)
+            left_distances = calculate_distances(left_pole, points, self.metric)[0, :]
+            right_distances = calculate_distances(right_pole, points, self.metric)[0, :]
             [(left_indexes if l < r else right_indexes).append(self.points[i + j])
              for j, l, r in zip(range(points.shape[0]), left_distances, right_distances)]
             return
 
         if len(self.points) > globals.BATCH_SIZE:
-            [partition(self._get_batch(self.points, i, poles), i)
+            [partition(self._get_batch(self.points, i), i)
              for i in range(0, len(self.points), globals.BATCH_SIZE)]
         else:
-            partition(self._get_batch(self.points, 0, poles), 0)
+            partition(self._get_batch(self.points, 0), 0)
 
         self.left = Cluster(
             data=self.data,

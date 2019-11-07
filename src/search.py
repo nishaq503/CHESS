@@ -7,6 +7,51 @@ from src.cluster import Cluster
 from src.distance_functions import check_input_array, calculate_distances
 
 
+def get_data_and_queries(
+        dataset: str,
+        mode: str = 'r',
+) -> Tuple[np.memmap, np.memmap]:
+    """
+    Reads the numpy memmap files for the given data set and returns them.
+    :param dataset: data set to read. Must be APOGEE or GreenGenes.
+    :param mode: optional mode to read the memmap files in.
+    :return: data for clustering, queries that were held out.
+    """
+    data: np.memmap
+    queries: np.memmap
+
+    if dataset == 'APOGEE':
+        data = np.memmap(
+            filename=globals.APOGEE_DATA,
+            dtype=globals.APOGEE_DTYPE,
+            mode=mode,
+            shape=globals.APOGEE_DATA_SHAPE,
+        )
+        queries = np.memmap(
+            filename=globals.APOGEE_QUERIES,
+            dtype=globals.APOGEE_DTYPE,
+            mode=mode,
+            shape=globals.APOGEE_QUERIES_SHAPE,
+        )
+    elif dataset == 'GreenGenes':
+        data = np.memmap(
+            filename=globals.GREENGENES_DATA,
+            dtype=globals.GREENGENES_DTYPE,
+            mode=mode,
+            shape=globals.GREENGENES_DATA_SHAPE,
+        )
+        queries = np.memmap(
+            filename=globals.GREENGENES_QUERIES,
+            dtype=globals.GREENGENES_DTYPE,
+            mode=mode,
+            shape=globals.GREENGENES_QUERIES_SHAPE,
+        )
+    else:
+        raise ValueError(f'Only the APOGEE and GreenGenes datasets are available. Got {dataset}.')
+
+    return data, queries
+
+
 class Search:
     """
     Implements Clustered Hierarchical Entropy-Scaling Search with GPU acceleration using tensorflow.
@@ -15,7 +60,7 @@ class Search:
 
     def __init__(
             self,
-            data: np.memmap,
+            dataset: str,
             metric: str,
             names_file: str = None,
             info_file: str = None,
@@ -24,13 +69,14 @@ class Search:
         """
         Initializes search object.
 
-        :param data: numpy.memmap of data to search.
+        :param dataset: name of data to search.
         :param metric: distance metric to use during clustering and search.
         :param names_file: name of .csv with columns {cluster_name, point_index}.
         :param info_file: name of .csv with columns {cluster_name, number_of_points, center, radius, lfd, is_leaf}.
         :param reading: weather or not the cluster-tree for the search object is being read from a file.
         """
-
+        self.dataset = dataset
+        data, _ = get_data_and_queries(dataset=self.dataset)
         self.data: np.memmap = data
 
         if metric not in globals.DISTANCE_FUNCTIONS:
@@ -55,7 +101,7 @@ class Search:
 
         self._cluster_dict: Dict[str: Cluster] = self._get_cluster_dict()
 
-    def _get_cluster_dict(self) -> Dict[str: Cluster]:
+    def _get_cluster_dict(self):
         cluster_dict: Dict[str: Cluster] = {}
 
         def in_order(node: Cluster):
@@ -97,7 +143,7 @@ class Search:
 
         for i in range(0, self.data.shape[0], globals.BATCH_SIZE):
             batch = self._get_batch(points, i)
-            distances = calculate_distances(query, batch, self.metric)[0]
+            distances = calculate_distances(query, batch, self.metric)[0, :]
             results.extend([i + j for j, d in enumerate(distances) if d <= radius])
 
         return results
@@ -128,7 +174,7 @@ class Search:
 
         for i in range(0, len(potential_hits), globals.BATCH_SIZE):
             batch = self._get_batch(potential_hits, i)
-            distances = calculate_distances(query, batch, self.metric)
+            distances = calculate_distances(query, batch, self.metric)[0, :]
             hits = [i + j for j, d in enumerate(distances) if d <= radius]
             results.extend([potential_hits[h] for h in hits])
 
@@ -142,7 +188,6 @@ class Search:
         Write a .csv with columns {cluster_name, point_index}.
         :param filename: Optional file to write to.
         """
-
         filename = self.names_file if filename is None else filename
         with open(filename, 'w') as outfile:
             outfile.write('cluster_name,point\n')
