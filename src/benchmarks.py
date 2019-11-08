@@ -133,8 +133,9 @@ def benchmark_search(
     :param radius: search-radius to use for each query.
     :param search_benchmarks_filename: name of .csv file to write benchmarks to.
     """
-    max_depth = max(list(map(len, search_object.cluster_dict.keys())))
-    search_depths = list(range(0, max_depth + 1, 5))
+    # max_depth = max(list(map(len, search_object.cluster_dict.keys())))
+    # search_depths = list(range(0, max_depth + 1, 5))
+    search_depths = [globals.MAX_DEPTH]
     search_queries = queries[:num_queries, :]
 
     for query in search_queries:
