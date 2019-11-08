@@ -55,8 +55,7 @@ if __name__ == '__main__':
     radii = {
         'euclidean': [2000, 4000],
         'cosine': [0.005, 0.001],
-        # 'hamming': [greengenes_min_radius, 2 * greengenes_min_radius, 5 * greengenes_min_radius],
-        'hamming': [76, 153, 384],
+        'hamming': [0.01, 0.02, 0.05],
     }
 
     _, queries = get_data_and_queries(dataset)
