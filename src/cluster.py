@@ -332,10 +332,12 @@ class Cluster:
         :return: List of names of clusters that may contain hits.
         """
         results = []
-        if self.depth < search_depth and self.radius > radius:
-            if self.left and self.left.can_include(query, radius):
+        if self.radius <= radius:
+            results.append(self.name)
+        elif (self.depth < search_depth) and (self.left or self.right):
+            if self.left.can_include(query, radius):
                 results.extend(self.left.search(query, radius, search_depth))
-            if self.right and self.right.can_include(query, radius):
+            if self.right.can_include(query, radius):
                 results.extend(self.right.search(query, radius, search_depth))
         else:
             results.append(self.name)
