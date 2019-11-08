@@ -121,7 +121,7 @@ def benchmark_search(
         search_object: Search,
         queries: np.memmap,
         num_queries: int,
-        radius: float,
+        radius: globals.FLOAT_DTYPE,
         search_benchmarks_filename: str,
 ):
     """
@@ -134,7 +134,7 @@ def benchmark_search(
     :param search_benchmarks_filename: name of .csv file to write benchmarks to.
     """
     max_depth = max(list(map(len, search_object.cluster_dict.keys())))
-    search_depths = list(range(0, max_depth, 1))
+    search_depths = list(range(0, max_depth + 1, 5))
     search_queries = queries[:num_queries, :]
 
     for query in search_queries:

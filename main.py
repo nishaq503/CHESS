@@ -36,7 +36,7 @@ if __name__ == '__main__':
         depth=initial_depth,
     )
 
-    max_depth = 10
+    max_depth = 50
     search_object = deepen_clustering(
         search_object=search_object,
         old_depth=initial_depth,
@@ -60,11 +60,11 @@ if __name__ == '__main__':
 
     _, queries = get_data_and_queries(dataset)
 
-    for radius in radii[metric]:
+    for radius in list(map(globals.FLOAT_DTYPE, radii[metric])):
         benchmark_search(
             search_object=search_object,
             queries=queries,
-            num_queries=5,
+            num_queries=10,
             radius=radius,
             search_benchmarks_filename=search_benchmarks_filename,
         )
