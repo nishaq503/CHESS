@@ -54,7 +54,7 @@ if __name__ == '__main__':
     greengenes_min_radius = int(0.01 * globals.GREENGENES_NUM_DIMS)
     radii = {
         'euclidean': [2000, 4000],
-        'cosine': [0.0025, 0.005, 0.01],
+        'cosine': [0.005, 0.001],
         'hamming': [greengenes_min_radius, 2 * greengenes_min_radius, 5 * greengenes_min_radius]
     }
 
