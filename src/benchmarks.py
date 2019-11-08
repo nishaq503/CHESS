@@ -121,7 +121,7 @@ def benchmark_search(
         search_object: Search,
         queries: np.memmap,
         num_queries: int,
-        radius: globals.FLOAT_DTYPE,
+        radius: globals.RADII_DTYPE,
         search_benchmarks_filename: str,
 ):
     """

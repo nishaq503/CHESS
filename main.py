@@ -15,8 +15,8 @@ if __name__ == '__main__':
     initial_depth = 1
     globals.MAX_DEPTH = initial_depth
 
-    dataset = 'APOGEE'
-    metric = 'cosine'
+    dataset = 'GreenGenes'
+    metric = 'hamming'
 
     timing_filename = f'logs/clustering_times.csv'
     if not os.path.exists(timing_filename):
@@ -54,13 +54,13 @@ if __name__ == '__main__':
     greengenes_min_radius = int(0.01 * globals.GREENGENES_NUM_DIMS)
     radii = {
         'euclidean': [2000, 4000],
-        'cosine': [0.0025, 0.005, 0.01],
-        'hamming': [greengenes_min_radius, 2 * greengenes_min_radius, 5 * greengenes_min_radius]
+        'cosine': [0.005, 0.001],
+        'hamming': [0.01, 0.02, 0.05],
     }
 
     _, queries = get_data_and_queries(dataset)
 
-    for radius in list(map(globals.FLOAT_DTYPE, radii[metric])):
+    for radius in list(map(globals.RADII_DTYPE, radii[metric])):
         benchmark_search(
             search_object=search_object,
             queries=queries,
