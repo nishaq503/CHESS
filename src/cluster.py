@@ -238,7 +238,7 @@ class Cluster:
         """
         return all((
             len(self.points) > globals.MIN_POINTS,
-            self.radius > globals.MIN_RADIUS,
+            self.radius >= globals.MIN_RADIUS,
             self.depth < globals.MAX_DEPTH,
         ))
 
@@ -265,9 +265,11 @@ class Cluster:
         if update:
             self.update(internals_only=True)
 
-        max_pair_index = np.argmax(self._pairwise_distances)
-        max_col = max_pair_index // len(self._potential_centers)
-        max_row = max_pair_index % len(self._potential_centers)
+        tri_upper = np.triu(self._pairwise_distances, k=1)
+
+        max_pair_index = np.argmax(tri_upper)
+        max_col = max_pair_index // len(tri_upper)
+        max_row = max_pair_index % len(tri_upper)
 
         left_pole_index = self._potential_centers[max_col]
         right_pole_index = self._potential_centers[max_row]
