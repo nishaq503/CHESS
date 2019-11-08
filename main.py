@@ -12,23 +12,26 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 if __name__ == '__main__':
     np.random.seed(42)
 
-    initial_depth = 1
+    initial_depth = 29
     globals.MAX_DEPTH = initial_depth
 
     dataset = 'GreenGenes'
     metric = 'hamming'
+
+    if dataset == 'GreenGenes':
+        globals.MIN_RADIUS = 1.0 / globals.GREENGENES_NUM_DIMS
 
     timing_filename = f'logs/clustering_times.csv'
     if not os.path.exists(timing_filename):
         with open(timing_filename, 'a') as outfile:
             outfile.write(f'dataset,metric,starting_depth,ending_depth,time_taken(s)\n')
 
-    make_clusters(
-        dataset=dataset,
-        metric=metric,
-        depth=initial_depth,
-        timing_filename=timing_filename,
-    )
+    # make_clusters(
+    #     dataset=dataset,
+    #     metric=metric,
+    #     depth=initial_depth,
+    #     timing_filename=timing_filename,
+    # )
 
     search_object = read_clusters(
         dataset=dataset,
@@ -55,7 +58,7 @@ if __name__ == '__main__':
     radii = {
         'euclidean': [2000, 4000],
         'cosine': [0.005, 0.001],
-        'hamming': [0.01, 0.02, 0.05],
+        'hamming': [0.001, 0.005],
     }
 
     _, queries = get_data_and_queries(dataset)
@@ -64,7 +67,7 @@ if __name__ == '__main__':
         benchmark_search(
             search_object=search_object,
             queries=queries,
-            num_queries=10,
+            num_queries=50,
             radius=radius,
             search_benchmarks_filename=search_benchmarks_filename,
         )
