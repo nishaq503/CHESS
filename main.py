@@ -18,6 +18,9 @@ if __name__ == '__main__':
     dataset = 'GreenGenes'
     metric = 'hamming'
 
+    if dataset == 'GreenGenes':
+        globals.MIN_RADIUS = 10.0 / globals.GREENGENES_NUM_DIMS
+
     timing_filename = f'logs/clustering_times.csv'
     if not os.path.exists(timing_filename):
         with open(timing_filename, 'a') as outfile:
@@ -51,11 +54,10 @@ if __name__ == '__main__':
             outfile.write(f'depth,radius,correctness,false_negative_rate,num_hits,num_clusters_searched,'
                           f'fraction_searched,df_calls_made,linear_time,chess_time,speedup_factor\n')
 
-    greengenes_min_radius = int(0.01 * globals.GREENGENES_NUM_DIMS)
     radii = {
         'euclidean': [2000, 4000],
         'cosine': [0.005, 0.001],
-        'hamming': [0.01, 0.02, 0.05],
+        'hamming': [0.001, 0.005, 0.01],
     }
 
     _, queries = get_data_and_queries(dataset)
@@ -64,7 +66,7 @@ if __name__ == '__main__':
         benchmark_search(
             search_object=search_object,
             queries=queries,
-            num_queries=10,
+            num_queries=50,
             radius=radius,
             search_benchmarks_filename=search_benchmarks_filename,
         )
