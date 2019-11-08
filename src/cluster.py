@@ -272,6 +272,11 @@ class Cluster:
         left_pole_index = self._potential_centers[max_col]
         right_pole_index = self._potential_centers[max_row]
 
+        if left_pole_index == right_pole_index:
+            raise ValueError(f'Got the same point {right_pole_index} as both poles.\n'
+                             f'Cluster name is {self.name}\n'
+                             f'Points are {self.points}.')
+
         left_pole, right_pole = self.data[left_pole_index], self.data[right_pole_index]
         left_pole, right_pole = np.expand_dims(left_pole, 0), np.expand_dims(right_pole, 0)
 
@@ -289,6 +294,18 @@ class Cluster:
              for i in range(0, len(self.points), globals.BATCH_SIZE)]
         else:
             partition(self._get_batch(self.points, 0), 0)
+
+        if left_pole_index in right_indexes:
+            right_indexes.remove(left_pole_index)
+            left_indexes.append(left_pole_index)
+        if right_pole_index in left_indexes:
+            left_indexes.remove(right_pole_index)
+            right_indexes.append(right_pole_index)
+
+        if len(left_indexes) == 0:
+            raise ValueError(f'Got empty left_indexes after popping cluster {self.name}.\n')
+        if len(right_indexes) == 0:
+            raise ValueError(f'Got empty right_indexes after popping cluster {self.name}.\n')
 
         self.left = Cluster(
             data=self.data,
