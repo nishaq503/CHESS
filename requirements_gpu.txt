@@ -3,7 +3,7 @@ astor==0.8.0
 cachetools==3.1.1
 certifi==2019.9.11
 chardet==3.0.4
-gast==0.3.2
+gast==0.2.2
 google-auth==1.7.0
 google-auth-oauthlib==0.4.1
 google-pasta==0.1.8
