@@ -1,22 +1,71 @@
-import os
+import unittest
 
 import numpy as np
 
-import config
-from src.utils import numpy_calculate_distance
-
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+from src.distance_functions import check_input_array, calculate_distances
 
 
-def calculate_center():
-    """ Calculate the geometric median of the potential centers. This is the center of the cluster.
+class TestDistanceFunctions(unittest.TestCase):
+    def test_array_attributes(self):
+        x = [1, 1]
+        self.assertRaises(TypeError, check_input_array, x)
 
-    :return: index of center of cluster.
-    """
-    pairwise_distances = np.asarray([0, 1, 2])
-    print(pairwise_distances.ndim)
-    return np.sum(pairwise_distances)
+        x = np.asarray([1, 1])
+        self.assertRaises(ValueError, check_input_array, x)
+
+        x = np.asarray([])
+        self.assertRaises(ValueError, check_input_array, x)
+
+        x = np.asarray([[]])
+        self.assertRaises(ValueError, check_input_array, x)
+
+        x = np.asarray([[1, 1], [2, 2], [3, 3]])
+        self.assertTrue(check_input_array(x))
+
+    def test_distance_values(self):
+        x = np.asarray([[1, 1], [2, 2], [3, 3]])
+        y = np.asarray([[1, 1], [2, 2], [3, 3]])
+
+        metric = 'euclidean'
+        correct_distances = np.asarray([[0, np.sqrt(2), np.sqrt(8)],
+                                        [np.sqrt(2), 0, np.sqrt(2)],
+                                        [np.sqrt(8), np.sqrt(2), 0]])
+        distances = calculate_distances(x, y, metric)
+        np.testing.assert_almost_equal(distances, correct_distances, decimal=7)
+
+        metric = 'cosine'
+        distances = calculate_distances(x, y, metric)
+        np.testing.assert_almost_equal(distances, np.zeros_like(distances), decimal=7)
+
+        metric = 'hamming'
+        correct_distances = np.asarray([[0, 1, 1],
+                                        [1, 0, 1],
+                                        [1, 1, 0]])
+        distances = calculate_distances(x, y, metric)
+        np.testing.assert_almost_equal(distances, correct_distances, decimal=0)
+
+    def test_distance_shapes(self):
+        x = np.asarray([[1, 1]])
+        y = np.asarray([[1, 1], [2, 2], [3, 3]])
+        metric = 'euclidean'
+
+        distances = calculate_distances(x, y, metric)[0, :]
+        self.assertEqual(distances.ndim, 1)
+        self.assertEqual(distances.shape, (y.shape[0],))
+
+        distances = calculate_distances(y, x, metric)[:, 0]
+        self.assertEqual(distances.ndim, 1)
+        self.assertEqual(distances.shape, (y.shape[0],))
+
+
+def sandbox():
+    x = np.asarray([[1, 1]])
+    y = np.asarray([[1, 1], [2, 2], [3, 3]])
+    metric = 'euclidean'
+    print(calculate_distances(x, y, metric))
+    return
 
 
 if __name__ == '__main__':
-    print(calculate_center())
+    unittest.main()
+    # sandbox()
