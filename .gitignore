@@ -5,3 +5,4 @@ __pycache__
 logs
 .git
 .ipynb_checkpoints
+old_notebooks
