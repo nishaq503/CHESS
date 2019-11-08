@@ -22,8 +22,8 @@ class Cluster:
             metric: str,
             name: str,
             center: int = None,
-            radius: globals.FLOAT_DTYPE = None,
-            local_fractal_dimension: globals.FLOAT_DTYPE = None,
+            radius: globals.RADII_DTYPE = None,
+            local_fractal_dimension: globals.RADII_DTYPE = None,
             left=None,
             right=None,
             reading: bool = False,
@@ -69,8 +69,8 @@ class Cluster:
         self._pairwise_distances: np.ndarray = np.asarray([[]])
 
         self.center: int
-        self.radius: globals.FLOAT_DTYPE
-        self.local_fractal_dimension: globals.FLOAT_DTYPE
+        self.radius: globals.RADII_DTYPE
+        self.local_fractal_dimension: globals.RADII_DTYPE
 
         if len(self.points) == 1:
             self.center = self.points[0]
@@ -136,7 +136,7 @@ class Cluster:
                            for p in points[start_index: start_index + num_points]])
 
     # noinspection PyTypeChecker
-    def _calculate_radius(self) -> globals.FLOAT_DTYPE:
+    def _calculate_radius(self) -> globals.RADII_DTYPE:
         """
         Calculates the radius of the cluster.
         This is the maximum of the distances of any point in the cluster to the cluster center.
@@ -164,7 +164,7 @@ class Cluster:
                 0.0
             )
 
-    def _calculate_local_fractal_dimension(self) -> globals.FLOAT_DTYPE:
+    def _calculate_local_fractal_dimension(self) -> globals.RADII_DTYPE:
         """
         Calculates the local fractal dimension of the cluster.
         This is the log2 ratio of the number of points in the cluster to the number of points within half the radius.
@@ -214,7 +214,7 @@ class Cluster:
     def can_include(
             self,
             query: np.ndarray,
-            radius: globals.FLOAT_DTYPE = 0,
+            radius: globals.RADII_DTYPE = 0,
     ) -> bool:
         """
         Checks weather or not the given query can ne included in the cluster.
@@ -319,7 +319,7 @@ class Cluster:
     def search(
             self,
             query: np.ndarray,
-            radius: globals.FLOAT_DTYPE,
+            radius: globals.RADII_DTYPE,
             search_depth: int,
     ) -> List[str]:
         """

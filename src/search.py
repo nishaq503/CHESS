@@ -125,7 +125,7 @@ class Search:
     def linear_search(
             self,
             query: np.ndarray,
-            radius: globals.FLOAT_DTYPE,
+            radius: globals.RADII_DTYPE,
     ) -> List[int]:
         """
         Perform naive linear search on self.data.
@@ -150,10 +150,10 @@ class Search:
     def search(
             self,
             query: np.ndarray,
-            radius: globals.FLOAT_DTYPE,
+            radius: globals.RADII_DTYPE,
             search_depth: int,
             count_calls: bool = False,
-    ) -> Tuple[List[int], int, globals.FLOAT_DTYPE]:
+    ) -> Tuple[List[int], int, globals.RADII_DTYPE]:
         """
         Perform clustered search to required depth.
 
@@ -280,8 +280,8 @@ class Search:
                 if cluster_name not in name_to_points.keys():
                     raise ValueError(f'{cluster_name} not found in name_to_points dictionary.')
 
-                name_to_info[cluster_name] = [int(center), globals.FLOAT_DTYPE(radius),
-                                              globals.FLOAT_DTYPE(lfd), bool(is_leaf)]
+                name_to_info[cluster_name] = [int(center), globals.RADII_DTYPE(radius),
+                                              globals.RADII_DTYPE(lfd), bool(is_leaf)]
                 if len(name_to_points[cluster_name]) != int(num_points):
                     raise ValueError(f'Mismatch in number of points in cluster {cluster_name}.\n'
                                      f'Got {num_points} from {self.info_file}.\n'
