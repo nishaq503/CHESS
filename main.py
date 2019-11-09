@@ -24,8 +24,8 @@ def main(
     globals.MAX_DEPTH = initial_depth
 
     if dataset == 'GreenGenes':
-        globals.MIN_POINTS = 100
-        globals.MIN_RADIUS = 10.0 / globals.GREENGENES_NUM_DIMS
+        globals.MIN_POINTS = 10
+        globals.MIN_RADIUS = 1.0 / globals.GREENGENES_NUM_DIMS
 
     if not os.path.exists(clustering_times_filename):
         with open(clustering_times_filename, 'a') as outfile:
@@ -72,6 +72,18 @@ def main(
 
 if __name__ == '__main__':
     np.random.seed(42)
+
+    # from argparse import ArgumentParser
+    #
+    # parser = ArgumentParser('CHESS')
+    # parser.add_argument('dataset', choices={'APOGEE', 'GreenGenes'})
+    # parser.add_argument('metric', choices=globals.DISTANCE_FUNCTIONS)
+    # parser.add_argument('--initial-depth', nargs=1, default=1)
+    # parser.add_argument('--final-depth', nargs=1, default=100)
+    # parser.add_argument('--do-initial-clustering', action='store_true')
+    # parser.add_argument('--run-search-benchmarks', action='store_true')
+    # args = parser.parse_args()
+    # main(**vars(args))
 
     # main(
     #     dataset='APOGEE',

@@ -72,12 +72,12 @@ def sandbox():
 def filter_duplicates():
     data, queries = get_data_and_queries(dataset='GreenGenes')
     set_data, set_queries = set(), set()
-    [set_data.add(tuple(point)) for point in data]
+    # [set_data.add(tuple(point)) for point in data]
     [set_queries.add(tuple(point)) for point in queries]
 
     print(len(set_data), len(set_queries))
     with open('lengths.txt', 'a') as outfile:
-        outfile.write(f'GREENGENES_NUM_DATA_NO_DUP = {len(set_data)}\n')
+        # outfile.write(f'GREENGENES_NUM_DATA_NO_DUP = {len(set_data)}\n')
         outfile.write(f'GREENGENES_NUM_QUERIES_NO_DUP = {len(set_queries)}\n')
 
     def write_memmap(filename, set_to_write):
@@ -93,12 +93,13 @@ def filter_duplicates():
         my_memmap.flush()
         del my_memmap
 
-    write_memmap(globals.GREENGENES_DATA_NO_DUP, set_data)
+    # write_memmap(globals.GREENGENES_DATA_NO_DUP, set_data)
     write_memmap(globals.GREENGENES_QUERIES_NO_DUP, set_queries)
 
     return
 
 
 if __name__ == '__main__':
-    # unittest.main()
-    sandbox()
+    unittest.main()
+    # sandbox()
+    # filter_duplicates()
