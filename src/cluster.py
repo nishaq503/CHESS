@@ -5,7 +5,7 @@ from typing import List
 import numpy as np
 
 from src import globals
-from src.distance_functions import calculate_distances
+from src.distance_functions import calculate_distances, check_input_array
 
 
 class Cluster:
@@ -121,6 +121,11 @@ class Cluster:
             num_tries = int(np.sqrt(len(self.points))) if self._should_subsample_centers else len(self.points)
 
         points = np.asarray([self.data[p] for p in self._potential_centers])
+        if points.ndim != 2:
+            raise ValueError(f'Expected points to have 2 dimensions. Got {points.ndim} instead.\n'
+                             f'Cluster name is {self.name} and potential_centers are:\n'
+                             f'{self._potential_centers}.')
+
         distances = calculate_distances(points, points, self.metric)
 
         for i in range(num_tries):
