@@ -135,7 +135,6 @@ class Cluster:
         return np.asarray([self.data[p]
                            for p in points[start_index: start_index + num_points]])
 
-    # noinspection PyTypeChecker
     def _calculate_radius(self) -> globals.RADII_DTYPE:
         """
         Calculates the radius of the cluster.
@@ -147,22 +146,11 @@ class Cluster:
         center = np.expand_dims(center, 0)
 
         if len(self.points) > globals.BATCH_SIZE:
-            return max(
-                max([max(calculate_distances(center,
-                                             self._get_batch(self.points, i),
-                                             self.metric)[0, :])
-                     for i in range(0, len(self.points), globals.BATCH_SIZE)]
-                    ),
-                0.0
-            )
+            potential_radii = [calculate_distances(center, self._get_batch(self.points, i), self.metric)[0, :]
+                               for i in range(0, len(self.points), globals.BATCH_SIZE)]
         else:
-            return max(
-                max(calculate_distances(
-                        center,
-                        self._get_batch(self.points, 0),
-                        self.metric)[0, :]),
-                0.0
-            )
+            potential_radii = calculate_distances(center, self._get_batch(self.points, 0), self.metric)[0, :]
+        return globals.RADII_DTYPE(np.max(potential_radii))
 
     def _calculate_local_fractal_dimension(self) -> globals.RADII_DTYPE:
         """
@@ -171,25 +159,17 @@ class Cluster:
 
         :return: local fractal dimension of the cluster.
         """
-
-        count: int
         center = self.data[self.center]
         center = np.expand_dims(center, 0)
 
         if len(self.points) > globals.BATCH_SIZE:
-            count = sum(
-                [sum(
-                    [1 if d <= self.radius / 2 else 0
-                     for d in calculate_distances(center,
-                                                  self._get_batch(self.points, i),
-                                                  self.metric)[0, :]]
-                ) for i in range(0, len(self.points), globals.BATCH_SIZE)]
-            )
+            count = [1 if d <= (self.radius / 2) else 0
+                     for i in range(0, len(self.points), globals.BATCH_SIZE)
+                     for d in calculate_distances(center, self._get_batch(self.points, i), self.metric)[0, :]]
         else:
-            count = sum([1 if d <= self.radius / 2 else 0
-                         for d in calculate_distances(center,
-                                                      self._get_batch(self.points, 0),
-                                                      self.metric)[0, :]])
+            count = [1 if d <= self.radius / 2 else 0
+                     for d in calculate_distances(center, self._get_batch(self.points, 0), self.metric)[0, :]]
+        count = np.sum(count, dtype=int)
         return 0 if count == 0 else np.log2(len(self.points) / count)
 
     def update(
