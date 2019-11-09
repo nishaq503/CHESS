@@ -52,7 +52,7 @@ def main(
         )
 
     if run_search_benchmarks:
-        search_benchmarks_filename = f'logs/{search_benchmarks_filename}_{dataset}_{metric}.csv'
+        search_benchmarks_filename = f'{search_benchmarks_filename}_{dataset}_{metric}.csv'
         if not os.path.exists(search_benchmarks_filename):
             with open(search_benchmarks_filename, 'w') as outfile:
                 outfile.write(f'depth,radius,correctness,false_negative_rate,num_hits,num_clusters_searched,'
