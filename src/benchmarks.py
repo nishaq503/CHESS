@@ -123,9 +123,10 @@ def write_results(
         results: List[int],
         linear_time: float,
         chess_time: float,
-        vs_falconn_filename: str,
+        search_benchmarks_filename: str,
         search_depth: int,
         radius: float,
+        num_clusters: int,
         fraction_searched: float,
 ):
     correctness = (set(linear_results) == set(results)) and (len(linear_results) == len(results))
@@ -135,7 +136,7 @@ def write_results(
         false_negative_rate = 0
     speedup_factor = linear_time / chess_time if chess_time > 0 else np.inf
 
-    with open(vs_falconn_filename, 'a') as outfile:
+    with open(search_benchmarks_filename, 'a') as outfile:
         outfile.write(f'{search_depth},{radius},{correctness},{false_negative_rate},{len(results)},{num_clusters},'
                       f'{fraction_searched},{globals.DF_CALLS},{linear_time},{chess_time},'
                       f'{speedup_factor:.3f}\n')
@@ -180,14 +181,15 @@ def benchmark_search(
             chess_time = time() - start
 
             write_results(
-                linear_results,
-                results,
-                linear_time,
-                chess_time,
-                search_benchmarks_filename,
-                depth,
-                radius,
-                fraction_searched
+                linear_results=linear_results,
+                results=results,
+                linear_time=linear_time,
+                chess_time=chess_time,
+                search_benchmarks_filename=search_benchmarks_filename,
+                search_depth=depth,
+                radius=radius,
+                num_clusters=num_clusters,
+                fraction_searched=fraction_searched,
             )
     return
 
@@ -233,14 +235,15 @@ def falconn_comparison(
         linear_time = time() - start
 
         write_results(
-            linear_results,
-            results,
-            linear_time,
-            chess_time,
-            vs_falconn_filename,
-            search_depth,
-            radius,
-            fraction_searched
+            linear_results=linear_results,
+            results=results,
+            linear_time=linear_time,
+            chess_time=chess_time,
+            search_benchmarks_filename=vs_falconn_filename,
+            search_depth=search_depth,
+            radius=radius,
+            num_clusters=num_clusters,
+            fraction_searched=fraction_searched,
         )
         num_searched += 1
         if num_searched > num_queries:
