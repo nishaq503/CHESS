@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List
+from typing import Dict
 
 import numpy as np
 
@@ -19,7 +19,7 @@ def main(
         clustering_times_filename: str = f'logs/clustering_times.csv',
         run_search_benchmarks: bool = True,
         search_benchmarks_filename: str = f'logs/search_benchmarks',
-        radii: Dict[str: List[np.float64]] = globals.SEARCH_RADII
+        radii: Dict = globals.SEARCH_RADII
 ):
     globals.MAX_DEPTH = initial_depth
 
