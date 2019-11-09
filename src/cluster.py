@@ -135,7 +135,6 @@ class Cluster:
         return np.asarray([self.data[p]
                            for p in points[start_index: start_index + num_points]])
 
-    # noinspection PyTypeChecker
     def _calculate_radius(self) -> globals.RADII_DTYPE:
         """
         Calculates the radius of the cluster.
@@ -147,22 +146,17 @@ class Cluster:
         center = np.expand_dims(center, 0)
 
         if len(self.points) > globals.BATCH_SIZE:
-            return max(
-                max([max(calculate_distances(center,
-                                             self._get_batch(self.points, i),
-                                             self.metric)[0, :])
-                     for i in range(0, len(self.points), globals.BATCH_SIZE)]
-                    ),
-                0.0
-            )
+            potential_radii = [np.max(calculate_distances(center, self._get_batch(self.points, i), self.metric)[0, :])
+                               for i in range(0, len(self.points), globals.BATCH_SIZE)]
         else:
-            return max(
-                max(calculate_distances(
-                        center,
-                        self._get_batch(self.points, 0),
-                        self.metric)[0, :]),
-                0.0
-            )
+            potential_radii = calculate_distances(center, self._get_batch(self.points, 0), self.metric)[0, :]
+
+        radii = np.asarray(potential_radii, dtype=globals.RADII_DTYPE)
+        radius = np.max(radii)
+        if not isinstance(radius, globals.RADII_DTYPE):
+            raise ValueError(f'Got problem with calculating radius in cluster {self.name}.\n'
+                             f'Radius was {radius}.')
+        return radius
 
     def _calculate_local_fractal_dimension(self) -> globals.RADII_DTYPE:
         """
@@ -171,26 +165,21 @@ class Cluster:
 
         :return: local fractal dimension of the cluster.
         """
-
-        count: int
         center = self.data[self.center]
         center = np.expand_dims(center, 0)
 
         if len(self.points) > globals.BATCH_SIZE:
-            count = sum(
-                [sum(
-                    [1 if d <= self.radius / 2 else 0
-                     for d in calculate_distances(center,
-                                                  self._get_batch(self.points, i),
-                                                  self.metric)[0, :]]
-                ) for i in range(0, len(self.points), globals.BATCH_SIZE)]
-            )
+            count = [1 if d <= (self.radius / 2) else 0
+                     for i in range(0, len(self.points), globals.BATCH_SIZE)
+                     for d in calculate_distances(center, self._get_batch(self.points, i), self.metric)[0, :]]
         else:
-            count = sum([1 if d <= self.radius / 2 else 0
-                         for d in calculate_distances(center,
-                                                      self._get_batch(self.points, 0),
-                                                      self.metric)[0, :]])
-        return 0 if count == 0 else np.log2(len(self.points) / count)
+            count = [1 if d <= self.radius / 2 else 0
+                     for d in calculate_distances(center, self._get_batch(self.points, 0), self.metric)[0, :]]
+        count = globals.RADII_DTYPE(np.sum(count, dtype=int))
+        if not isinstance(count, globals.RADII_DTYPE):
+            raise ValueError(f'Got problem with calculating local_fractal_dimension in cluster {self.name}.\n'
+                             f'Count was {count}, of type {type(count)}.')
+        return 0 if count == 0 else np.log2(globals.RADII_DTYPE(len(self.points)) / count)
 
     def update(
             self,
@@ -237,8 +226,8 @@ class Cluster:
         :return: Weather or not the cluster can be popped.
         """
         return all((
-            len(self.points) > globals.MIN_POINTS,
-            self.radius >= globals.MIN_RADIUS,
+            globals.MIN_POINTS < len(self.points),
+            globals.MIN_RADIUS < self.radius,
             self.depth < globals.MAX_DEPTH,
         ))
 
@@ -268,8 +257,8 @@ class Cluster:
         tri_upper = np.triu(self._pairwise_distances, k=1)
 
         max_pair_index = np.argmax(tri_upper)
-        max_col = max_pair_index // len(tri_upper)
-        max_row = max_pair_index % len(tri_upper)
+        max_col = max_pair_index // len(self._pairwise_distances)
+        max_row = max_pair_index % len(self._pairwise_distances)
 
         left_pole_index = self._potential_centers[max_col]
         right_pole_index = self._potential_centers[max_row]
