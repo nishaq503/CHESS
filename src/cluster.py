@@ -5,7 +5,7 @@ from typing import List
 import numpy as np
 
 from src import globals
-from src.distance_functions import calculate_distances
+from src.distance_functions import calculate_distances, check_input_array
 
 
 class Cluster:
@@ -83,16 +83,29 @@ class Cluster:
         else:
             self.update()
 
-    def _get_potential_centers(self) -> List[int]:
+    def _get_potential_centers(
+            self,
+            start_index: int = 0,
+    ) -> List[int]:
         """
         If the cluster contains too many points, subsample square_root as many points as potential centers.
         Otherwise any point in the points list is a potential center.
+
+        :param start_index: start index when trying multiple times in _calculate_pairwise_distances.
         :return: list of indexes in self.data of points that could be the center of the cluster.
         """
+        points: List[int] = []
+
+        if start_index == 0:
+            points = self.points.copy()
+            np.random.shuffle(points)
+
         num_samples = int(np.sqrt(len(self.points))) if self._should_subsample_centers else len(self.points)
-        points: List[int] = self.points.copy()
-        np.random.shuffle(points)
-        return points[: num_samples + 1]
+        if start_index >= (len(self.points) - num_samples):
+            start_index = 0
+            np.random.shuffle(points)
+
+        return points[start_index: start_index + num_samples + 1]
 
     def _calculate_pairwise_distances(
             self,
@@ -107,15 +120,29 @@ class Cluster:
         if num_tries is None:
             num_tries = int(np.sqrt(len(self.points))) if self._should_subsample_centers else len(self.points)
 
+        def check_points_array():
+            if points.ndim != 2:
+                raise ValueError(f'Expected points to have 2 dimensions. Got {points.ndim} instead.\n'
+                                 f'Cluster name is {self.name} and potential_centers are:\n'
+                                 f'{self._potential_centers}.')
+            if points.shape[0] == 0:
+                raise ValueError(f'Expected array to have at least one point.')
+            if points.shape[1] == 0:
+                raise ValueError(f'Expected array to have points with non-zero dimensions.')
+
         points = np.asarray([self.data[p] for p in self._potential_centers])
+        check_points_array()
+
         distances = calculate_distances(points, points, self.metric)
 
-        for _ in range(num_tries):
+        num_samples = int(np.sqrt(len(self.points))) if self._should_subsample_centers else len(self.points)
+        for i in range(num_samples, len(self.points), num_samples):
             if 0 < np.max(distances):
                 return distances
             else:
-                self._potential_centers = self._get_potential_centers()
+                self._potential_centers = self._get_potential_centers(start_index=i)
             points = np.asarray([self.data[p] for p in self._potential_centers])
+            check_points_array()
             distances = calculate_distances(points, points, self.metric)
         else:
             if len(self.points) > globals.MIN_POINTS:
