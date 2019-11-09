@@ -24,8 +24,8 @@ def main(
     globals.MAX_DEPTH = initial_depth
 
     if dataset == 'GreenGenes':
-        globals.MIN_POINTS = 10
-        globals.MIN_RADIUS = 1.0 / globals.GREENGENES_NUM_DIMS
+        globals.MIN_POINTS = 50
+        globals.MIN_RADIUS = 10.0 / globals.GREENGENES_NUM_DIMS
 
     if not os.path.exists(clustering_times_filename):
         with open(clustering_times_filename, 'a') as outfile:
@@ -63,7 +63,7 @@ def main(
             benchmark_search(
                 search_object=search_object,
                 queries=queries,
-                num_queries=50,
+                num_queries=10,
                 radius=radius,
                 search_benchmarks_filename=search_benchmarks_filename,
             )
@@ -104,8 +104,8 @@ if __name__ == '__main__':
     main(
         dataset='GreenGenes',
         metric='hamming',
-        initial_depth=1,
+        initial_depth=6,
         final_depth=100,
-        do_initial_clustering=True,
+        do_initial_clustering=False,
         run_search_benchmarks=True
     )

@@ -106,38 +106,38 @@ class Cluster:
 
         :return: pairwise distance matrix of points that are potential centers.
         """
-        # num_tries = len(self.points) // self._num_samples
+        num_tries = len(self.points) // self._num_samples
 
-        # def check_points_array():
-        #     if points.ndim != 2:
-        #         raise ValueError(f'Expected points to have 2 dimensions. Got {points.ndim} instead.\n'
-        #                          f'Cluster name is {self.name} and potential_centers are:\n'
-        #                          f'{self._potential_centers}.')
-        #     if points.shape[0] == 0:
-        #         raise ValueError(f'Expected array to have at least one point.')
-        #     if points.shape[1] == 0:
-        #         raise ValueError(f'Expected array to have points with non-zero dimensions.')
+        def check_points_array():
+            if points.ndim != 2:
+                raise ValueError(f'Expected points to have 2 dimensions. Got {points.ndim} instead.\n'
+                                 f'Cluster name is {self.name} and potential_centers are:\n'
+                                 f'{self._potential_centers}.')
+            if points.shape[0] == 0:
+                raise ValueError(f'Expected array to have at least one point.')
+            if points.shape[1] == 0:
+                raise ValueError(f'Expected array to have points with non-zero dimensions.')
 
         points = np.asarray([self.data[p] for p in self._potential_centers])
-        # check_points_array()
+        check_points_array()
 
         distances = calculate_distances(points, points, self.metric)
         if 0 == np.max(distances):
             raise ValueError(f'Still had duplicates in cluster {self.name}.\n')
 
-        # if len(self.points) <= globals.MIN_POINTS and 0 < np.max(distances):
-        #     for i in range(self._num_samples, len(self.points), self._num_samples):
-        #         if 0 < np.max(distances):
-        #             return distances
-        #         else:
-        #             self._potential_centers = self._get_potential_centers()
-        #         points = np.asarray([self.data[p] for p in self._potential_centers])
-        #         check_points_array()
-        #         distances = calculate_distances(points, points, self.metric)
-        # else:
-        #     raise ValueError(f'Could not find a non-zero pairwise distance in {num_tries} tries.\n'
-        #                      f'Cluster name is {self.name} and points are:\n'
-        #                      f'{self.points}.')
+        if len(self.points) <= globals.MIN_POINTS and 0 < np.max(distances):
+            for i in range(self._num_samples, len(self.points), self._num_samples):
+                if 0 < np.max(distances):
+                    return distances
+                else:
+                    self._potential_centers = self._get_potential_centers()
+                points = np.asarray([self.data[p] for p in self._potential_centers])
+                check_points_array()
+                distances = calculate_distances(points, points, self.metric)
+        else:
+            raise ValueError(f'Could not find a non-zero pairwise distance in {num_tries} tries.\n'
+                             f'Cluster name is {self.name} and points are:\n'
+                             f'{self.points}.')
         return distances
 
     def _calculate_center(self) -> int:
