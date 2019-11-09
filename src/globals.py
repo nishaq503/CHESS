@@ -33,4 +33,9 @@ DISTANCE_FUNCTIONS = {
     'cosine',
     'hamming',
 }
+SEARCH_RADII = {
+    'euclidean': [2000, 4000],
+    'cosine': [0.005, 0.001],
+    'hamming': [0.001, 0.005, 0.01],
+}
 DF_CALLS = 0

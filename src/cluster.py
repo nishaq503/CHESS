@@ -237,8 +237,8 @@ class Cluster:
         :return: Weather or not the cluster can be popped.
         """
         return all((
-            len(self.points) > globals.MIN_POINTS,
-            self.radius >= globals.MIN_RADIUS,
+            globals.MIN_POINTS < len(self.points),
+            globals.MIN_RADIUS < self.radius,
             self.depth < globals.MAX_DEPTH,
         ))
 

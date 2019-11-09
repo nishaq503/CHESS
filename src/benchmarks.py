@@ -12,7 +12,7 @@ def make_clusters(
         dataset: str,
         metric: str,
         depth: int,
-        timing_filename: str = None,
+        clustering_times_filename: str = None,
 ) -> Search:
     """
     Makes a new search-object with a cluster-tree of the requested depth.
@@ -20,7 +20,7 @@ def make_clusters(
     :param dataset: dataset to cluster.
     :param metric: distance metric to use for clustering.
     :param depth: maximum depth of cluster tree.
-    :param timing_filename: optional .csv file in which to store the time it took for clustering.
+    :param clustering_times_filename: optional .csv file in which to store the time it took for clustering.
     :return: search object that was created.
     """
     start = time()
@@ -32,8 +32,8 @@ def make_clusters(
     )
     end = time()
 
-    if timing_filename is not None:
-        with open(timing_filename, 'a') as outfile:
+    if clustering_times_filename is not None:
+        with open(clustering_times_filename, 'a') as outfile:
             outfile.write(f'{dataset},{metric},{0},{depth},{end - start:.6f}\n')
 
     search_object.print_names()
@@ -194,7 +194,7 @@ def benchmark_search(
     return
 
 
-def falconn_comparison(
+def benchmark_search_with_hits(
         search_object: Search,
         queries: np.memmap,
         num_queries: int,
@@ -205,7 +205,7 @@ def falconn_comparison(
 
 ):
     """
-    Perform clustered-search and store benchmarks in a .csv file.
+    Perform clustered-search. Store benchmarks Only if min_results <= num_hits <= max_results.
 
     :param search_object: search-object to run benchmarks on.
     :param queries: queries to search around.
