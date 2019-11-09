@@ -104,8 +104,8 @@ if __name__ == '__main__':
     main(
         dataset='GreenGenes',
         metric='hamming',
-        initial_depth=10,
-        final_depth=100,
+        initial_depth=50,
+        final_depth=50,
         do_initial_clustering=False,
         run_search_benchmarks=True
     )
