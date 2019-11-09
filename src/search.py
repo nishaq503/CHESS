@@ -295,7 +295,7 @@ class Search:
                 name=name,
                 center=name_to_info[name][0],
                 radius=name_to_info[name][1],
-                local_fractal_dimension=name_to_info[name][0],
+                local_fractal_dimension=name_to_info[name][2],
                 left=_build_tree(f'{name}0'),
                 right=_build_tree(f'{name}1'),
                 reading=True,

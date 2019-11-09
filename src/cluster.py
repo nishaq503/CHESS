@@ -84,70 +84,60 @@ class Cluster:
         else:
             self.update()
 
-    def _get_potential_centers(
-            self,
-            start_index: int = 0,
-    ) -> List[int]:
+    def _get_potential_centers(self) -> List[int]:
         """
         If the cluster contains too many points, subsample square_root as many points as potential centers.
         Otherwise any point in the points list is a potential center.
 
-        :param start_index: start index when trying multiple times in _calculate_pairwise_distances.
         :return: list of indexes in self.data of points that could be the center of the cluster.
         """
-        points: List[int] = []
+        points: List[int] = self.points.copy()
 
-        if start_index == 0:
-            points = self.points.copy()
+        if self._should_subsample_centers:
             np.random.shuffle(points)
 
-        if start_index >= (len(self.points) - self._num_samples):
-            start_index = 0
-            np.random.shuffle(points)
-
-        return points[start_index: start_index + self._num_samples + 1]
+        return points[: self._num_samples + 1]
 
     def _calculate_pairwise_distances(
             self,
-            num_tries: int = None,
     ) -> np.ndarray:
         """
         Calculates the pairwise distances between potential centers.
 
-        :param num_tries: Number of tries to make to get a non-zero pairwise distance.
         :return: pairwise distance matrix of points that are potential centers.
         """
-        if num_tries is None:
-            num_tries = int(np.sqrt(len(self.points))) if self._should_subsample_centers else len(self.points)
+        # num_tries = len(self.points) // self._num_samples
 
-        def check_points_array():
-            if points.ndim != 2:
-                raise ValueError(f'Expected points to have 2 dimensions. Got {points.ndim} instead.\n'
-                                 f'Cluster name is {self.name} and potential_centers are:\n'
-                                 f'{self._potential_centers}.')
-            if points.shape[0] == 0:
-                raise ValueError(f'Expected array to have at least one point.')
-            if points.shape[1] == 0:
-                raise ValueError(f'Expected array to have points with non-zero dimensions.')
+        # def check_points_array():
+        #     if points.ndim != 2:
+        #         raise ValueError(f'Expected points to have 2 dimensions. Got {points.ndim} instead.\n'
+        #                          f'Cluster name is {self.name} and potential_centers are:\n'
+        #                          f'{self._potential_centers}.')
+        #     if points.shape[0] == 0:
+        #         raise ValueError(f'Expected array to have at least one point.')
+        #     if points.shape[1] == 0:
+        #         raise ValueError(f'Expected array to have points with non-zero dimensions.')
 
         points = np.asarray([self.data[p] for p in self._potential_centers])
-        check_points_array()
+        # check_points_array()
 
         distances = calculate_distances(points, points, self.metric)
+        if 0 == np.max(distances):
+            raise ValueError(f'Still had duplicates in cluster {self.name}.\n')
 
-        for i in range(self._num_samples, len(self.points), self._num_samples):
-            if 0 < np.max(distances):
-                return distances
-            else:
-                self._potential_centers = self._get_potential_centers(start_index=i)
-            points = np.asarray([self.data[p] for p in self._potential_centers])
-            check_points_array()
-            distances = calculate_distances(points, points, self.metric)
-        else:
-            if len(self.points) > globals.MIN_POINTS:
-                raise ValueError(f'Could not find a non-zero pairwise distance in {num_tries} tries.\n'
-                                 f'Cluster name is {self.name} and points are:\n'
-                                 f'{self.points}.')
+        # if len(self.points) <= globals.MIN_POINTS and 0 < np.max(distances):
+        #     for i in range(self._num_samples, len(self.points), self._num_samples):
+        #         if 0 < np.max(distances):
+        #             return distances
+        #         else:
+        #             self._potential_centers = self._get_potential_centers()
+        #         points = np.asarray([self.data[p] for p in self._potential_centers])
+        #         check_points_array()
+        #         distances = calculate_distances(points, points, self.metric)
+        # else:
+        #     raise ValueError(f'Could not find a non-zero pairwise distance in {num_tries} tries.\n'
+        #                      f'Cluster name is {self.name} and points are:\n'
+        #                      f'{self.points}.')
         return distances
 
     def _calculate_center(self) -> int:
@@ -175,8 +165,7 @@ class Cluster:
         :return numpy array of points in the batch:
         """
         num_points = min(start_index + globals.BATCH_SIZE, len(points)) - start_index
-        return np.asarray([self.data[p]
-                           for p in points[start_index: start_index + num_points]])
+        return np.asarray([self.data[p] for p in points[start_index: start_index + num_points]])
 
     def _calculate_radius(self) -> globals.RADII_DTYPE:
         """
@@ -219,9 +208,9 @@ class Cluster:
             count = [1 if d <= self.radius / 2 else 0
                      for d in calculate_distances(center, self._get_batch(self.points, 0), self.metric)[0, :]]
         count = globals.RADII_DTYPE(np.sum(count, dtype=int))
-        if not isinstance(count, globals.RADII_DTYPE):
-            raise ValueError(f'Got problem with calculating local_fractal_dimension in cluster {self.name}.\n'
-                             f'Count was {count}, of type {type(count)}.')
+        # if not isinstance(count, globals.RADII_DTYPE):
+        #     raise ValueError(f'Got problem with calculating local_fractal_dimension in cluster {self.name}.\n'
+        #                      f'Count was {count}, of type {type(count)}.')
         return 0 if count == 0 else np.log2(globals.RADII_DTYPE(len(self.points)) / count)
 
     def update(
