@@ -24,6 +24,7 @@ def main(
     globals.MAX_DEPTH = initial_depth
 
     if dataset == 'GreenGenes':
+        globals.MIN_POINTS = 100
         globals.MIN_RADIUS = 10.0 / globals.GREENGENES_NUM_DIMS
 
     if not os.path.exists(clustering_times_filename):

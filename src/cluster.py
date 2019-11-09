@@ -107,17 +107,22 @@ class Cluster:
         if num_tries is None:
             num_tries = int(np.sqrt(len(self.points))) if self._should_subsample_centers else len(self.points)
 
+        points = np.asarray([self.data[p] for p in self._potential_centers])
+        distances = calculate_distances(points, points, self.metric)
+
         for _ in range(num_tries):
-            points = np.asarray([self.data[p] for p in self._potential_centers])
-            distances = calculate_distances(points, points, self.metric)
             if 0 < np.max(distances):
                 return distances
             else:
                 self._potential_centers = self._get_potential_centers()
+            points = np.asarray([self.data[p] for p in self._potential_centers])
+            distances = calculate_distances(points, points, self.metric)
         else:
-            raise ValueError(f'Could not find a non-zero pairwise distance in {num_tries} tries.\n'
-                             f'Cluster name is {self.name} and points are:\n'
-                             f'{self.points}.')
+            if self.can_be_popped():
+                raise ValueError(f'Could not find a non-zero pairwise distance in {num_tries} tries.\n'
+                                 f'Cluster name is {self.name} and points are:\n'
+                                 f'{self.points}.')
+        return distances
 
     def _calculate_center(self) -> int:
         """
@@ -168,10 +173,6 @@ class Cluster:
         if not isinstance(radius, globals.RADII_DTYPE):
             raise ValueError(f'Got problem with calculating radius in cluster {self.name}.\n'
                              f'Radius was {radius}.')
-        # if not radius > 0:
-        #     raise ValueError(f'There are duplicates in the data. These should be removed.\n'
-        #                      f'Cluster name is {self.name}. Points are:\n'
-        #                      f'{self.points}.')
         return radius
 
     def _calculate_local_fractal_dimension(self) -> globals.RADII_DTYPE:
