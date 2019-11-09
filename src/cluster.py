@@ -134,8 +134,7 @@ class Cluster:
                 distances = calculate_distances(points, points, self.metric)
         else:
             raise ValueError(f'Could not find a non-zero pairwise distance in {num_tries} tries.\n'
-                             f'Cluster name is {self.name} and points are:\n'
-                             f'{self.points}.')
+                             f'Cluster name is {self.name} and points are:\n')
         return distances
 
     def _calculate_center(self) -> int:
