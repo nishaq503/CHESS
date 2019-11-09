@@ -1,4 +1,5 @@
 from time import time
+from typing import List
 
 import numpy as np
 
@@ -117,6 +118,31 @@ def deepen_clustering(
     return search_object
 
 
+def write_results(
+        linear_results: List[int],
+        results: List[int],
+        linear_time: float,
+        chess_time: float,
+        vs_falconn_filename: str,
+        search_depth: int,
+        radius: float,
+        fraction_searched: float,
+):
+    correctness = (set(linear_results) == set(results)) and (len(linear_results) == len(results))
+    if len(linear_results) > 0:
+        false_negative_rate = 1 - (len(set(results)) / len(set(linear_results)))
+    else:
+        false_negative_rate = 0
+    speedup_factor = linear_time / chess_time if chess_time > 0 else np.inf
+
+    with open(vs_falconn_filename, 'a') as outfile:
+        outfile.write(f'{search_depth},{radius},{correctness},{false_negative_rate},{len(results)},{num_clusters},'
+                      f'{fraction_searched},{globals.DF_CALLS},{linear_time},{chess_time},'
+                      f'{speedup_factor:.3f}\n')
+        outfile.flush()
+    return
+
+
 def benchmark_search(
         search_object: Search,
         queries: np.memmap,
@@ -153,17 +179,72 @@ def benchmark_search(
             results, num_clusters, fraction_searched = search_object.search(query, radius, depth, True)
             chess_time = time() - start
 
-            correctness = (set(linear_results) == set(results)) and (len(linear_results) == len(results))
-            if len(linear_results) > 0:
-                false_negative_rate = 1 - (len(set(results)) / len(set(linear_results)))
-            else:
-                false_negative_rate = 0
+            write_results(
+                linear_results,
+                results,
+                linear_time,
+                chess_time,
+                search_benchmarks_filename,
+                depth,
+                radius,
+                fraction_searched
+            )
+    return
 
-            speedup_factor = linear_time / chess_time if chess_time > 0 else np.inf
 
-            with open(search_benchmarks_filename, 'a') as outfile:
-                outfile.write(f'{depth},{radius},{correctness},{false_negative_rate},{len(results)},{num_clusters},'
-                              f'{fraction_searched},{globals.DF_CALLS},{linear_time},{chess_time},'
-                              f'{speedup_factor:.3f}\n')
-                outfile.flush()
+def falconn_comparison(
+        search_object: Search,
+        queries: np.memmap,
+        num_queries: int,
+        radius: globals.RADII_DTYPE,
+        vs_falconn_filename: str,
+        min_results: int = 1,
+        max_results: int = 100,
+
+):
+    """
+    Perform clustered-search and store benchmarks in a .csv file.
+
+    :param search_object: search-object to run benchmarks on.
+    :param queries: queries to search around.
+    :param num_queries: number of queries to get benchmarks for.
+    :param radius: search-radius to use for each query.
+    :param vs_falconn_filename: name of .csv file to write benchmarks to.
+    :param min_results: minimum number of results.
+    :param max_results: maximum number of results.
+    """
+    search_depth = max(list(map(len, search_object.cluster_dict.keys())))
+    num_searched: int = 0
+
+    for q in queries:
+        query = np.expand_dims(q, 0)
+        check_input_array(query)
+        globals.DF_CALLS = 0
+
+        start = time()
+        results, num_clusters, fraction_searched = search_object.search(query, radius, search_depth, True)
+        chess_time = time() - start
+
+        if not (min_results <= len(results) <= max_results):
+            continue
+
+        start = time()
+        linear_results = search_object.linear_search(query=query, radius=radius)
+        linear_time = time() - start
+
+        write_results(
+            linear_results,
+            results,
+            linear_time,
+            chess_time,
+            vs_falconn_filename,
+            search_depth,
+            radius,
+            fraction_searched
+        )
+        num_searched += 1
+        if num_searched > num_queries:
+            break
+    else:
+        print(num_searched)
     return

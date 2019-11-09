@@ -3,7 +3,7 @@ import os
 import numpy as np
 
 from src import globals
-from src.benchmarks import make_clusters, read_clusters, deepen_clustering, benchmark_search
+from src.benchmarks import make_clusters, read_clusters, deepen_clustering, benchmark_search, falconn_comparison
 from src.search import get_data_and_queries
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -48,7 +48,7 @@ if __name__ == '__main__':
     #     timing_filename=timing_filename,
     # )
 
-    search_benchmarks_filename = f'logs/search_benchmarks_{dataset}_{metric}.csv'
+    search_benchmarks_filename = f'logs/vs_falconn_{dataset}_{metric}.csv'
     if not os.path.exists(search_benchmarks_filename):
         with open(search_benchmarks_filename, 'w') as outfile:
             outfile.write(f'depth,radius,correctness,false_negative_rate,num_hits,num_clusters_searched,'
@@ -63,10 +63,19 @@ if __name__ == '__main__':
     _, queries = get_data_and_queries(dataset)
 
     for radius in list(map(globals.RADII_DTYPE, radii[metric])):
-        benchmark_search(
+        # benchmark_search(
+        #     search_object=search_object,
+        #     queries=queries,
+        #     num_queries=50,
+        #     radius=radius,
+        #     search_benchmarks_filename=search_benchmarks_filename,
+        # )
+        falconn_comparison(
             search_object=search_object,
             queries=queries,
             num_queries=50,
             radius=radius,
-            search_benchmarks_filename=search_benchmarks_filename,
+            vs_falconn_filename=search_benchmarks_filename,
+            min_results=1,
+            max_results=100,
         )

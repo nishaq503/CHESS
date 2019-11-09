@@ -268,8 +268,8 @@ class Cluster:
         tri_upper = np.triu(self._pairwise_distances, k=1)
 
         max_pair_index = np.argmax(tri_upper)
-        max_col = max_pair_index // len(tri_upper)
-        max_row = max_pair_index % len(tri_upper)
+        max_col = max_pair_index // len(self._pairwise_distances)
+        max_row = max_pair_index % len(self._pairwise_distances)
 
         left_pole_index = self._potential_centers[max_col]
         right_pole_index = self._potential_centers[max_row]
