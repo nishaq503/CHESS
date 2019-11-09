@@ -5,7 +5,7 @@ from typing import List
 import numpy as np
 
 from src import globals
-from src.distance_functions import calculate_distances, check_input_array
+from src.distance_functions import calculate_distances
 
 
 class Cluster:
@@ -65,6 +65,7 @@ class Cluster:
         self.right: Cluster = right
 
         self._should_subsample_centers: bool = len(points) > globals.SUBSAMPLING_LIMIT
+        self._num_samples = int(np.sqrt(len(self.points))) if self._should_subsample_centers else len(self.points)
         self._potential_centers: List[int] = []
         self._pairwise_distances: np.ndarray = np.asarray([[]])
 
@@ -100,12 +101,11 @@ class Cluster:
             points = self.points.copy()
             np.random.shuffle(points)
 
-        num_samples = int(np.sqrt(len(self.points))) if self._should_subsample_centers else len(self.points)
-        if start_index >= (len(self.points) - num_samples):
+        if start_index >= (len(self.points) - self._num_samples):
             start_index = 0
             np.random.shuffle(points)
 
-        return points[start_index: start_index + num_samples + 1]
+        return points[start_index: start_index + self._num_samples + 1]
 
     def _calculate_pairwise_distances(
             self,
@@ -135,8 +135,7 @@ class Cluster:
 
         distances = calculate_distances(points, points, self.metric)
 
-        num_samples = int(np.sqrt(len(self.points))) if self._should_subsample_centers else len(self.points)
-        for i in range(num_samples, len(self.points), num_samples):
+        for i in range(self._num_samples, len(self.points), self._num_samples):
             if 0 < np.max(distances):
                 return distances
             else:
