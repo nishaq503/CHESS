@@ -156,6 +156,10 @@ class Cluster:
         if not isinstance(radius, globals.RADII_DTYPE):
             raise ValueError(f'Got problem with calculating radius in cluster {self.name}.\n'
                              f'Radius was {radius}.')
+        if not (radius > 0 or len(self.points) == 0):
+            raise ValueError(f'There are duplicates in the data. These should be removed.\n'
+                             f'Cluster name is {self.name}. Points are:\n'
+                             f'{self.points}')
         return radius
 
     def _calculate_local_fractal_dimension(self) -> globals.RADII_DTYPE:
