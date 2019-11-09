@@ -122,8 +122,6 @@ class Cluster:
         check_points_array()
 
         distances = calculate_distances(points, points, self.metric)
-        if 0 == np.max(distances):
-            raise ValueError(f'Still had duplicates in cluster {self.name}.\n')
 
         if len(self.points) <= globals.MIN_POINTS and 0 < np.max(distances):
             for i in range(self._num_samples, len(self.points), self._num_samples):
