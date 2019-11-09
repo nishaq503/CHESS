@@ -72,27 +72,27 @@ def main(
 if __name__ == '__main__':
     np.random.seed(42)
 
-    main(
-        dataset='APOGEE',
-        metric='euclidean',
-        initial_depth=1,
-        final_depth=100,
-        do_initial_clustering=True,
-        run_search_benchmarks=False,
-    )
-    main(
-        dataset='APOGEE',
-        metric='cosine',
-        initial_depth=1,
-        final_depth=100,
-        do_initial_clustering=True,
-        run_search_benchmarks=False
-    )
     # main(
-    #     dataset='GreenGenes',
-    #     metric='hamming',
+    #     dataset='APOGEE',
+    #     metric='euclidean',
     #     initial_depth=1,
     #     final_depth=100,
     #     do_initial_clustering=True,
-    #     run_search_benchmarks=True
+    #     run_search_benchmarks=False,
     # )
+    # main(
+    #     dataset='APOGEE',
+    #     metric='cosine',
+    #     initial_depth=1,
+    #     final_depth=100,
+    #     do_initial_clustering=True,
+    #     run_search_benchmarks=False
+    # )
+    main(
+        dataset='GreenGenes',
+        metric='hamming',
+        initial_depth=1,
+        final_depth=100,
+        do_initial_clustering=True,
+        run_search_benchmarks=True
+    )
