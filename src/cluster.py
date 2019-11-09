@@ -146,11 +146,17 @@ class Cluster:
         center = np.expand_dims(center, 0)
 
         if len(self.points) > globals.BATCH_SIZE:
-            potential_radii = [calculate_distances(center, self._get_batch(self.points, i), self.metric)[0, :]
+            potential_radii = [np.max(calculate_distances(center, self._get_batch(self.points, i), self.metric)[0, :])
                                for i in range(0, len(self.points), globals.BATCH_SIZE)]
         else:
             potential_radii = calculate_distances(center, self._get_batch(self.points, 0), self.metric)[0, :]
-        return globals.RADII_DTYPE(np.max(potential_radii))
+
+        radii = np.asarray(potential_radii, dtype=globals.RADII_DTYPE)
+        radius = np.max(radii)
+        if not isinstance(radius, globals.RADII_DTYPE):
+            raise ValueError(f'Got problem with calculating radius in cluster {self.name}.\n'
+                             f'Radius was {radius}.')
+        return radius
 
     def _calculate_local_fractal_dimension(self) -> globals.RADII_DTYPE:
         """
@@ -169,8 +175,11 @@ class Cluster:
         else:
             count = [1 if d <= self.radius / 2 else 0
                      for d in calculate_distances(center, self._get_batch(self.points, 0), self.metric)[0, :]]
-        count = np.sum(count, dtype=int)
-        return 0 if count == 0 else np.log2(len(self.points) / count)
+        count = globals.RADII_DTYPE(np.sum(count, dtype=int))
+        if not isinstance(count, globals.RADII_DTYPE):
+            raise ValueError(f'Got problem with calculating local_fractal_dimension in cluster {self.name}.\n'
+                             f'Count was {count}, of type {type(count)}.')
+        return 0 if count == 0 else np.log2(globals.RADII_DTYPE(len(self.points)) / count)
 
     def update(
             self,
