@@ -118,7 +118,7 @@ class Cluster:
             points = np.asarray([self.data[p] for p in self._potential_centers])
             distances = calculate_distances(points, points, self.metric)
         else:
-            if self.can_be_popped():
+            if len(self.points) > globals.MIN_POINTS:
                 raise ValueError(f'Could not find a non-zero pairwise distance in {num_tries} tries.\n'
                                  f'Cluster name is {self.name} and points are:\n'
                                  f'{self.points}.')
