@@ -1,4 +1,5 @@
 from time import time
+from typing import List
 
 import numpy as np
 
@@ -11,7 +12,7 @@ def make_clusters(
         dataset: str,
         metric: str,
         depth: int,
-        timing_filename: str = None,
+        clustering_times_filename: str = None,
 ) -> Search:
     """
     Makes a new search-object with a cluster-tree of the requested depth.
@@ -19,7 +20,7 @@ def make_clusters(
     :param dataset: dataset to cluster.
     :param metric: distance metric to use for clustering.
     :param depth: maximum depth of cluster tree.
-    :param timing_filename: optional .csv file in which to store the time it took for clustering.
+    :param clustering_times_filename: optional .csv file in which to store the time it took for clustering.
     :return: search object that was created.
     """
     start = time()
@@ -31,8 +32,8 @@ def make_clusters(
     )
     end = time()
 
-    if timing_filename is not None:
-        with open(timing_filename, 'a') as outfile:
+    if clustering_times_filename is not None:
+        with open(clustering_times_filename, 'a') as outfile:
             outfile.write(f'{dataset},{metric},{0},{depth},{end - start:.6f}\n')
 
     search_object.print_names()
@@ -117,6 +118,32 @@ def deepen_clustering(
     return search_object
 
 
+def write_results(
+        linear_results: List[int],
+        results: List[int],
+        linear_time: float,
+        chess_time: float,
+        search_benchmarks_filename: str,
+        search_depth: int,
+        radius: float,
+        num_clusters: int,
+        fraction_searched: float,
+):
+    correctness = (set(linear_results) == set(results)) and (len(linear_results) == len(results))
+    if len(linear_results) > 0:
+        false_negative_rate = 1 - (len(set(results)) / len(set(linear_results)))
+    else:
+        false_negative_rate = 0
+    speedup_factor = linear_time / chess_time if chess_time > 0 else np.inf
+
+    with open(search_benchmarks_filename, 'a') as outfile:
+        outfile.write(f'{search_depth},{radius},{correctness},{false_negative_rate},{len(results)},{num_clusters},'
+                      f'{fraction_searched},{globals.DF_CALLS},{linear_time},{chess_time},'
+                      f'{speedup_factor:.3f}\n')
+        outfile.flush()
+    return
+
+
 def benchmark_search(
         search_object: Search,
         queries: np.memmap,
@@ -133,8 +160,9 @@ def benchmark_search(
     :param radius: search-radius to use for each query.
     :param search_benchmarks_filename: name of .csv file to write benchmarks to.
     """
-    max_depth = max(list(map(len, search_object.cluster_dict.keys())))
-    search_depths = list(range(0, max_depth + 1, 5))
+    # max_depth = max(list(map(len, search_object.cluster_dict.keys())))
+    # search_depths = list(range(0, max_depth + 1, 5))
+    search_depths = [globals.MAX_DEPTH]
     search_queries = queries[:num_queries, :]
 
     for query in search_queries:
@@ -152,17 +180,74 @@ def benchmark_search(
             results, num_clusters, fraction_searched = search_object.search(query, radius, depth, True)
             chess_time = time() - start
 
-            correctness = (set(linear_results) == set(results)) and (len(linear_results) == len(results))
-            if len(linear_results) > 0:
-                false_negative_rate = 1 - (len(set(results)) / len(set(linear_results)))
-            else:
-                false_negative_rate = 0
+            write_results(
+                linear_results=linear_results,
+                results=results,
+                linear_time=linear_time,
+                chess_time=chess_time,
+                search_benchmarks_filename=search_benchmarks_filename,
+                search_depth=depth,
+                radius=radius,
+                num_clusters=num_clusters,
+                fraction_searched=fraction_searched,
+            )
+    return
 
-            speedup_factor = linear_time / chess_time if chess_time > 0 else np.inf
 
-            with open(search_benchmarks_filename, 'a') as outfile:
-                outfile.write(f'{depth},{radius},{correctness},{false_negative_rate},{len(results)},{num_clusters},'
-                              f'{fraction_searched},{globals.DF_CALLS},{linear_time},{chess_time},'
-                              f'{speedup_factor:.3f}\n')
-                outfile.flush()
+def benchmark_search_with_hits(
+        search_object: Search,
+        queries: np.memmap,
+        num_queries: int,
+        radius: globals.RADII_DTYPE,
+        vs_falconn_filename: str,
+        min_results: int = 1,
+        max_results: int = 100,
+
+):
+    """
+    Perform clustered-search. Store benchmarks Only if min_results <= num_hits <= max_results.
+
+    :param search_object: search-object to run benchmarks on.
+    :param queries: queries to search around.
+    :param num_queries: number of queries to get benchmarks for.
+    :param radius: search-radius to use for each query.
+    :param vs_falconn_filename: name of .csv file to write benchmarks to.
+    :param min_results: minimum number of results.
+    :param max_results: maximum number of results.
+    """
+    search_depth = max(list(map(len, search_object.cluster_dict.keys())))
+    num_searched: int = 0
+
+    for q in queries:
+        query = np.expand_dims(q, 0)
+        check_input_array(query)
+        globals.DF_CALLS = 0
+
+        start = time()
+        results, num_clusters, fraction_searched = search_object.search(query, radius, search_depth, True)
+        chess_time = time() - start
+
+        if not (min_results <= len(results) <= max_results):
+            continue
+
+        start = time()
+        linear_results = search_object.linear_search(query=query, radius=radius)
+        linear_time = time() - start
+
+        write_results(
+            linear_results=linear_results,
+            results=results,
+            linear_time=linear_time,
+            chess_time=chess_time,
+            search_benchmarks_filename=vs_falconn_filename,
+            search_depth=search_depth,
+            radius=radius,
+            num_clusters=num_clusters,
+            fraction_searched=fraction_searched,
+        )
+        num_searched += 1
+        if num_searched > num_queries:
+            break
+    else:
+        print(num_searched)
     return

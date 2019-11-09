@@ -89,23 +89,40 @@ class Cluster:
         Otherwise any point in the points list is a potential center.
         :return: list of indexes in self.data of points that could be the center of the cluster.
         """
+        num_samples = int(np.sqrt(len(self.points))) if self._should_subsample_centers else len(self.points)
         points: List[int] = self.points.copy()
+        np.random.shuffle(points)
+        return points[: num_samples + 1]
 
-        if self._should_subsample_centers:
-            num_samples = int(np.sqrt(len(self.points)))
-            np.random.shuffle(points)
-            points = points[: num_samples + 1]
-
-        return points
-
-    def _calculate_pairwise_distances(self) -> np.ndarray:
+    def _calculate_pairwise_distances(
+            self,
+            num_tries: int = None,
+    ) -> np.ndarray:
         """
         Calculates the pairwise distances between potential centers.
 
+        :param num_tries: Number of tries to make to get a non-zero pairwise distance.
         :return: pairwise distance matrix of points that are potential centers.
         """
+        if num_tries is None:
+            num_tries = int(np.sqrt(len(self.points))) if self._should_subsample_centers else len(self.points)
+
         points = np.asarray([self.data[p] for p in self._potential_centers])
-        return calculate_distances(points, points, self.metric)
+        distances = calculate_distances(points, points, self.metric)
+
+        for _ in range(num_tries):
+            if 0 < np.max(distances):
+                return distances
+            else:
+                self._potential_centers = self._get_potential_centers()
+            points = np.asarray([self.data[p] for p in self._potential_centers])
+            distances = calculate_distances(points, points, self.metric)
+        else:
+            if len(self.points) > globals.MIN_POINTS:
+                raise ValueError(f'Could not find a non-zero pairwise distance in {num_tries} tries.\n'
+                                 f'Cluster name is {self.name} and points are:\n'
+                                 f'{self.points}.')
+        return distances
 
     def _calculate_center(self) -> int:
         """
@@ -135,7 +152,6 @@ class Cluster:
         return np.asarray([self.data[p]
                            for p in points[start_index: start_index + num_points]])
 
-    # noinspection PyTypeChecker
     def _calculate_radius(self) -> globals.RADII_DTYPE:
         """
         Calculates the radius of the cluster.
@@ -147,22 +163,17 @@ class Cluster:
         center = np.expand_dims(center, 0)
 
         if len(self.points) > globals.BATCH_SIZE:
-            return max(
-                max([max(calculate_distances(center,
-                                             self._get_batch(self.points, i),
-                                             self.metric)[0, :])
-                     for i in range(0, len(self.points), globals.BATCH_SIZE)]
-                    ),
-                0.0
-            )
+            potential_radii = [np.max(calculate_distances(center, self._get_batch(self.points, i), self.metric)[0, :])
+                               for i in range(0, len(self.points), globals.BATCH_SIZE)]
         else:
-            return max(
-                max(calculate_distances(
-                        center,
-                        self._get_batch(self.points, 0),
-                        self.metric)[0, :]),
-                0.0
-            )
+            potential_radii = calculate_distances(center, self._get_batch(self.points, 0), self.metric)[0, :]
+
+        radii = np.asarray(potential_radii, dtype=globals.RADII_DTYPE)
+        radius = np.max(radii)
+        if not isinstance(radius, globals.RADII_DTYPE):
+            raise ValueError(f'Got problem with calculating radius in cluster {self.name}.\n'
+                             f'Radius was {radius}.')
+        return radius
 
     def _calculate_local_fractal_dimension(self) -> globals.RADII_DTYPE:
         """
@@ -171,26 +182,21 @@ class Cluster:
 
         :return: local fractal dimension of the cluster.
         """
-
-        count: int
         center = self.data[self.center]
         center = np.expand_dims(center, 0)
 
         if len(self.points) > globals.BATCH_SIZE:
-            count = sum(
-                [sum(
-                    [1 if d <= self.radius / 2 else 0
-                     for d in calculate_distances(center,
-                                                  self._get_batch(self.points, i),
-                                                  self.metric)[0, :]]
-                ) for i in range(0, len(self.points), globals.BATCH_SIZE)]
-            )
+            count = [1 if d <= (self.radius / 2) else 0
+                     for i in range(0, len(self.points), globals.BATCH_SIZE)
+                     for d in calculate_distances(center, self._get_batch(self.points, i), self.metric)[0, :]]
         else:
-            count = sum([1 if d <= self.radius / 2 else 0
-                         for d in calculate_distances(center,
-                                                      self._get_batch(self.points, 0),
-                                                      self.metric)[0, :]])
-        return 0 if count == 0 else np.log2(len(self.points) / count)
+            count = [1 if d <= self.radius / 2 else 0
+                     for d in calculate_distances(center, self._get_batch(self.points, 0), self.metric)[0, :]]
+        count = globals.RADII_DTYPE(np.sum(count, dtype=int))
+        if not isinstance(count, globals.RADII_DTYPE):
+            raise ValueError(f'Got problem with calculating local_fractal_dimension in cluster {self.name}.\n'
+                             f'Count was {count}, of type {type(count)}.')
+        return 0 if count == 0 else np.log2(globals.RADII_DTYPE(len(self.points)) / count)
 
     def update(
             self,
@@ -237,8 +243,8 @@ class Cluster:
         :return: Weather or not the cluster can be popped.
         """
         return all((
-            len(self.points) > globals.MIN_POINTS,
-            self.radius > globals.MIN_RADIUS,
+            globals.MIN_POINTS < len(self.points),
+            globals.MIN_RADIUS < self.radius,
             self.depth < globals.MAX_DEPTH,
         ))
 
@@ -265,12 +271,19 @@ class Cluster:
         if update:
             self.update(internals_only=True)
 
-        max_pair_index = np.argmax(self._pairwise_distances)
-        max_col = max_pair_index // len(self._potential_centers)
-        max_row = max_pair_index % len(self._potential_centers)
+        tri_upper = np.triu(self._pairwise_distances, k=1)
+
+        max_pair_index = np.argmax(tri_upper)
+        max_col = max_pair_index // len(self._pairwise_distances)
+        max_row = max_pair_index % len(self._pairwise_distances)
 
         left_pole_index = self._potential_centers[max_col]
         right_pole_index = self._potential_centers[max_row]
+
+        if left_pole_index == right_pole_index:
+            raise ValueError(f'Got the same point {right_pole_index} as both poles.\n'
+                             f'Cluster name is {self.name}\n'
+                             f'Points are {self.points}.')
 
         left_pole, right_pole = self.data[left_pole_index], self.data[right_pole_index]
         left_pole, right_pole = np.expand_dims(left_pole, 0), np.expand_dims(right_pole, 0)
@@ -289,6 +302,18 @@ class Cluster:
              for i in range(0, len(self.points), globals.BATCH_SIZE)]
         else:
             partition(self._get_batch(self.points, 0), 0)
+
+        if left_pole_index in right_indexes:
+            right_indexes.remove(left_pole_index)
+            left_indexes.append(left_pole_index)
+        if right_pole_index in left_indexes:
+            left_indexes.remove(right_pole_index)
+            right_indexes.append(right_pole_index)
+
+        if len(left_indexes) == 0:
+            raise ValueError(f'Got empty left_indexes after popping cluster {self.name}.\n')
+        if len(right_indexes) == 0:
+            raise ValueError(f'Got empty right_indexes after popping cluster {self.name}.\n')
 
         self.left = Cluster(
             data=self.data,
