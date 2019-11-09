@@ -97,15 +97,15 @@ class Cluster:
         if self._should_subsample_centers:
             np.random.shuffle(points)
 
-        unique_points = set()
+        # unique_points = set()
         unique_indexes = set()
         for p in points:
-            point = tuple(self.data[p])
-            if point not in unique_points:
-                unique_points.add(tuple(point))
-                unique_indexes.add(p)
-            if len(unique_points) >= self._num_samples:
-                break
+            # point = tuple(self.data[p])
+            # if point not in unique_points:
+            #     unique_points.add(tuple(point))
+            unique_indexes.add(p)
+            # if len(unique_points) >= self._num_samples:
+            #     break
         if len(unique_indexes) == 1:
             self._contains_only_duplicates = True
         return list(unique_indexes)
