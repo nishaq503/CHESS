@@ -67,6 +67,7 @@ class Cluster:
         self._should_subsample_centers: bool = len(points) > globals.SUBSAMPLING_LIMIT
         self._num_samples = int(np.sqrt(len(self.points))) if self._should_subsample_centers else len(self.points)
         self._potential_centers: List[int] = []
+        self._contains_only_duplicates: bool = False
         self._pairwise_distances: np.ndarray = np.asarray([[]])
 
         self.center: int
@@ -84,71 +85,53 @@ class Cluster:
         else:
             self.update()
 
-    def _get_potential_centers(
-            self,
-            start_index: int = 0,
-    ) -> List[int]:
+    def _get_unique_potential_centers(self) -> List[int]:
+        """
+        This method is used in cases where there are duplicates in data.
+
+        :return: a list of points that are unique.
+        """
+        points: List[int] = self.points.copy()
+
+        if self._should_subsample_centers:
+            np.random.shuffle(points)
+
+        unique_indexes, unique_points = set(), set()
+        for p in points:
+            point = tuple(self.data[p])
+            if point not in unique_points:
+                unique_points.add(tuple(point))
+            unique_indexes.add(p)
+            if len(unique_indexes) >= self._num_samples:
+                break
+        if len(unique_indexes) == 1:
+            self._contains_only_duplicates = True
+        return list(unique_indexes)
+
+    def _get_potential_centers(self) -> List[int]:
         """
         If the cluster contains too many points, subsample square_root as many points as potential centers.
         Otherwise any point in the points list is a potential center.
 
-        :param start_index: start index when trying multiple times in _calculate_pairwise_distances.
         :return: list of indexes in self.data of points that could be the center of the cluster.
         """
-        points: List[int] = []
+        points: List[int] = self.points.copy()
 
-        if start_index == 0:
-            points = self.points.copy()
+        if self._should_subsample_centers:
             np.random.shuffle(points)
 
-        if start_index >= (len(self.points) - self._num_samples):
-            start_index = 0
-            np.random.shuffle(points)
-
-        return points[start_index: start_index + self._num_samples + 1]
+        return points[:self._num_samples + 1]
 
     def _calculate_pairwise_distances(
             self,
-            num_tries: int = None,
     ) -> np.ndarray:
         """
         Calculates the pairwise distances between potential centers.
 
-        :param num_tries: Number of tries to make to get a non-zero pairwise distance.
         :return: pairwise distance matrix of points that are potential centers.
         """
-        if num_tries is None:
-            num_tries = int(np.sqrt(len(self.points))) if self._should_subsample_centers else len(self.points)
-
-        def check_points_array():
-            if points.ndim != 2:
-                raise ValueError(f'Expected points to have 2 dimensions. Got {points.ndim} instead.\n'
-                                 f'Cluster name is {self.name} and potential_centers are:\n'
-                                 f'{self._potential_centers}.')
-            if points.shape[0] == 0:
-                raise ValueError(f'Expected array to have at least one point.')
-            if points.shape[1] == 0:
-                raise ValueError(f'Expected array to have points with non-zero dimensions.')
-
         points = np.asarray([self.data[p] for p in self._potential_centers])
-        check_points_array()
-
-        distances = calculate_distances(points, points, self.metric)
-
-        for i in range(self._num_samples, len(self.points), self._num_samples):
-            if 0 < np.max(distances):
-                return distances
-            else:
-                self._potential_centers = self._get_potential_centers(start_index=i)
-            points = np.asarray([self.data[p] for p in self._potential_centers])
-            check_points_array()
-            distances = calculate_distances(points, points, self.metric)
-        else:
-            if len(self.points) > globals.MIN_POINTS:
-                raise ValueError(f'Could not find a non-zero pairwise distance in {num_tries} tries.\n'
-                                 f'Cluster name is {self.name} and points are:\n'
-                                 f'{self.points}.')
-        return distances
+        return calculate_distances(points, points, self.metric)
 
     def _calculate_center(self) -> int:
         """
@@ -157,7 +140,10 @@ class Cluster:
 
         :return: index in self.data of the center of the cluster.
         """
-        return self._potential_centers[int(np.argmin(self._pairwise_distances.sum(axis=1)))]
+        if self._contains_only_duplicates:
+            return self.points[0]
+        else:
+            return self._potential_centers[int(np.argmin(self._pairwise_distances.sum(axis=1)))]
 
     def _get_batch(
             self,
@@ -175,8 +161,7 @@ class Cluster:
         :return numpy array of points in the batch:
         """
         num_points = min(start_index + globals.BATCH_SIZE, len(points)) - start_index
-        return np.asarray([self.data[p]
-                           for p in points[start_index: start_index + num_points]])
+        return np.asarray([self.data[p] for p in points[start_index: start_index + num_points]])
 
     def _calculate_radius(self) -> globals.RADII_DTYPE:
         """
@@ -188,7 +173,9 @@ class Cluster:
         center = self.data[self.center]
         center = np.expand_dims(center, 0)
 
-        if len(self.points) > globals.BATCH_SIZE:
+        if self._contains_only_duplicates:
+            return globals.RADII_DTYPE(0.0)
+        elif len(self.points) > globals.BATCH_SIZE:
             potential_radii = [np.max(calculate_distances(center, self._get_batch(self.points, i), self.metric)[0, :])
                                for i in range(0, len(self.points), globals.BATCH_SIZE)]
         else:
@@ -211,7 +198,9 @@ class Cluster:
         center = self.data[self.center]
         center = np.expand_dims(center, 0)
 
-        if len(self.points) > globals.BATCH_SIZE:
+        if self._contains_only_duplicates:
+            return globals.RADII_DTYPE(0)
+        elif len(self.points) > globals.BATCH_SIZE:
             count = [1 if d <= (self.radius / 2) else 0
                      for i in range(0, len(self.points), globals.BATCH_SIZE)
                      for d in calculate_distances(center, self._get_batch(self.points, i), self.metric)[0, :]]
@@ -219,9 +208,6 @@ class Cluster:
             count = [1 if d <= self.radius / 2 else 0
                      for d in calculate_distances(center, self._get_batch(self.points, 0), self.metric)[0, :]]
         count = globals.RADII_DTYPE(np.sum(count, dtype=int))
-        if not isinstance(count, globals.RADII_DTYPE):
-            raise ValueError(f'Got problem with calculating local_fractal_dimension in cluster {self.name}.\n'
-                             f'Count was {count}, of type {type(count)}.')
         return 0 if count == 0 else np.log2(globals.RADII_DTYPE(len(self.points)) / count)
 
     def update(
@@ -269,6 +255,7 @@ class Cluster:
         :return: Weather or not the cluster can be popped.
         """
         return all((
+            not self._contains_only_duplicates,
             globals.MIN_POINTS < len(self.points),
             globals.MIN_RADIUS < self.radius,
             self.depth < globals.MAX_DEPTH,

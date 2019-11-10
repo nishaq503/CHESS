@@ -161,9 +161,8 @@ def benchmark_search(
     :param search_benchmarks_filename: name of .csv file to write benchmarks to.
     """
     max_depth = max(list(map(len, search_object.cluster_dict.keys())))
-    search_depths = list(range(0, max_depth + 1, 5))
-    if max_depth not in search_depths:
-        search_depths.append(max_depth)
+    search_depths = list(range(10, max_depth + 1, 10))
+    # search_depths = [globals.MAX_DEPTH]
     search_queries = queries[:num_queries, :]
 
     for query in search_queries:

@@ -35,13 +35,13 @@ def get_data_and_queries(
         )
     elif dataset == 'GreenGenes':
         data = np.memmap(
-            filename=globals.GREENGENES_DATA,
+            filename=globals.GREENGENES_DATA_NO_DUP,
             dtype=globals.GREENGENES_DTYPE,
             mode=mode,
             shape=globals.GREENGENES_DATA_SHAPE,
         )
         queries = np.memmap(
-            filename=globals.GREENGENES_QUERIES,
+            filename=globals.GREENGENES_QUERIES_NO_DUP,
             dtype=globals.GREENGENES_DTYPE,
             mode=mode,
             shape=globals.GREENGENES_QUERIES_SHAPE,
@@ -295,7 +295,7 @@ class Search:
                 name=name,
                 center=name_to_info[name][0],
                 radius=name_to_info[name][1],
-                local_fractal_dimension=name_to_info[name][0],
+                local_fractal_dimension=name_to_info[name][2],
                 left=_build_tree(f'{name}0'),
                 right=_build_tree(f'{name}1'),
                 reading=True,

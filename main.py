@@ -24,8 +24,8 @@ def main(
     globals.MAX_DEPTH = initial_depth
 
     if dataset == 'GreenGenes':
-        globals.MIN_POINTS = 100
-        globals.MIN_RADIUS = 10.0 / globals.GREENGENES_NUM_DIMS
+        globals.MIN_POINTS = 10
+        globals.MIN_RADIUS = 2.0 / globals.GREENGENES_NUM_DIMS
 
     if not os.path.exists(clustering_times_filename):
         with open(clustering_times_filename, 'a') as outfile:
@@ -52,7 +52,7 @@ def main(
         )
 
     if run_search_benchmarks:
-        search_benchmarks_filename = f'logs/{search_benchmarks_filename}_{dataset}_{metric}.csv'
+        search_benchmarks_filename = f'{search_benchmarks_filename}_{dataset}_{metric}.csv'
         if not os.path.exists(search_benchmarks_filename):
             with open(search_benchmarks_filename, 'w') as outfile:
                 outfile.write(f'depth,radius,correctness,false_negative_rate,num_hits,num_clusters_searched,'
@@ -82,3 +82,40 @@ if __name__ == '__main__':
     parser.add_argument('--run-search-benchmarks', action='store_true')
     args = parser.parse_args()
     main(**vars(args))
+
+    # from argparse import ArgumentParser
+    #
+    # parser = ArgumentParser('CHESS')
+    # parser.add_argument('dataset', choices={'APOGEE', 'GreenGenes'})
+    # parser.add_argument('metric', choices=globals.DISTANCE_FUNCTIONS)
+    # parser.add_argument('--initial-depth', nargs=1, default=1)
+    # parser.add_argument('--final-depth', nargs=1, default=100)
+    # parser.add_argument('--do-initial-clustering', action='store_true')
+    # parser.add_argument('--run-search-benchmarks', action='store_true')
+    # args = parser.parse_args()
+    # main(**vars(args))
+
+    # main(
+    #     dataset='APOGEE',
+    #     metric='euclidean',
+    #     initial_depth=1,
+    #     final_depth=100,
+    #     do_initial_clustering=True,
+    #     run_search_benchmarks=False,
+    # )
+    # main(
+    #     dataset='APOGEE',
+    #     metric='cosine',
+    #     initial_depth=1,
+    #     final_depth=100,
+    #     do_initial_clustering=True,
+    #     run_search_benchmarks=False
+    # )
+    main(
+        dataset='GreenGenes',
+        metric='hamming',
+        initial_depth=50,
+        final_depth=50,
+        do_initial_clustering=False,
+        run_search_benchmarks=True
+    )
