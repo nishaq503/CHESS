@@ -63,7 +63,7 @@ def main(
             benchmark_search(
                 search_object=search_object,
                 queries=queries,
-                num_queries=10,
+                num_queries=50,
                 radius=radius,
                 search_benchmarks_filename=search_benchmarks_filename,
             )
@@ -104,8 +104,8 @@ if __name__ == '__main__':
     main(
         dataset='GreenGenes',
         metric='hamming',
-        initial_depth=88,
-        final_depth=100,
+        initial_depth=50,
+        final_depth=50,
         do_initial_clustering=False,
         run_search_benchmarks=False
     )
