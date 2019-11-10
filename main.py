@@ -107,5 +107,5 @@ if __name__ == '__main__':
         initial_depth=50,
         final_depth=50,
         do_initial_clustering=False,
-        run_search_benchmarks=False
+        run_search_benchmarks=True
     )
