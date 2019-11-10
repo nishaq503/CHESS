@@ -161,8 +161,7 @@ def benchmark_search(
     :param search_benchmarks_filename: name of .csv file to write benchmarks to.
     """
     max_depth = max(list(map(len, search_object.cluster_dict.keys())))
-    search_depths = list(range(10, max_depth + 1, 10))
-    # search_depths = [globals.MAX_DEPTH]
+    search_depths = list(range(0, max_depth + 1, 5))
     search_queries = queries[:num_queries, :]
 
     for query in search_queries:
@@ -177,12 +176,19 @@ def benchmark_search(
             globals.DF_CALLS = 0
 
             start = time()
-            results, num_clusters, fraction_searched = search_object.search(query, radius, depth, True)
+            results = search_object.search(
+                query=query,
+                radius=radius,
+                search_depth=depth,
+                count_distance_comparisons=True,
+            )
             chess_time = time() - start
+
+            chess_results, num_clusters, fraction_searched = results
 
             write_results(
                 linear_results=linear_results,
-                results=results,
+                results=chess_results,
                 linear_time=linear_time,
                 chess_time=chess_time,
                 search_benchmarks_filename=search_benchmarks_filename,
@@ -202,7 +208,6 @@ def benchmark_search_with_hits(
         vs_falconn_filename: str,
         min_results: int = 1,
         max_results: int = 100,
-
 ):
     """
     Perform clustered-search. Store benchmarks Only if min_results <= num_hits <= max_results.
