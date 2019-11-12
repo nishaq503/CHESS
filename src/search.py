@@ -35,13 +35,13 @@ def get_data_and_queries(
         )
     elif dataset == 'GreenGenes':
         data = np.memmap(
-            filename=globals.GREENGENES_DATA_NO_DUP,
+            filename=globals.GREENGENES_DATA,
             dtype=globals.GREENGENES_DTYPE,
             mode=mode,
             shape=globals.GREENGENES_DATA_SHAPE,
         )
         queries = np.memmap(
-            filename=globals.GREENGENES_QUERIES_NO_DUP,
+            filename=globals.GREENGENES_QUERIES,
             dtype=globals.GREENGENES_DTYPE,
             mode=mode,
             shape=globals.GREENGENES_QUERIES_SHAPE,
@@ -54,8 +54,8 @@ def get_data_and_queries(
 
 class Search:
     """
-    Implements Clustered Hierarchical Entropy-Scaling Search with GPU acceleration using tensorflow.
-    I'm trying to squash a few bugs right now so tensorflow implementation is currently turned off.
+    Implements Clustered Hierarchical Entropy-Scaling Search.
+    All it needs is a dataset and a distance function (preferably a metric).
     """
 
     def __init__(
@@ -69,10 +69,10 @@ class Search:
         """
         Initializes search object.
 
-        :param dataset: name of data to search.
+        :param dataset: name of dataset to search.
         :param metric: distance metric to use during clustering and search.
-        :param names_file: name of .csv with columns {cluster_name, point_index}.
-        :param info_file: name of .csv with columns {cluster_name, number_of_points, center, radius, lfd, is_leaf}.
+        :param names_file: name of .csv with columns [cluster_name, point_index].
+        :param info_file: name of .csv with columns [cluster_name, number_of_points, center, radius, lfd, is_leaf].
         :param reading: weather or not the cluster-tree for the search object is being read from a file.
         """
         self.dataset = dataset
@@ -118,8 +118,19 @@ class Search:
             self,
             points: List[int],
             start_index: int,
+            batch_size: int = globals.BATCH_SIZE,
     ):
-        num_points = min(start_index + globals.BATCH_SIZE, self.data.shape[0]) - start_index
+        """
+        Gets a batch of points from the given points list.
+        Batch starts at index start_index in points list.
+
+        :param points: list of indexes in self.data from which to draw the batch.
+        :param start_index: index in points from where to start drawing the batch.
+        :param batch_size: size of each batch.
+
+        :return numpy array of points in the batch:
+        """
+        num_points = min(start_index + batch_size, self.data.shape[0]) - start_index
         return np.asarray([self.data[p] for p in points[start_index: start_index + num_points]])
 
     def linear_search(
@@ -129,7 +140,7 @@ class Search:
     ) -> List[int]:
         """
         Perform naive linear search on self.data.
-        This is to get ground truth for clustered search to compare against.
+        This is for comparing against clustered search.
 
         :param query: point around which to search.
         :param radius: search radius to use.
@@ -141,8 +152,7 @@ class Search:
         points = list(range(self.data.shape[0]))
 
         for i in range(0, self.data.shape[0], globals.BATCH_SIZE):
-            batch = self._get_batch(points, i)
-            distances = calculate_distances(query, batch, self.metric)[0, :]
+            distances = calculate_distances(query, self._get_batch(points, i), self.metric)[0, :]
             results.extend([i + j for j, d in enumerate(distances) if d <= radius])
 
         return results
@@ -151,32 +161,33 @@ class Search:
             self,
             query: np.ndarray,
             radius: globals.RADII_DTYPE,
-            search_depth: int,
-            count_calls: bool = False,
-    ) -> Tuple[List[int], int, globals.RADII_DTYPE]:
+            search_depth: int = globals.MAX_DEPTH,
+            count: bool = False,
+    ) -> Tuple[List[int], int, float]:
         """
         Perform clustered search to required depth.
 
-        :param query: point around which to search.
+        :param query: point around which to search. This must have shape (1, num_dims)
         :param radius: search radius to use.
         :param search_depth: maximum depth to which to search.
-        :param count_calls: weather or not to count distance calls for benchmarking.
+        :param count: weather or not to count distance calls for benchmarking.
         :return: List of indexes in self.data of hits, number of clusters searched, fraction of dataset searched.
         """
         check_input_array(query)
 
         clusters = self.root.search(query, radius, search_depth)
-        potential_hits = [p
-                          for c in clusters
-                          for p in self.cluster_dict[c].points]
+        potential_hits = [p for c in clusters for p in self.cluster_dict[c].points]
 
         results = []
 
         for i in range(0, len(potential_hits), globals.BATCH_SIZE):
-            batch = self._get_batch(potential_hits, i)
-            distances = calculate_distances(query, batch, self.metric, count_calls=count_calls)[0, :]
-            hits = [i + j for j, d in enumerate(distances) if d <= radius]
-            results.extend([potential_hits[h] for h in hits])
+            distances = calculate_distances(
+                x=query,
+                y=self._get_batch(potential_hits, i),
+                metric=self.metric,
+                count_calls=count,
+            )[0, :]
+            results.extend([potential_hits[i + j] for j, d in enumerate(distances) if d <= radius])
 
         return results, len(clusters), len(potential_hits) / self.data.shape[0]
 
@@ -217,8 +228,8 @@ class Search:
             outfile.write('cluster_name,number_of_points,center,radius,lfd,is_leaf\n')
 
             def _helper(node: Cluster):
-                outfile.write(f'{node.name},{len(node.points):d},{node.center:d},{node.radius:.16f},'
-                              f'{node.local_fractal_dimension:.16f},{not node.can_be_popped()}\n')
+                outfile.write(f'{node.name},{len(node.points):d},{node.center:d},{node.radius:.8f},'
+                              f'{node.local_fractal_dimension:.8f},{not node.can_be_popped()}\n')
                 if node.left:
                     _helper(node.left)
                 if node.right:
@@ -312,7 +323,7 @@ class Search:
         [cluster.pop(update=True)
          for i in range(old_depth, new_depth)
          for name, cluster in self.cluster_dict.items()
-         if len(cluster.name) == i]
+         if len(name) == i]
 
         self.cluster_dict = self._get_cluster_dict()
         return

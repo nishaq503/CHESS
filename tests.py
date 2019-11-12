@@ -62,10 +62,9 @@ class TestDistanceFunctions(unittest.TestCase):
 
 
 def sandbox():
-    data, queries = get_data_and_queries(dataset='GreenGenes')
-    set_data: Set = set()
-    [set_data.add(tuple(point)) for point in queries]
-    print(len(queries), len(set_data))
+    a = 15.5
+    b = np.asarray(a)
+    print(b,  type(b))
     return
 
 
@@ -100,6 +99,6 @@ def filter_duplicates():
 
 
 if __name__ == '__main__':
-    unittest.main()
-    # sandbox()
+    # unittest.main()
+    sandbox()
     # filter_duplicates()
