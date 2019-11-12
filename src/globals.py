@@ -34,6 +34,10 @@ MIN_RADIUS = 0
 MAX_DEPTH = 50
 RADII_DTYPE = np.float64
 
+DATASETS = {
+    'APOGEE',
+    'GreenGenes',
+}
 DISTANCE_FUNCTIONS = {
     'euclidean',
     'cosine',
