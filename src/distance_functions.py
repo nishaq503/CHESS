@@ -43,4 +43,5 @@ def calculate_distances(
     if use_tensorflow:
         raise NotImplementedError(f'Tensorflow distances have not yet been ported from old repo.')
     else:
-        return pairwise_distances(x, y, metric)
+        distances = pairwise_distances(x, y, metric)
+        return np.maximum(distances, np.zeros_like(distances, dtype=globals.RADII_DTYPE))

@@ -180,7 +180,7 @@ def benchmark_search(
                 query=query,
                 radius=radius,
                 search_depth=depth,
-                count_distance_comparisons=True,
+                count=True,
             )
             chess_time = time() - start
 
