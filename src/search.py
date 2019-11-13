@@ -62,18 +62,12 @@ class Search:
             self,
             dataset: str,
             metric: str,
-            names_file: str = None,
-            info_file: str = None,
-            reading: bool = False,
     ):
         """
         Initializes search object.
 
         :param dataset: name of dataset to search.
         :param metric: distance metric to use during clustering and search.
-        :param names_file: name of .csv with columns [cluster_name, point_index].
-        :param info_file: name of .csv with columns [cluster_name, number_of_points, center, radius, lfd, is_leaf].
-        :param reading: weather or not the cluster-tree for the search object is being read from a file.
         """
         self.dataset = dataset
         data, _ = get_data_and_queries(dataset=self.dataset)
@@ -83,23 +77,36 @@ class Search:
             raise NotImplementedError(f'Got metric {metric}. It must be one of {globals.DISTANCE_FUNCTIONS}.')
         self.metric: str = metric
 
-        self.names_file: str = names_file
-        self.info_file: str = info_file
-
         self.root: Cluster
+        self.cluster_dict: Dict[str: Cluster]
+        self.names_file: str
+        self.info_file: str
 
-        if reading:
-            self.root = self.read_cluster_tree()
-        else:
-            self.root = Cluster(
-                data=self.data,
-                points=list(range(self.data.shape[0])),
-                metric=self.metric,
-                name='',
-            )
-            self.root.make_tree()
+    # noinspection PyAttributeOutsideInit
+    def build(self):
+        """ Builds cluster-tree. """
+        self.root = Cluster(
+            data=self.data,
+            points=list(range(self.data.shape[0])),
+            metric=self.metric,
+            name='',
+        )
+        self.root.make_tree()
+        self.cluster_dict = self._get_cluster_dict()
+        return
 
-        self.cluster_dict: Dict[str: Cluster] = self._get_cluster_dict()
+    # noinspection PyAttributeOutsideInit
+    def load(
+            self,
+            names_file: str,
+            info_file: str,
+    ):
+        """ Loads cluster-tree from files on disk. """
+        self.names_file = names_file
+        self.info_file = info_file
+        self.root = self.read_cluster_tree()
+        self.cluster_dict = self._get_cluster_dict()
+        return
 
     def _get_cluster_dict(self):
         cluster_dict: Dict[str: Cluster] = {}
@@ -163,7 +170,7 @@ class Search:
             radius: globals.RADII_DTYPE,
             search_depth: int = globals.MAX_DEPTH,
             count: bool = False,
-    ) -> Tuple[List[int], int, float]:
+    ):
         """
         Perform clustered search to required depth.
 
@@ -171,7 +178,7 @@ class Search:
         :param radius: search radius to use.
         :param search_depth: maximum depth to which to search.
         :param count: weather or not to count distance calls for benchmarking.
-        :return: List of indexes in self.data of hits, number of clusters searched, fraction of dataset searched.
+        :return: List of indexes in self.data of hits.
         """
         check_input_array(query)
 
@@ -189,7 +196,10 @@ class Search:
             )[0, :]
             results.extend([potential_hits[i + j] for j, d in enumerate(distances) if d <= radius])
 
-        return results, len(clusters), len(potential_hits) / self.data.shape[0]
+        if count:
+            return results, len(clusters), len(potential_hits) / self.data.shape[0]
+        else:
+            return results
 
     def print_names(
             self,
@@ -238,19 +248,12 @@ class Search:
             _helper(self.root)
         return
 
-    def read_cluster_tree(
-            self,
-            names_file: str = None,
-            info_file: str = None,
-    ) -> Cluster:
+    def read_cluster_tree(self) -> Cluster:
         """
         Reads a cluster-tree from (optionally given) .csv files on disk
 
-        :param names_file: name of .csv with columns {cluster_name, point_index}.
-        :param info_file: name of .csv with columns {cluster_name, number_of_points, center, radius, lfd, is_leaf}.
         :return: root cluster.
         """
-        self.names_file = names_file if names_file is not None else self.names_file
         name_to_points: Dict[str: List[int]] = {}
 
         with open(self.names_file, 'r') as infile:
@@ -278,7 +281,6 @@ class Search:
 
         _build_dict_tree('')
 
-        self.info_file = info_file if info_file is not None else self.info_file
         name_to_info: Dict[str, List] = {}
         with open(self.info_file, 'r') as infile:
             infile.readline()
@@ -325,5 +327,6 @@ class Search:
          for name, cluster in self.cluster_dict.items()
          if len(name) == i]
 
+        # noinspection PyAttributeOutsideInit
         self.cluster_dict = self._get_cluster_dict()
         return
