@@ -73,39 +73,16 @@ def main(
 if __name__ == '__main__':
     np.random.seed(42)
 
-    # from argparse import ArgumentParser
-    #
-    # parser = ArgumentParser('CHESS')
-    # parser.add_argument('dataset', choices={'APOGEE', 'GreenGenes'})
-    # parser.add_argument('metric', choices=globals.DISTANCE_FUNCTIONS)
-    # parser.add_argument('--initial-depth', nargs=1, default=1)
-    # parser.add_argument('--final-depth', nargs=1, default=100)
-    # parser.add_argument('--do-initial-clustering', action='store_true')
-    # parser.add_argument('--run-search-benchmarks', action='store_true')
-    # args = parser.parse_args()
-    # main(**vars(args))
+    from argparse import ArgumentParser
 
-    # main(
-    #     dataset='APOGEE',
-    #     metric='euclidean',
-    #     initial_depth=1,
-    #     final_depth=100,
-    #     do_initial_clustering=True,
-    #     run_search_benchmarks=False,
-    # )
-    # main(
-    #     dataset='APOGEE',
-    #     metric='cosine',
-    #     initial_depth=1,
-    #     final_depth=100,
-    #     do_initial_clustering=True,
-    #     run_search_benchmarks=False,
-    # )
-    main(
-        dataset='GreenGenes',
-        metric='hamming',
-        initial_depth=1,
-        final_depth=100,
-        do_initial_clustering=True,
-        run_search_benchmarks=True,
-    )
+    parser = ArgumentParser('CHESS')
+    parser.add_argument('dataset', choices=globals.DATASETS,
+                        help=f'must be one of {globals.DATASETS}.')
+    parser.add_argument('metric', choices=globals.DISTANCE_FUNCTIONS,
+                        help=f'must be one of {globals.DISTANCE_FUNCTIONS}.')
+    parser.add_argument('--initial-depth', default=1, type=int)
+    parser.add_argument('--final-depth', default=100, type=int)
+    parser.add_argument('--do-initial-clustering', action='store_true')
+    parser.add_argument('--run-search-benchmarks', action='store_true')
+    args = parser.parse_args()
+    main(**vars(args))
