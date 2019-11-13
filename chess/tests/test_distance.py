@@ -1,11 +1,6 @@
 import unittest
-from typing import Set
 
-import numpy as np
-
-from src.distance_functions import check_input_array, calculate_distances
-from src.search import get_data_and_queries
-from src import globals
+from chess.distance import *
 
 
 class TestDistanceFunctions(unittest.TestCase):
@@ -59,46 +54,3 @@ class TestDistanceFunctions(unittest.TestCase):
         distances = calculate_distances(y, x, metric)[:, 0]
         self.assertEqual(distances.ndim, 1)
         self.assertEqual(distances.shape, (y.shape[0],))
-
-
-def sandbox():
-    a = 15.5
-    b = np.asarray(a)
-    print(b,  type(b))
-    return
-
-
-def filter_duplicates():
-    data, queries = get_data_and_queries(dataset='GreenGenes')
-    set_data, set_queries = set(), set()
-    # [set_data.add(tuple(point)) for point in data]
-    [set_queries.add(tuple(point)) for point in queries]
-
-    print(len(set_data), len(set_queries))
-    with open('lengths.txt', 'a') as outfile:
-        # outfile.write(f'GREENGENES_NUM_DATA_NO_DUP = {len(set_data)}\n')
-        outfile.write(f'GREENGENES_NUM_QUERIES_NO_DUP = {len(set_queries)}\n')
-
-    def write_memmap(filename, set_to_write):
-        my_memmap = np.memmap(
-            filename=filename,
-            dtype=globals.GREENGENES_DTYPE,
-            mode='w+',
-            shape=(len(set_to_write), globals.GREENGENES_NUM_DIMS),
-        )
-        for i, point in enumerate(set_to_write):
-            p = np.asarray(point, dtype=globals.GREENGENES_DTYPE)
-            my_memmap[i] = p
-        my_memmap.flush()
-        del my_memmap
-
-    # write_memmap(globals.GREENGENES_DATA_NO_DUP, set_data)
-    write_memmap(globals.GREENGENES_QUERIES_NO_DUP, set_queries)
-
-    return
-
-
-if __name__ == '__main__':
-    # unittest.main()
-    sandbox()
-    # filter_duplicates()

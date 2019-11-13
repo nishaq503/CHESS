@@ -3,9 +3,10 @@ from typing import Dict
 
 import numpy as np
 
-from src import globals
-from src.benchmarks import make_clusters, read_clusters, deepen_clustering, benchmark_search
-from src.search import get_data_and_queries
+import chess.data
+from chess import globals
+from chess.benchmarks import make_clusters, read_clusters, deepen_clustering, benchmark_search
+from chess.search import get_data_and_queries
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -25,7 +26,7 @@ def main(
 
     if dataset == 'GreenGenes':
         globals.MIN_POINTS = 10
-        globals.MIN_RADIUS = 2.0 / globals.GREENGENES_NUM_DIMS
+        globals.MIN_RADIUS = 2.0 / chess.data.GREENGENES_NUM_DIMS
 
     if not os.path.exists(clustering_times_filename):
         with open(clustering_times_filename, 'a') as outfile:

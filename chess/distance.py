@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.metrics import pairwise_distances
-from src import globals
+
+from chess import globals
 
 
 def check_input_array(x):
@@ -27,7 +28,7 @@ def calculate_distances(
     
     :param x: 2-d array of points.
     :param y: 2-d array of points.
-    :param metric: distance function to use.
+    :param metric: distance metric from scikit-learn pairwise to use.
     :param count_calls: Weather or not to count the number of distance calculations made.
     :param use_tensorflow: Weather or not to use tensorflow to compute distances.
     

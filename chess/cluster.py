@@ -1,32 +1,26 @@
 import pickle
-from collections import Counter
-from typing import List
+from typing import List, Set
 
 import numpy as np
 
-from src import globals
-from src.distance_functions import calculate_distances
+from chess import globals
+from chess.distance import calculate_distances
 
 
 class Cluster:
-    """
-    Defines the cluster class.
+    """ Defines the cluster class.
     Adds methods relevant to building and searching through a cluster-tree.
-    Adds a compress method that should only be used for apogee data with euclidean distance.
+    Adds a compress method that should only be used for appropriate datasets.
     """
 
     def __init__(
             self,
             data: np.memmap,
-            points: List[int],
             metric: str,
-            name: str,
+            points: Set[int] = None,
+            name: str = '',
             center: int = None,
             radius: globals.RADII_DTYPE = None,
-            local_fractal_dimension: globals.RADII_DTYPE = None,
-            left=None,
-            right=None,
-            reading: bool = False,
     ):
         """
         Initializes cluster object.
@@ -37,85 +31,34 @@ class Cluster:
         :param name: name of cluster to track ancestry.
         :param center: index in data of center of cluster.
         :param radius: radius of cluster i.e. the maximum distance from any point in the cluster to the cluster center.
-        :param local_fractal_dimension: log2 ratio of number of points in cluster to number points within half radius.
-        :param left: left-child cluster.
-        :param right: right-child cluster.
-        :param reading: weather or not a cluster is being read from file.
         """
-
         self.data: np.memmap = data
         self.name: str = name
-        self.depth: int = len(name)
-
-        error_suffix = f'\nCluster name is {self.name}.'
-        if len(points) == 0:
-            raise ValueError(f'points list must have at least one point.'
-                             f'Cluster name is {self.name}.' + error_suffix)
-        if len(points) != len(set(points)):
-            duplicates = [(p, count) for p, count in Counter(points).items() if count > 1]
-            raise ValueError(f'Points list must not have duplicate elements.\n'
-                             f'These points were duplicated:\n{duplicates}.' + error_suffix)
-        self.points: List[int] = points
-
-        if metric not in globals.DISTANCE_FUNCTIONS:
-            raise NotImplementedError(f'Got metric {metric}. It must be one of {globals.DISTANCE_FUNCTIONS}.')
         self.metric: str = metric
+        self.center: int = center
+        self.radius: globals.RADII_DTYPE = radius
 
-        self.left: Cluster = left
-        self.right: Cluster = right
+        self.depth: int = len(name)
+        self.points: Set[int] = points or set(range(self.data.shape[0]))
 
-        self._should_subsample_centers: bool = len(points) > globals.SUBSAMPLING_LIMIT
-        self._num_samples = int(np.sqrt(len(self.points))) if self._should_subsample_centers else len(self.points)
-        self._potential_centers: List[int] = []
-        self._contains_only_duplicates: bool = False
-        self._pairwise_distances: np.ndarray = np.asarray([[]], dtype=globals.RADII_DTYPE)
+        self.left = self.right = None
 
-        self.center: int
-        self.radius: globals.RADII_DTYPE
-        self.local_fractal_dimension: globals.RADII_DTYPE
+        self._subsample: bool = len(self.points) > globals.SUBSAMPLING_LIMIT
 
-        if len(self.points) == 1:
-            self.center = self.points[0]
-            self.radius = 0
-            self.local_fractal_dimension = 0
-        elif reading:
-            self.center = center
-            self.radius = radius
-            self.local_fractal_dimension = local_fractal_dimension
-        else:
-            self.update()
+    def validate(self):
+        assert len(self.points) > 0, f"Empty point indices in {self.name}"
+        assert len(self.points) != len(set(self.points)), f"Duplicate point indices in {self.name}"
 
-    def _get_unique_potential_centers(self) -> List[int]:
-        """
-        This method is used in cases where there are duplicates in data.
+    def _sample_unique(self):
+        """ Returns indices of unique potential centers. """
+        n = int(np.sqrt(len(self.points))) if self._subsample else len(self.points)
+        unique = np.unique(self.data[list(self.points)], return_index=True, axis=0)[1]
+        return np.random.choice(unique, n, replace=False) if len(unique) > n else unique
 
-        :return: a list of points that are unique.
-        """
-        points: List[int] = self.points.copy()
-        np.random.shuffle(points)
-
-        unique_indexes, unique_points = set(), set()
-        for p in points:
-            point = tuple(self.data[p])
-            if point not in unique_points:
-                unique_points.add(tuple(point))
-                unique_indexes.add(p)
-            if len(unique_indexes) >= self._num_samples:
-                break
-        if len(unique_indexes) == 1:
-            self._contains_only_duplicates = True
-        return list(unique_indexes)
-
-    def _get_potential_centers(self) -> List[int]:
-        """
-        If the cluster contains too many points, subsample square_root as many points as potential centers.
-        Otherwise any point in the points list is a potential center.
-
-        :return: list of indexes in self.data of points that could be the center of the cluster.
-        """
-        points: List[int] = self.points.copy()
-        np.random.shuffle(points)
-        return points[:self._num_samples]
+    def _sample(self):
+        """ Returns indices of potential centers. """
+        n = int(np.sqrt(len(self.points))) if self._subsample else len(self.points)
+        return np.random.choice(list(self.points), n, replace=False)
 
     def _calculate_pairwise_distances(self) -> np.ndarray:
         """

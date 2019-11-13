@@ -1,10 +1,13 @@
+""" Clustered Hierarchical Entropy-Scaling Search.
+"""
 from typing import Dict, List, Tuple
 
 import numpy as np
 
-from src import globals
-from src.cluster import Cluster
-from src.distance_functions import check_input_array, calculate_distances
+import chess.data
+from chess import globals
+from chess.cluster import Cluster
+from chess.distance import check_input_array, calculate_distances
 
 
 def get_data_and_queries(
@@ -22,29 +25,29 @@ def get_data_and_queries(
 
     if dataset == 'APOGEE':
         data = np.memmap(
-            filename=globals.APOGEE_DATA,
-            dtype=globals.APOGEE_DTYPE,
+            filename=chess.data.Apogee.DATA,
+            dtype=chess.data.Apogee.DTYPE,
             mode=mode,
-            shape=globals.APOGEE_DATA_SHAPE,
+            shape=chess.data.Apogee.DATA_SHAPE,
         )
         queries = np.memmap(
-            filename=globals.APOGEE_QUERIES,
-            dtype=globals.APOGEE_DTYPE,
+            filename=chess.data.Apogee.QUERIES,
+            dtype=chess.data.Apogee.DTYPE,
             mode=mode,
-            shape=globals.APOGEE_QUERIES_SHAPE,
+            shape=chess.data.Apogee.QUERIES_SHAPE,
         )
     elif dataset == 'GreenGenes':
         data = np.memmap(
-            filename=globals.GREENGENES_DATA,
-            dtype=globals.GREENGENES_DTYPE,
+            filename=chess.data.GreenGenes.DATA,
+            dtype=chess.data.GreenGenes.DTYPE,
             mode=mode,
-            shape=globals.GREENGENES_DATA_SHAPE,
+            shape=chess.data.GreenGenes.DATA_SHAPE,
         )
         queries = np.memmap(
-            filename=globals.GREENGENES_QUERIES,
-            dtype=globals.GREENGENES_DTYPE,
+            filename=chess.data.GreenGenes.QUERIES,
+            dtype=chess.data.GreenGenes.DTYPE,
             mode=mode,
-            shape=globals.GREENGENES_QUERIES_SHAPE,
+            shape=chess.data.GreenGenes.QUERIES_SHAPE,
         )
     else:
         raise ValueError(f'Only the APOGEE and GreenGenes datasets are available. Got {dataset}.')
@@ -53,8 +56,7 @@ def get_data_and_queries(
 
 
 class Search:
-    """
-    Implements Clustered Hierarchical Entropy-Scaling Search.
+    """ Implements Clustered Hierarchical Entropy-Scaling Search.
     All it needs is a dataset and a distance function (preferably a metric).
     """
 
