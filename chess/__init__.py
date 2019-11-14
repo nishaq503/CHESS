@@ -13,14 +13,30 @@ class CHESS:
         self.metric = metric
 
     def __str__(self):
-        return '\n'.join([str(c) for c in self.cluster.inorder()])
+        """
+        :return: CSV-style string with two columns, name and an array of points, one row per leaf cluster.
+        """
+        return '\n'.join([
+            'name, points',
+            *[str(c) for c in self.cluster.leaves()]
+        ])
 
     def __repr__(self):
-        return '\n'.join([repr(c) for c in self.cluster.inorder()])
+        """
+        :return: CSV-style string with more attributes, one row per cluster, generated inorder.
+        """
+        return '\n'.join([
+            'name, number_of_points, center, radius, lfd, is_leaf',
+            *[repr(c) for c in self.cluster.inorder()]
+        ])
 
-    def cluster(self, stopping_criteria):
-        """ Clusters points recursively until stopping_criteria returns True. """
-        raise NotImplementedError
+    def cluster(self, stopping_criteria=None):
+        """ Clusters points recursively until stopping_criteria returns True.
+
+        :param stopping_criteria: optional override to cluster.partitionable
+        """
+        self.cluster.make_tree(stopping_criteria)
+        return
 
     def search(self, query, radius):
         """ Searches the clusters for all points within query.radius of query.point.
