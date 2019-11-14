@@ -96,8 +96,8 @@ class Search:
             metric=self.metric,
             name='',
         )
-        self.build_deeper(additional_depth=depth)
         self.cluster_dict = self._get_cluster_dict()
+        self.build_deeper(additional_depth=depth)
         return
 
     def build_deeper(self, additional_depth: int):
@@ -141,6 +141,7 @@ class Search:
                 in_order(node.right)
 
         in_order(self.root)
+        self.cluster_dict = cluster_dict
         return cluster_dict
 
     def _get_batch(
