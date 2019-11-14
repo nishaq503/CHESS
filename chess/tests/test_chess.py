@@ -22,4 +22,10 @@ class TestCHESS(unittest.TestCase):
         return
 
     def test_functional(self):
-        cluster = CHESS(self.data, 'euclidean')
+        chess = CHESS(self.data, 'euclidean')
+        chess.build()
+        result = chess.search(self.data[0], 0.0)
+        self.assertEqual(len(result), 1)
+
+        result = chess.search(self.data[0] + 50, 0.0)
+        self.assertEqual(len(result), 0)

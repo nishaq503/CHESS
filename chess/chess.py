@@ -1,3 +1,5 @@
+import tempfile
+
 import numpy as np
 
 from .cluster import Cluster
@@ -30,7 +32,7 @@ class CHESS:
             *[repr(c) for c in self.cluster.inorder()]
         ])
 
-    def cluster(self, stopping_criteria=None):
+    def build(self, stopping_criteria=None):
         """ Clusters points recursively until stopping_criteria returns True.
 
         :param stopping_criteria: optional override to cluster.partitionable
@@ -48,6 +50,17 @@ class CHESS:
 
     def compress(self):
         """ Compresses the clusters. """
+        temp = tempfile.NamedTemporaryFile()
+        mm = np.memmap(
+            temp.name,
+            dtype=self.cluster.data.dtype,
+            mode='w+',
+            shape=self.cluster.data.shape,
+        )
+        i = 0
+        for cluster in self.cluster.leaves():
+            points = cluster.compress()
+            print()
         raise NotImplementedError
 
     def write(self, filename):

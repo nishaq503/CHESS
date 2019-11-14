@@ -1,35 +1,9 @@
 import logging
+from abc import ABC
 
 import numpy as np
 
 log = logging.getLogger(__name__)
-
-
-def get_data(dataset: str, mode: str = 'r') -> np.memmap:
-    """ Reads and returns the numpy memmap file for the given dataset.
-
-    :param dataset: data set to read. Must be APOGEE or GreenGenes.
-    :param mode: optional mode to read the memmap files in.
-    :return: data for clustering.
-    """
-    if dataset == 'APOGEE':
-        data = np.memmap(
-            filename=Apogee.DATA,
-            dtype=Apogee.DTYPE,
-            mode=mode,
-            shape=Apogee.DATA_SHAPE,
-        )
-    elif dataset == 'GreenGenes':
-        data = np.memmap(
-            filename=GreenGenes.DATA,
-            dtype=GreenGenes.DTYPE,
-            mode=mode,
-            shape=GreenGenes.DATA_SHAPE,
-        )
-    else:
-        raise ValueError(f'Only the APOGEE and GreenGenes datasets are available. Got {dataset}.')
-
-    return data
 
 
 def filter_duplicates(data: np.memmap, filename: str):
@@ -59,7 +33,39 @@ def filter_duplicates(data: np.memmap, filename: str):
     return
 
 
-class Apogee:
+class Dataset(ABC):
+    FULL: str
+    DATA: str
+    QUERIES: str
+    NQUERIES: int
+    DTYPE: str
+    ROWS: int
+    DIMS: int
+
+    def get_data(self):
+        return np.memmap(
+            filename=self.DATA,
+            dtype=self.DTYPE,
+            mode='r',
+            shape=self.data_shape(),
+        )
+
+    def data_shape(self):
+        return self.ROWS - self.NQUERIES, self.DIMS
+
+    def get_queries(self):
+        return np.memmap(
+            filename=self.QUERIES,
+            dtype=self.DTYPE,
+            mode='r',
+            shape=self.queries_shape(),
+        )
+
+    def queries_shape(self):
+        return self.NQUERIES, self.DIMS
+
+
+class Apogee(Dataset):
     FULL = '/home/nishaq/APOGEE/apogee_full.memmap'
     DATA = '/home/nishaq/APOGEE/apogee_data.memmap'
     QUERIES = '/home/nishaq/APOGEE/apogee_queries.memmap'
@@ -71,7 +77,7 @@ class Apogee:
     DTYPE = 'float32'
 
 
-class GreenGenes:
+class GreenGenes(Dataset):
     FULL = '/home/nishaq/GreenGenes/gg_full.memmap'
     DATA = '/home/nishaq/GreenGenes/gg_data.memmap'
     QUERIES = '/home/nishaq/GreenGenes/gg_queries.memmap'

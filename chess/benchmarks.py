@@ -4,34 +4,7 @@ from typing import List
 import numpy as np
 
 from chess import globals
-from chess.data import Apogee, GreenGenes
 from chess.distance import check_input_array
-from chess.search import Search, get_data_and_queries
-
-
-def get_queries(dataset: str, mode: str = 'r') -> np.memmap:
-    """ Reads the numpy memmap files for the given data set and returns them.
-    :param dataset: data set to read. Must be APOGEE or GreenGenes.
-    :param mode: optional mode to read the memmap files in.
-    :return: data for clustering, queries that were held out.
-    """
-    if dataset == 'APOGEE':
-        queries = np.memmap(
-            filename=Apogee.QUERIES,
-            dtype=Apogee.DTYPE,
-            mode=mode,
-            shape=Apogee.QUERIES_SHAPE,
-        )
-    elif dataset == 'GreenGenes':
-        queries = np.memmap(
-            filename=GreenGenes.QUERIES,
-            dtype=GreenGenes.DTYPE,
-            mode=mode,
-            shape=GreenGenes.QUERIES_SHAPE,
-        )
-    else:
-        raise ValueError(f'Only the APOGEE and GreenGenes datasets are available. Got {dataset}.')
-    return queries
 
 
 def make_clusters(

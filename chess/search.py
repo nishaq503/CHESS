@@ -65,7 +65,7 @@ def linear_search(cluster: Cluster, query: Query) -> List[int]:
     """
     results = []
     for i, batch in enumerate(cluster):
-        distances = calculate_distances(query.point, batch, cluster.metric)
+        distances = calculate_distances([query.point], batch, cluster.metric)[0]
         results.extend([i + j for j, d in enumerate(distances) if d <= query.radius])
 
     return results

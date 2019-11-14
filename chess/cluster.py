@@ -1,4 +1,3 @@
-import pickle
 from typing import List, Tuple, Dict, Union, Callable
 
 import numpy as np
@@ -126,7 +125,7 @@ class Cluster:
         :return: radius of cluster.
         """
         if not self._radius and not self._all_same:
-            assert self.center
+            assert self.center is not None
             center = self.data[self.center]
             center = np.expand_dims(center, 0)
             radii = [np.max(calculate_distances(center, b, self.metric)) for b in self]
@@ -232,7 +231,7 @@ class Cluster:
             self.right.make_tree()
         return
 
-    def compress(self, filename):
+    def compress(self):
         """ Compresses a leaf cluster.
         # TODO: Migrate away from pickle. Perhaps we can build a new memmap?
         """
@@ -242,11 +241,7 @@ class Cluster:
         center = self.data[self.center]
         points = [np.asarray(np.ceil((self.data[p] - center) // step_size), dtype=np.int64)
                   for p in self.points]
-
-        filepath = f'{filename}/{self.name}.pickle'
-        with open(filepath, 'wb') as outfile:
-            pickle.dump(points, outfile)
-        return
+        return points
 
     ###################################
     # Traversals
