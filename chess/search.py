@@ -1,5 +1,6 @@
 """ Clustered Hierarchical Entropy-Scaling Search.
 """
+from functools import partial
 from typing import List
 
 from chess.cluster import Cluster
@@ -10,7 +11,8 @@ from chess.query import Query
 def search(cluster: Cluster, query: Query) -> List[int]:
     """ Finds all points within query.radius of query.point. """
     clusters = cluster_search(cluster, query)
-    points = [p for cluster in clusters for p in linear_search(cluster, query)]
+    points = [p for results in map(partial(linear_search, query=query), clusters) for p in results]
+    # points = [p for cluster in clusters for p in linear_search(cluster, query)]
     return points
 
 
