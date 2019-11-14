@@ -83,7 +83,7 @@ class Search:
         self.info_file: str
 
     # noinspection PyAttributeOutsideInit
-    def build(self):
+    def build(self, depth: int):
         """ Builds cluster-tree. """
         self.root = Cluster(
             data=self.data,
@@ -91,7 +91,22 @@ class Search:
             metric=self.metric,
             name='',
         )
-        self.root.make_tree()
+        self.partition(depth=depth)
+        self.cluster_dict = self._get_cluster_dict()
+        return
+
+    def partition(
+            self,
+            depth: int,
+    ):
+        old_depth = max(map(len, self.cluster_dict.keys()))
+
+        [cluster.pop(update=True)
+         for i in range(old_depth, depth)
+         for name, cluster in self.cluster_dict.items()
+         if len(name) == i]
+
+        # noinspection PyAttributeOutsideInit
         self.cluster_dict = self._get_cluster_dict()
         return
 
@@ -106,6 +121,15 @@ class Search:
         self.info_file = info_file
         self.root = self.read_cluster_tree()
         self.cluster_dict = self._get_cluster_dict()
+        return
+
+    def write(
+            self,
+            names_file: str,
+            info_file: str,
+    ):
+        self._print_names(filename=names_file)
+        self._print_info(filename=info_file)
         return
 
     def _get_cluster_dict(self):
@@ -201,7 +225,7 @@ class Search:
         else:
             return results
 
-    def print_names(
+    def _print_names(
             self,
             filename: str = None
     ):
@@ -225,7 +249,7 @@ class Search:
             _helper(self.root)
         return
 
-    def print_info(
+    def _print_info(
             self,
             filename: str = None
     ):
@@ -315,18 +339,3 @@ class Search:
             ) if name in name_to_points else None
 
         return _build_tree('')
-
-    def cluster_deeper(
-            self,
-            new_depth: int,
-    ):
-        old_depth = max(list(map(len, self.cluster_dict.keys())))
-
-        [cluster.pop(update=True)
-         for i in range(old_depth, new_depth)
-         for name, cluster in self.cluster_dict.items()
-         if len(name) == i]
-
-        # noinspection PyAttributeOutsideInit
-        self.cluster_dict = self._get_cluster_dict()
-        return
