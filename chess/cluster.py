@@ -146,8 +146,7 @@ class Cluster:
             center = np.expand_dims(center, 0)
             radii = [np.max(calculate_distances(center, b, self.metric)) for b in self]
             self._radius = np.max(radii)
-            # TODO: What does this line do?
-            self._radius = self._radius if self._radius != globals.RADII_DTYPE(0.0) else globals.RADII_DTYPE(0.0)
+            self._radius = globals.RADII_DTYPE(self._radius)
 
         return self._radius or globals.RADII_DTYPE(0.0)
 
