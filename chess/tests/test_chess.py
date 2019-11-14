@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-from chess import CHESS
+from chess.chess import CHESS
 
 
 class TestCHESS(unittest.TestCase):
