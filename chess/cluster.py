@@ -118,21 +118,6 @@ class Cluster:
         """ Returns the index of the centroid of the cluster."""
         return self.samples[int(np.argmin(self.distances.sum(axis=1)))]
 
-    def _iter_batch(self, start_index: int = 0, batch_size: int = globals.BATCH_SIZE) -> np.ndarray:
-        """ Iterates over batches of points from the given points list.
-
-        Batch starts at index start_index in points list.
-
-        :param start_index: index in points from where to start drawing the batch.
-        :param batch_size: size of each batch.
-
-        :return numpy array of points in the batch:
-
-        TODO: Remove?
-        """
-        for i in range(start_index, len(self), batch_size):
-            yield self[i:i + batch_size]
-
     def radius(self) -> globals.RADII_DTYPE:
         """ Calculates the radius of the cluster.
 
