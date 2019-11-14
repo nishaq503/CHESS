@@ -56,10 +56,6 @@ class Cluster:
         assert len(self.points) == len(set(self.points)), f"Duplicate point indices in cluster {self.name}:\n{self.points}"
         assert self.center is not None
 
-    def _center(self):
-        """ Returns the index of the centroid of the cluster."""
-        return self.samples[int(np.argmin(self.distances.sum(axis=1)))]
-
     def __iter__(self):
         """ Iterates over points within the cluster. """
         for i in range(0, len(self.points), globals.BATCH_SIZE):
@@ -93,16 +89,8 @@ class Cluster:
         ])
 
     def dict(self):
-        d = Dict[str: Cluster] = {}
-
-        def inorder(node: Cluster):
-            if node.left:
-                inorder(node.left)
-            d[node.name] = node
-            if node.right:
-                inorder(node.right)
-
-        inorder(self)
+        d: Dict[str: Cluster]
+        d = {c.name: c for c in self.inorder()}
         return d
 
     def _samples(self) -> Tuple[List[int], np.ndarray]:
@@ -126,6 +114,10 @@ class Cluster:
 
         return points, distances
 
+    def _center(self):
+        """ Returns the index of the centroid of the cluster."""
+        return self.samples[int(np.argmin(self.distances.sum(axis=1)))]
+
     def _iter_batch(self, start_index: int = 0, batch_size: int = globals.BATCH_SIZE) -> np.ndarray:
         """ Iterates over batches of points from the given points list.
 
@@ -135,6 +127,8 @@ class Cluster:
         :param batch_size: size of each batch.
 
         :return numpy array of points in the batch:
+
+        TODO: Remove?
         """
         for i in range(start_index, len(self), batch_size):
             yield self[i:i + batch_size]
@@ -257,8 +251,10 @@ class Cluster:
         return
 
     def compress(self, filename):
-        if self.left or self.right:
-            return
+        """ Compresses a leaf cluster.
+        # TODO: Migrate away from pickle. Perhaps we can build a new memmap?
+        """
+        assert not (self.left or self.right), f'Can only compress leaves! Tried to compress {self.name}.'
 
         step_size = 10 ** (globals.H_MAGNITUDE / (-2.5))
         center = self.data[self.center]
@@ -270,6 +266,9 @@ class Cluster:
             pickle.dump(points, outfile)
         return
 
+    ###################################
+    # Traversals
+    ###################################
     def inorder(self):
         return self._inorder(self)
 
