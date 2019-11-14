@@ -24,20 +24,15 @@ def make_clusters(
     :return: search object that was created.
     """
     start = time()
-    search_object: Search = Search(
-        dataset=dataset,
-        metric=metric,
-        names_file=f'logs/names_{metric}_{depth}.csv',
-        info_file=f'logs/info_{metric}_{depth}.csv',
-    )
+    search_object: Search = Search(dataset=dataset, metric=metric)
+    search_object.build(depth=depth)
     end = time()
 
     if clustering_times_filename is not None:
         with open(clustering_times_filename, 'a') as outfile:
             outfile.write(f'{dataset},{metric},{0},{depth},{end - start:.6f}\n')
 
-    search_object.print_names()
-    search_object.print_info()
+    search_object.write(names_file=f'logs/names_{metric}_{depth}.csv', info_file=f'logs/info_{metric}_{depth}.csv')
 
     return search_object
 
@@ -67,13 +62,9 @@ def read_clusters(
     if info_file is None:
         info_file = f'logs/info_{metric}_{depth}.csv'
 
-    return Search(
-        dataset=dataset,
-        metric=metric,
-        names_file=names_file,
-        info_file=info_file,
-        reading=True,
-    )
+    search_object = Search(dataset=dataset, metric=metric)
+    search_object.read(names_file=names_file, info_file=info_file)
+    return search_object
 
 
 def deepen_clustering(
@@ -90,18 +81,14 @@ def deepen_clustering(
             names = f'logs/names_{search_object.metric}_{depth}.csv'
         if info is None:
             info = f'logs/info_{search_object.metric}_{depth}.csv'
-
-        search_object.names_file = names
-        search_object.print_names()
-
-        search_object.info_file = info
-        search_object.print_info()
+        search_object.write(names_file=names, info_file=info)
+        return
 
     if iterative:
         for i in range(old_depth + 1, new_depth + 1):
             globals.MAX_DEPTH = i
             start = time()
-            search_object.cluster_deeper(new_depth=i)
+            search_object.build_deeper(additional_depth=i)
             end = time()
 
             if timing_filename is not None:
@@ -112,13 +99,13 @@ def deepen_clustering(
 
     else:
         globals.MAX_DEPTH = new_depth
-        search_object.cluster_deeper(new_depth=new_depth)
+        search_object.build_deeper(additional_depth=new_depth)
         print_summary(depth=new_depth, names=names_file, info=info_file)
 
     return search_object
 
 
-def write_results(
+def _write_results(
         linear_results: List[int],
         results: List[int],
         linear_time: float,
@@ -186,7 +173,7 @@ def benchmark_search(
 
             chess_results, num_clusters, fraction_searched = results
 
-            write_results(
+            _write_results(
                 linear_results=linear_results,
                 results=chess_results,
                 linear_time=linear_time,
@@ -239,7 +226,7 @@ def benchmark_search_with_hits(
         linear_results = search_object.linear_search(query=query, radius=radius)
         linear_time = time() - start
 
-        write_results(
+        _write_results(
             linear_results=linear_results,
             results=results,
             linear_time=linear_time,
