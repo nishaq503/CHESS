@@ -1,5 +1,5 @@
 import pickle
-from typing import List, Tuple, Dict, Union
+from typing import List, Tuple, Dict, Union, Callable
 
 import numpy as np
 
@@ -173,8 +173,6 @@ class Cluster:
             * Partition the points in this cluster by the pole that the points are closer to.
             * Assign the partitioned points to the left and right child clusters appropriately.
         """
-        assert self.partitionable()
-
         max_pair_index = np.argmax(np.triu(self.distances, k=1))
         max_col = max_pair_index // len(self.distances)
         max_row = max_pair_index % len(self.distances)
@@ -217,7 +215,7 @@ class Cluster:
         )
         return
 
-    def make_tree(self, stopping_criteria=None):
+    def make_tree(self, stopping_criteria: Callable[[any], bool] = None):
         """
         Build cluster sub-tree starting at this cluster.
         """
