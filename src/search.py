@@ -84,50 +84,48 @@ class Search:
 
     # noinspection PyAttributeOutsideInit
     def build(self, depth: int):
-        """ Builds cluster-tree. """
+        """
+        Builds cluster-tree.
+
+        :param depth: depth of cluster tree to build.
+        :return:
+        """
         self.root = Cluster(
             data=self.data,
             points=list(range(self.data.shape[0])),
             metric=self.metric,
             name='',
         )
-        self.partition(depth=depth)
+        self.build_deeper(additional_depth=depth)
         self.cluster_dict = self._get_cluster_dict()
         return
 
-    def partition(
-            self,
-            depth: int,
-    ):
+    def build_deeper(self, additional_depth: int):
+        """
+        Makes the cluster tree deeper.
+
+        :param additional_depth: Amount by which to increase depth by.
+        :return:
+        """
         old_depth = max(map(len, self.cluster_dict.keys()))
 
-        [cluster.pop(update=True)
-         for i in range(old_depth, depth)
-         for name, cluster in self.cluster_dict.items()
-         if len(name) == i]
+        for i in range(old_depth, old_depth + additional_depth):
+            [cluster.pop(update=True) for name, cluster in self.cluster_dict.items() if len(name) == i]
+            # noinspection PyAttributeOutsideInit
+            self.cluster_dict = self._get_cluster_dict()
 
-        # noinspection PyAttributeOutsideInit
-        self.cluster_dict = self._get_cluster_dict()
         return
 
     # noinspection PyAttributeOutsideInit
-    def load(
-            self,
-            names_file: str,
-            info_file: str,
-    ):
+    def read(self, names_file: str, info_file: str):
         """ Loads cluster-tree from files on disk. """
         self.names_file = names_file
         self.info_file = info_file
-        self.root = self.read_cluster_tree()
+        self.root = self._read_cluster_tree()
         self.cluster_dict = self._get_cluster_dict()
         return
 
-    def write(
-            self,
-            names_file: str,
-            info_file: str,
-    ):
+    def write(self, names_file: str, info_file: str):
         self._print_names(filename=names_file)
         self._print_info(filename=info_file)
         return
@@ -272,7 +270,7 @@ class Search:
             _helper(self.root)
         return
 
-    def read_cluster_tree(self) -> Cluster:
+    def _read_cluster_tree(self) -> Cluster:
         """
         Reads a cluster-tree from (optionally given) .csv files on disk
 

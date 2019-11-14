@@ -25,7 +25,7 @@ def make_clusters(
     """
     start = time()
     search_object: Search = Search(dataset=dataset, metric=metric)
-    search_object.partition(depth=depth)
+    search_object.build(depth=depth)
     end = time()
 
     if clustering_times_filename is not None:
@@ -63,7 +63,7 @@ def read_clusters(
         info_file = f'logs/info_{metric}_{depth}.csv'
 
     search_object = Search(dataset=dataset, metric=metric)
-    search_object.load(names_file=names_file, info_file=info_file)
+    search_object.read(names_file=names_file, info_file=info_file)
     return search_object
 
 
@@ -88,7 +88,7 @@ def deepen_clustering(
         for i in range(old_depth + 1, new_depth + 1):
             globals.MAX_DEPTH = i
             start = time()
-            search_object.partition(depth=i)
+            search_object.build_deeper(additional_depth=i)
             end = time()
 
             if timing_filename is not None:
@@ -99,7 +99,7 @@ def deepen_clustering(
 
     else:
         globals.MAX_DEPTH = new_depth
-        search_object.partition(depth=new_depth)
+        search_object.build_deeper(additional_depth=new_depth)
         print_summary(depth=new_depth, names=names_file, info=info_file)
 
     return search_object
