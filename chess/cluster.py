@@ -35,24 +35,32 @@ class Cluster:
         self.data: np.memmap = data
         self.name: str = name
         self.metric: str = metric
-        self.center: int = center
-        self.radius: globals.RADII_DTYPE = radius
+        self._center: int = center
+        self._radius: globals.RADII_DTYPE = radius
+        self.left = self.right = None
+        self._samples: List[int] = None
 
         self.depth: int = len(name)
-        self.points: Set[int] = points or set(range(self.data.shape[0]))
 
-        self.left = self.right = None
+        self.points: List[int] = points or list(range(self.data.shape[0]))
+        assert len(self.points) > 0, f"Empty point indices in {self.name}"
+        assert len(self.points) == len(set(self.points)), f"Duplicate point indices in {self.name}"
 
         self._subsample: bool = len(self.points) > globals.SUBSAMPLING_LIMIT
 
-    def validate(self):
-        assert len(self.points) > 0, f"Empty point indices in {self.name}"
-        assert len(self.points) != len(set(self.points)), f"Duplicate point indices in {self.name}"
+    @property
+    def center(self):
+        if not self._samples:
+            raise NotImplementedError("Gotta build first.")
+        return self._samples[int(np.argmin(self._pairwise_distances().sum(axis=1)))]
 
     def _sample_unique(self):
-        """ Returns indices of unique potential centers. """
+        """ Returns indices of unique potential centers.
+
+        # TODO: Examine cost of unique vs a loop on shuffled indices.
+        """
         n = int(np.sqrt(len(self.points))) if self._subsample else len(self.points)
-        unique = np.unique(self.data[list(self.points)], return_index=True, axis=0)[1]
+        unique = np.unique(self.data[self.points], return_index=True, axis=0)[1]
         return np.random.choice(unique, n, replace=False) if len(unique) > n else unique
 
     def _sample(self):
@@ -60,42 +68,28 @@ class Cluster:
         n = int(np.sqrt(len(self.points))) if self._subsample else len(self.points)
         return np.random.choice(list(self.points), n, replace=False)
 
-    def _calculate_pairwise_distances(self) -> np.ndarray:
-        """
-        Calculates the pairwise distances between potential centers.
+    def _pairwise_distances(self) -> np.ndarray:
+        """ Calculates the pairwise distances between potential centers.
 
         :return: pairwise distance matrix of points that are potential centers.
         """
-        points = np.asarray([self.data[p] for p in self._potential_centers])
-        distances = calculate_distances(points, points, self.metric)
+        points = self._sample()
+        distances = calculate_distances(self.data[points], self.data[points], self.metric)
 
-        if np.max(distances) == globals.RADII_DTYPE(0):  # all points in potential centers were duplicates.
-            self._potential_centers = self._get_unique_potential_centers()
-            points = np.asarray([self.data[p] for p in self._potential_centers])
-            distances = calculate_distances(points, points, self.metric)
+        if np.max(distances) == globals.RADII_DTYPE(0):
+            # All sampled points were duplicates.
+            points = self._sample_unique()
+            distances = calculate_distances(self.data[points], self.data[points], self.metric)
 
         return distances
 
-    def _calculate_center(self) -> int:
-        """
-        Calculates the geometric median of the potential centers.
-        This point is the center of the cluster.
+    def _iter_batch(self, batch_size: int = globals.BATCH_SIZE) -> np.ndarray:
+        for i in range(0, len(self.points), batch_size):
+            yield self.data[i:i + batch_size]
 
-        :return: index in self.data of the center of the cluster.
-        """
-        if self._contains_only_duplicates:
-            return self.points[0]
-        else:
-            return self._potential_centers[int(np.argmin(self._pairwise_distances.sum(axis=1)))]
+    def _batch(self, points: List[int], start_index: int, batch_size: int = globals.BATCH_SIZE) -> np.ndarray:
+        """ Gets a batch of points from the given points list.
 
-    def _get_batch(
-            self,
-            points: List[int],
-            start_index: int,
-            batch_size: int = globals.BATCH_SIZE,
-    ) -> np.ndarray:
-        """
-        Gets a batch of points from the given points list.
         Batch starts at index start_index in points list.
 
         :param points: list of indexes in self.data from which to draw the batch.
@@ -107,25 +101,32 @@ class Cluster:
         num_points = min(start_index + batch_size, len(points)) - start_index
         return np.asarray([self.data[p] for p in points[start_index: start_index + num_points]])
 
-    def _calculate_radius(self) -> globals.RADII_DTYPE:
-        """
-        Calculates the radius of the cluster.
+    def radius(self) -> globals.RADII_DTYPE:
+        """ Calculates the radius of the cluster.
+
         This is the maximum of the distances of any point in the cluster to the cluster center.
 
         :return: radius of cluster.
         """
-        center = self.data[self.center]
-        center = np.expand_dims(center, 0)
-
-        if self._contains_only_duplicates:
-            return globals.RADII_DTYPE(0.0)
-        potential_radii = [np.max(calculate_distances(center, self._get_batch(self.points, i), self.metric)[0, :])
-                           for i in range(0, len(self.points), globals.BATCH_SIZE)]
-        radius = np.max(np.asarray(potential_radii, dtype=globals.RADII_DTYPE))
-        if not isinstance(radius, globals.RADII_DTYPE):
-            raise ValueError(f'Got problem with calculating radius in cluster {self.name}.\n'
-                             f'Radius was {radius}.')
-        return radius
+        if not self._radius:
+            # TODO: Should radius be callable if center is None?
+            center = self.data[self.center or 0]
+            center = np.expand_dims(center, 0)
+            radii = [np.max(calculate_distances(center, b, self.metric)) for b in self._iter_batch()]
+            self._radius = np.max(radii)
+            self._radius = self._radius if self._radius != globals.RADII_DTYPE(0.0) else globals.RADII_DTYPE(0.0)
+            #
+            # center = np.expand_dims(center, 0)
+            #
+            # if self._contains_only_duplicates:
+            #     return globals.RADII_DTYPE(0.0)
+            # potential_radii = [np.max(calculate_distances(center, self._batch(self.points, i), self.metric)[0, :])
+            #                    for i in range(0, len(self.points), globals.BATCH_SIZE)]
+            # radius = np.max(np.asarray(potential_radii, dtype=globals.RADII_DTYPE))
+            # if not isinstance(radius, globals.RADII_DTYPE):
+            #     raise ValueError(f'Got problem with calculating radius in cluster {self.name}.\n'
+            #                      f'Radius was {radius}.')
+        return self._radius
 
     def _calculate_local_fractal_dimension(self) -> globals.RADII_DTYPE:
         """
@@ -139,22 +140,11 @@ class Cluster:
 
         if self._contains_only_duplicates:
             return globals.RADII_DTYPE(0)
-        count = [1 if d <= (self.radius / 2) else 0
+        count = [1 if d <= (self._radius / 2) else 0
                  for i in range(0, len(self.points), globals.BATCH_SIZE)
-                 for d in calculate_distances(center, self._get_batch(self.points, i), self.metric)[0, :]]
+                 for d in calculate_distances(center, self._batch(self.points, i), self.metric)[0, :]]
         count = np.sum(count, dtype=globals.RADII_DTYPE)
         return 0 if count == 0 else np.log2(globals.RADII_DTYPE(len(self.points)) / count)
-
-    def update(self):
-        """
-        Updates the relevant private variables of the cluster.
-        """
-        self._potential_centers = self._get_potential_centers()
-        self._pairwise_distances = self._calculate_pairwise_distances()
-        self.center = self._calculate_center()
-        self.radius = self._calculate_radius()
-        self.local_fractal_dimension = self._calculate_local_fractal_dimension()
-        return
 
     def can_include(
             self,
@@ -173,7 +163,7 @@ class Cluster:
         center = np.expand_dims(center, 0)
         distance = calculate_distances(center, query, self.metric)[0, 0]
 
-        return distance <= (self.radius + radius)
+        return distance <= (self._radius + radius)
 
     def can_be_popped(self) -> bool:
         """
@@ -184,8 +174,10 @@ class Cluster:
         return all((
             not self._contains_only_duplicates,
             globals.MIN_POINTS < len(self.points),
-            globals.MIN_RADIUS < self.radius,
+            globals.MIN_RADIUS < self._radius,
             self.depth < globals.MAX_DEPTH,
+            not self.left,
+            not self.right
         ))
 
     def pop(
@@ -204,10 +196,6 @@ class Cluster:
 
         :param update: weather or not up update internals before popping cluster.
         """
-
-        if self.left or self.right or (not self.can_be_popped()):
-            return
-
         if update:
             self.update()
 
@@ -233,7 +221,7 @@ class Cluster:
              for j, l, r in zip(range(points.shape[0]), left_distances, right_distances)]
             return
 
-        [partition(self._get_batch(self.points, i), i) for i in range(0, len(self.points), globals.BATCH_SIZE)]
+        [partition(self._batch(self.points, i), i) for i in range(0, len(self.points), globals.BATCH_SIZE)]
 
         if left_pole_index in right_indexes:
             right_indexes.remove(left_pole_index)
@@ -289,7 +277,7 @@ class Cluster:
         :return: List of names of clusters that may contain hits.
         """
         results = []
-        if self.radius <= radius:
+        if self._radius <= radius:
             results.append(self.name)
         elif (self.depth < search_depth) and (self.left or self.right):
             if self.left.can_include(query, radius):

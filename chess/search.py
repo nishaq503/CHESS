@@ -230,7 +230,7 @@ class Search:
             outfile.write('cluster_name,number_of_points,center,radius,lfd,is_leaf\n')
 
             def _helper(node: Cluster):
-                outfile.write(f'{node.name},{len(node.points):d},{node.center:d},{node.radius:.8f},'
+                outfile.write(f'{node.name},{len(node.points):d},{node.center:d},{node._radius:.8f},'
                               f'{node.local_fractal_dimension:.8f},{not node.can_be_popped()}\n')
                 if node.left:
                     _helper(node.left)
