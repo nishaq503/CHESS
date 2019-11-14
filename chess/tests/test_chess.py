@@ -6,7 +6,7 @@ import numpy as np
 from chess import CHESS
 
 
-class TestSearch(unittest.TestCase):
+class TestCHESS(unittest.TestCase):
     tempfile: str
 
     @classmethod
@@ -23,4 +23,3 @@ class TestSearch(unittest.TestCase):
 
     def test_functional(self):
         cluster = CHESS(self.data, 'euclidean')
-        print(self.data)

@@ -2,6 +2,7 @@ import unittest
 
 import numpy as np
 
+from chess import globals
 from chess.search import *
 
 

@@ -10,7 +10,11 @@ from chess.query import Query
 
 
 def search(cluster: Cluster, query: Query) -> List[int]:
-    """ Finds all points within query.radius of query.point. """
+    """ Finds all points within query.radius of query.point.
+
+    :param cluster: cluster to start searching in.
+    :param query: point to search around.
+    """
     clusters = cluster_search(cluster, query)
 
     # Multiprocessing.
@@ -35,15 +39,18 @@ def cluster_search(cluster: Cluster, query: Query) -> List[Cluster]:
     :return: List of names of clusters that may contain hits.
     """
     results = []
-    if cluster.radius() <= query.radius:
-        results.append(cluster)
-    elif cluster.depth < query.max_depth and (cluster.left or cluster.right):
-        if query in cluster.left:
-            results.extend(cluster_search(cluster.left, query))
-        if query in cluster.right:
-            results.extend(cluster_search(cluster.right, query))
-    else:
-        pass
+    if query in cluster:
+        if cluster.radius() <= query.radius or not (cluster.left or cluster.right):
+            # If our search radius is larger than the cluster,
+            # or if the cluster has no children.
+            results.append(cluster)
+
+        elif cluster.depth < query.max_depth and (cluster.left or cluster.right):
+            # Here, we can keep filtering down to children.
+            if query in cluster.left:
+                results.extend(cluster_search(cluster.left, query))
+            if query in cluster.right:
+                results.extend(cluster_search(cluster.right, query))
 
     return results
 

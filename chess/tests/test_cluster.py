@@ -30,16 +30,6 @@ class TestCluster(unittest.TestCase):
         self.assertEqual(np.diagonal(distances).sum().round(), 0)
         return
 
-    def test_iter_batch(self):
-        data = np.random.randn(100, 100)
-        c = Cluster(data, 'euclidean')
-        iter = c._iter_batch(batch_size=30)
-        self.assertEqual(len(next(iter)), 30)
-        self.assertEqual(len(next(iter)), 30)
-        self.assertEqual(len(next(iter)), 30)
-        self.assertEqual(len(next(iter)), 10)
-        return
-
     def test_radius(self):
         data = np.random.randn(100, 100)
         c = Cluster(data, 'euclidean')
