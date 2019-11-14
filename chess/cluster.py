@@ -214,7 +214,10 @@ class Cluster:
             left_dist = calculate_distances(left_pole, batch, self.metric)[0, :]
             right_dist = calculate_distances(right_pole, batch, self.metric)[0, :]
             for j, l, r in zip(range(len(batch)), left_dist, right_dist):
-                (left_indices if l < r else right_indices).append(self.points[i + j])
+                (left_indices if l < r else right_indices).append(self.points[i * globals.BATCH_SIZE + j])
+
+        assert len(left_indices) == len(set(left_indices))
+        assert len(right_indices) == len(set(right_indices))
 
         def partition(points: np.ndarray):
             left_distances = calculate_distances(left_pole, points, self.metric)[0, :]
@@ -239,15 +242,15 @@ class Cluster:
 
         self.left = Cluster(
             data=self.data,
-            points=left_indices,
             metric=self.metric,
+            points=left_indices,
             name=f'{self.name}0',
         )
 
         self.right = Cluster(
             data=self.data,
-            points=right_indices,
             metric=self.metric,
+            points=right_indices,
             name=f'{self.name}1',
         )
         return
