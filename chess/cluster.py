@@ -53,7 +53,7 @@ class Cluster:
 
         # Invariants after construction.
         assert len(self.points) > 0, f"Empty point indices in {self.name}"
-        assert len(self.points) == len(set(self.points)), f"Duplicate point indices in {self.name}"
+        assert len(self.points) == len(set(self.points)), f"Duplicate point indices in cluster {self.name}:\n{self.points}"
         assert self.center is not None
 
     def _center(self):
@@ -78,6 +78,19 @@ class Cluster:
         center = np.expand_dims(self.data[self.center], 0)
         distance = calculate_distances(center, query.point, self.metric)[0, 0]
         return distance <= (self.radius() + query.radius)
+
+    def __str__(self):
+        return ', '.join([self.name, *[str(p) for p in self.points]])
+
+    def __repr__(self):
+        return ','.join([
+            self.name,
+            len(self.points),
+            self.center,
+            self.radius(),
+            self.local_fractal_dimension(),
+            self.partitionable,
+        ])
 
     def dict(self):
         d = Dict[str: Cluster] = {}
@@ -144,7 +157,7 @@ class Cluster:
 
         return self._radius or globals.RADII_DTYPE(0.0)
 
-    def _local_fractal_dimension(self) -> globals.RADII_DTYPE:
+    def local_fractal_dimension(self) -> globals.RADII_DTYPE:
         """ Calculates the local fractal dimension of the cluster.
         This is the log2 ratio of the number of points in the cluster to the number of points within half the radius.
 
@@ -182,6 +195,8 @@ class Cluster:
             * Partition the points in this cluster by the pole that the points are closer to.
             * Assign the partitioned points to the left and right child clusters appropriately.
         """
+        assert self.partitionable()
+
         max_pair_index = np.argmax(np.triu(self.distances, k=1))
         max_col = max_pair_index // len(self.distances)
         max_row = max_pair_index % len(self.distances)
@@ -189,45 +204,49 @@ class Cluster:
         left_pole_index = self.samples[max_col]
         right_pole_index = self.samples[max_row]
 
-        if left_pole_index == right_pole_index:
-            raise ValueError(f'Got the same point {right_pole_index} as both poles. Cluster name is {self.name}.\n')
+        assert left_pole_index != right_pole_index, f'Left pole and right pole are equal in cluster {self.name}'
 
         left_pole, right_pole = self.data[left_pole_index], self.data[right_pole_index]
         left_pole, right_pole = np.expand_dims(left_pole, 0), np.expand_dims(right_pole, 0)
 
-        left_indexes, right_indexes = [], []
+        left_indices, right_indices = [], []
+        for i, batch in enumerate(self):
+            left_dist = calculate_distances(left_pole, batch, self.metric)[0, :]
+            right_dist = calculate_distances(right_pole, batch, self.metric)[0, :]
+            for j, l, r in zip(range(len(batch)), left_dist, right_dist):
+                (left_indices if l < r else right_indices).append(self.points[i + j])
 
         def partition(points: np.ndarray):
             left_distances = calculate_distances(left_pole, points, self.metric)[0, :]
             right_distances = calculate_distances(right_pole, points, self.metric)[0, :]
-            [(left_indexes if l < r else right_indexes).append(self.points[j])
+            [(left_indices if l < r else right_indices).append(self.points[j])
              for j, l, r in zip(range(points.shape[0]), left_distances, right_distances)]
             return
 
-        [partition(batch) for batch in self]
+        # [partition(batch) for batch in self]
 
-        if left_pole_index in right_indexes:
-            right_indexes.remove(left_pole_index)
-            left_indexes.append(left_pole_index)
-        if right_pole_index in left_indexes:
-            left_indexes.remove(right_pole_index)
-            right_indexes.append(right_pole_index)
+        if left_pole_index in right_indices:
+            right_indices.remove(left_pole_index)
+            left_indices.append(left_pole_index)
+        if right_pole_index in left_indices:
+            left_indices.remove(right_pole_index)
+            right_indices.append(right_pole_index)
 
-        if len(left_indexes) == 0:
+        if len(left_indices) == 0:
             raise ValueError(f'Got empty left_indexes after partitioning cluster {self.name}.\n')
-        if len(right_indexes) == 0:
+        if len(right_indices) == 0:
             raise ValueError(f'Got empty right_indexes after partitioning cluster {self.name}.\n')
 
         self.left = Cluster(
             data=self.data,
-            points=left_indexes,
+            points=left_indices,
             metric=self.metric,
             name=f'{self.name}0',
         )
 
         self.right = Cluster(
             data=self.data,
-            points=right_indexes,
+            points=right_indices,
             metric=self.metric,
             name=f'{self.name}1',
         )
@@ -284,3 +303,138 @@ class Cluster:
         with open(filepath, 'wb') as outfile:
             pickle.dump(points, outfile)
         return
+
+    def print_names(
+            self,
+            filename: str = None
+    ):
+        """
+        Write a .csv with columns {cluster_name, point_index}.
+        :param filename: Optional file to write to.
+        """
+        filename = self.names_file if filename is None else filename
+        with open(filename, 'w') as outfile:
+            outfile.write('cluster_name,point\n')
+
+            def _helper(node: Cluster):
+                if node.left:
+                    _helper(node.left)
+                if node.right:
+                    _helper(node.right)
+                else:
+                    [outfile.write(f'{node.name},{str(p)}\n') for p in node.points]
+                    outfile.flush()
+
+            _helper(self.root)
+        return
+
+    def print_info(
+            self,
+            filename: str = None
+    ):
+        """
+        Write a .csv with columns {cluster_name, number_of_points, center, radius, lfd, is_leaf}.
+        :param filename: Optional file to write to.
+        """
+        filename = self.info_file if filename is None else filename
+        with open(filename, 'w') as outfile:
+            outfile.write('cluster_name,number_of_points,center,radius,lfd,is_leaf\n')
+
+            def _helper(node: Cluster):
+                outfile.write(f'{node.name},{len(node.points):d},{node.center:d},{node._radius:.8f},'
+                              f'{node.local_fractal_dimension:.8f},{not node.partitionable()}\n')
+                if node.left:
+                    _helper(node.left)
+                if node.right:
+                    _helper(node.right)
+
+            _helper(self.root)
+        return
+
+    def _build_dict_tree(name: str) -> List[int]:
+        if name in name_to_points.keys():
+            return name_to_points[name]
+        else:
+            left = _build_dict_tree(f'{name}0')
+            right = _build_dict_tree(f'{name}1')
+            name_to_points[name] = left.copy() + right.copy()
+            return name_to_points[name]
+
+        _build_dict_tree('')
+
+        self.info_file = info_file if info_file is not None else self.info_file
+        name_to_info: Dict[str, List] = {}
+        with open(self.info_file, 'r') as infile:
+            infile.readline()
+            while True:
+                line = infile.readline()
+                if not line:
+                    break
+
+                [cluster_name, num_points, center, radius, lfd, is_leaf] = line.split(',')
+                if cluster_name not in name_to_points.keys():
+                    raise ValueError(f'{cluster_name} not found in name_to_points dictionary.')
+
+                name_to_info[cluster_name] = [int(center), globals.RADII_DTYPE(radius),
+                                              globals.RADII_DTYPE(lfd), bool(is_leaf)]
+                if len(name_to_points[cluster_name]) != int(num_points):
+                    raise ValueError(f'Mismatch in number of points in cluster {cluster_name}.\n'
+                                     f'Got {num_points} from {self.info_file}.\n'
+                                     f'Got {len(name_to_points[cluster_name])} from {self.names_file}.')
+
+        def _build_tree(name: str) -> Cluster:
+            return Cluster(
+                data=self.data,
+                points=name_to_points[name].copy(),
+                metric=self.metric,
+                name=name,
+                center=name_to_info[name][0],
+                radius=name_to_info[name][1],
+                local_fractal_dimension=name_to_info[name][2],
+                left=_build_tree(f'{name}0'),
+                right=_build_tree(f'{name}1'),
+                reading=True,
+            ) if name in name_to_points else None
+
+        return _build_tree('')
+
+    def cluster_deeper(
+            self,
+            new_depth: int,
+    ):
+        old_depth = max(list(map(len, self.cluster_dict.keys())))
+
+        [cluster.partition(update=True)
+         for i in range(old_depth, new_depth)
+         for name, cluster in self.cluster_dict.items()
+         if len(name) == i]
+
+        self.cluster_dict = self._get_cluster_dict()
+        return
+
+    def inorder(self):
+        return self._inorder(self)
+
+    def _inorder(self, node):
+        if node.left:
+            for n in self._inorder(node.left):
+                yield n
+        yield node
+        if node.right:
+            for n in self._inorder(node.right):
+                yield n
+
+    def leaves(self):
+        return self._leaves(self)
+
+    def _leaves(self, node):
+        if not (node.left or node.right):
+            yield node
+
+        if node.left:
+            for n in self._leaves(node.left):
+                yield n
+
+        if node.right:
+            for n in self._leaves(node.right):
+                yield n

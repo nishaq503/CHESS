@@ -4,6 +4,12 @@ from chess.cluster import *
 
 
 class TestCluster(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.data = np.concatenate([np.random.randn(50, 100) - 10, np.random.randn(50, 100) + 10])
+        self.c = Cluster(self.data, 'euclidean')
+        return
+
     def test_sample_random_data(self):
         c = Cluster(np.random.randn(100, 100), 'euclidean')
         self.assertEqual(len(c.samples), 100)
@@ -43,7 +49,7 @@ class TestCluster(unittest.TestCase):
     def test_local_fractal_dimension(self):
         data = np.random.randn(100, 100)
         c = Cluster(data, 'euclidean')
-        self.assertGreater(c._local_fractal_dimension(), 0)
+        self.assertGreater(c.local_fractal_dimension(), 0)
         return
 
     def test_iter(self):
@@ -66,3 +72,24 @@ class TestCluster(unittest.TestCase):
         c = Cluster(data, 'euclidean')
         self.assertTrue(np.all(np.equal(c[0], data[0])))
         return
+
+    def test_partition(self):
+        self.c.partition()
+        self.assertTrue(self.c.left and self.c.right)
+        self.assertEqual(len(self.c.left), len(self.c.right))
+        return
+
+    def test_inorder(self):
+        data = np.random.randn(50, 100)
+        c = Cluster(np.concatenate([data - 10, data + 10]), 'euclidean')
+        c.partition()
+        clusters = list(c.inorder())
+        self.assertEqual(len(clusters), 3)
+        return
+
+    def test_leaves(self):
+        data = np.random.randn(50, 100)
+        c = Cluster(np.concatenate([data - 10, data + 10]), 'euclidean')
+        c.partition()
+        clusters = list(c.leaves())
+        self.assertEqual(len(clusters), 2)
