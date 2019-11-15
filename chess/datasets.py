@@ -86,9 +86,7 @@ def load(dataset: str) -> Dataset:
     try:
         return DATASETS[dataset]
     except KeyError:
-        msg = f'Invalid dataset selected. Choices are: {DATASETS}'
-        log.exception(msg)
-        raise ValueError(msg)
+        raise ValueError(f'Invalid dataset selected. Choices are: {DATASETS}')
 
 
 def filter_duplicates(data: np.memmap, filename: str):
