@@ -1,5 +1,7 @@
 import numpy as np
 
+USING_TENSORFLOW = False
+
 APOGEE_FULL = '/home/nishaq/APOGEE/apogee_full.memmap'
 APOGEE_DATA = '/home/nishaq/APOGEE/apogee_data.memmap'
 APOGEE_QUERIES = '/home/nishaq/APOGEE/apogee_queries.memmap'
