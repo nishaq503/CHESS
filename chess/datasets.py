@@ -1,36 +1,10 @@
 import logging
 from abc import ABC
+from inspect import isclass
 
 import numpy as np
 
 log = logging.getLogger(__name__)
-
-
-def filter_duplicates(data: np.memmap, filename: str):
-    # TODO: Switch to np.unique()
-    set_data = set()
-    [set_data.add(tuple(point)) for point in data]
-
-    log.debug(f'Reduced from {data.shape}, to {len(set_data)}')
-    if data.shape[0] == len(set_data):
-        # No elements were removed.
-        return
-
-    def write_memmap(filename, set_to_write):
-        my_memmap = np.memmap(
-            filename=filename,
-            dtype=data.dtype,
-            mode='w+',
-            shape=(len(set_to_write), *data.shape[1:]),
-        )
-        for i, point in enumerate(set_to_write):
-            p = np.asarray(point, dtype=data.dtype)
-            my_memmap[i] = p
-        my_memmap.flush()
-        del my_memmap
-
-    write_memmap(filename, set_data)
-    return
 
 
 class Dataset(ABC):
@@ -93,3 +67,52 @@ class GreenGenes(Dataset):
     DATA_SHAPE = (NUM_ROWS - NUM_QUERIES, NUM_DIMS)
     QUERIES_SHAPE = (NUM_QUERIES, NUM_DIMS)
     DTYPE = np.int8
+
+
+# Gather all subclasses of Dataset.
+DATASETS = dict(filter(
+    lambda e: isclass(e[1]) and e[1] is not Dataset and issubclass(e[1], Dataset),
+    globals().items()
+))
+
+
+def load(dataset: str) -> Dataset:
+    """ Attempts to load the given dataset.
+
+    :param dataset: the name of the dataset to load.
+
+    :return Dataset: the selected dataset.
+    """
+    try:
+        return DATASETS[dataset]
+    except KeyError:
+        msg = f'Invalid dataset selected. Choices are: {DATASETS}'
+        log.exception(msg)
+        raise ValueError(msg)
+
+
+def filter_duplicates(data: np.memmap, filename: str):
+    # TODO: Switch to np.unique()
+    set_data = set()
+    [set_data.add(tuple(point)) for point in data]
+
+    log.debug(f'Reduced from {data.shape}, to {len(set_data)}')
+    if data.shape[0] == len(set_data):
+        # No elements were removed.
+        return
+
+    def write_memmap(filename, set_to_write):
+        my_memmap = np.memmap(
+            filename=filename,
+            dtype=data.dtype,
+            mode='w+',
+            shape=(len(set_to_write), *data.shape[1:]),
+        )
+        for i, point in enumerate(set_to_write):
+            p = np.asarray(point, dtype=data.dtype)
+            my_memmap[i] = p
+        my_memmap.flush()
+        del my_memmap
+
+    write_memmap(filename, set_data)
+    return

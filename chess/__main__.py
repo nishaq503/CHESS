@@ -1,3 +1,9 @@
+""" CHESS Main Loop.
+
+Loads important variables into the environment,
+then presents a REPL.
+"""
+
 from chess import CHESS
 
 if __name__ == '__main__':
