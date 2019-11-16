@@ -6,7 +6,7 @@ with open('README.md', 'r') as f:
     long_description = f.read()
 
 setup(
-    name='CHESS',
+    name='CHESS-python',
     version=chess.__version__.strip(),
     packages=['chess'],
     url='https://github.com/nishaq503/CHESS',
