@@ -7,12 +7,12 @@ with open('README.md', 'r') as f:
 
 setup(
     name='CHESS',
-    version=chess.__version__,
+    version=chess.__version__.strip(),
     packages=['chess'],
     url='https://github.com/nishaq503/CHESS',
     license='',
-    author='Najib Ishaq',
+    author=chess.__author__.strip(),
     author_email='',
-    description='Clustered Hierarchical Entropy-Scaling Search',
+    description=chess.__doc__.strip(),
     long_description=long_description
 )

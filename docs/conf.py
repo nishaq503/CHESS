@@ -21,7 +21,7 @@ import chess
 
 project = 'CHESS'
 copyright = '2019, Najib Ishaq'
-author = 'Najib Ishaq'
+author = chess.__author__
 
 # The full version, including alpha/beta/rc tags
 release = chess.__version__
