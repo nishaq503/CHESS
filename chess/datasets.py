@@ -116,7 +116,6 @@ def filter_duplicates(data: np.memmap, filename: str):
             p = np.asarray(point, dtype=data.dtype)
             my_memmap[i] = p
         my_memmap.flush()
-        del my_memmap
 
     write_memmap(set_data)
     return
