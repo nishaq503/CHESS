@@ -1,3 +1,5 @@
+""" CHESS Cluster.
+"""
 from typing import List, Tuple, Dict, Union, Callable
 
 import numpy as np
