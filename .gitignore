@@ -108,6 +108,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.chess
 env/
 venv/
 ENV/
@@ -131,3 +132,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# from experiments
+logs
+old_logs
+old_notebooks
+plots
