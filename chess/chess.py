@@ -1,4 +1,6 @@
-import tempfile
+""" CHESS API
+"""
+import pickle
 
 import numpy as np
 
@@ -9,6 +11,8 @@ from .search import search
 
 
 class CHESS:
+    """ Clustered Hierarchical Entropy-Scaling Search Object.
+    """
 
     def __init__(self, data: np.memmap, metric: str):
         self.cluster = Cluster(data, metric)
@@ -32,6 +36,9 @@ class CHESS:
             *[repr(c) for c in self.cluster.inorder()]
         ])
 
+    def __eq__(self, other):
+        return self.metric == other.metric and self.cluster == other.cluster
+
     def build(self, stopping_criteria=None):
         """ Clusters points recursively until stopping_criteria returns True.
 
@@ -41,18 +48,20 @@ class CHESS:
         return
 
     def search(self, query, radius):
-        """ Searches the clusters for all points within query.radius of query.point.
+        """ Searches the clusters for all points within radius of query.
         """
         return search(self.cluster, Query(point=query, radius=radius))
 
     def knn_search(self, query, k):
+        """ Searches the clusters for the k-nearest points to the query.
+        """
         return knn_search(self.cluster, Query(point=query, k=k))
 
-    def compress(self):
-        """ Compresses the clusters. """
-        temp = tempfile.NamedTemporaryFile()
+    def compress(self, filename: str):
+        """ Compresses the clusters.
+        """
         mm = np.memmap(
-            temp.name,
+            filename,
             dtype=self.cluster.data.dtype,
             mode='w+',
             shape=self.cluster.data.shape,
@@ -60,14 +69,21 @@ class CHESS:
         i = 0
         for cluster in self.cluster.leaves():
             points = cluster.compress()
-            print()
-        raise NotImplementedError
+            mm[i:i + len(points)] = points[:]
+            i += len(points)
+        mm.flush()
+        del mm
 
     def write(self, filename):
-        """ Writes the CHESS object to the given filename. """
-        raise NotImplementedError
+        """ Writes the CHESS object to the given filename.
+        """
+        with open(filename, 'wb') as f:
+            pickle.dump(self, f)
+        return
 
     @staticmethod
     def load(filename):
-        """ Loads the CHESS object from the given file. """
-        raise NotImplementedError
+        """ Loads the CHESS object from the given file.
+        """
+        with open(filename, 'rb') as f:
+            return pickle.load(f)

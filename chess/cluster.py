@@ -78,14 +78,19 @@ class Cluster:
         return f'{self.name}, [{", ".join([str(p) for p in self.points])}]'
 
     def __repr__(self):
-        return ','.join([
+        return ','.join(map(str, [
             self.name,
             len(self.points),
             self.center,
             self.radius(),
             self.local_fractal_dimension(),
-            self.partitionable,
-        ])
+            self.partitionable(),
+        ]))
+
+    def __eq__(self, other):
+        return self.metric == other.metric \
+               and self.points == other.points \
+               and np.all(self.data == other.data)
 
     def dict(self):
         d: Dict[str: Cluster]

@@ -20,13 +20,13 @@ def search(cluster: Cluster, query: Query) -> List[int]:
     # Multiprocessing.
     with Pool() as m:
         results = m.map(partial(linear_search, query=query), clusters)
-    points = [p for result in results for p in results]
+    points = [p for result in results for p in result]
 
     # Using map
-    points = [p for results in map(partial(linear_search, query=query), clusters) for p in results]
+    # points = [p for results in map(partial(linear_search, query=query), clusters) for p in results]
 
     # Comprehension
-    points = [p for cluster in clusters for p in linear_search(cluster, query)]
+    # points = [p for cluster in clusters for p in linear_search(cluster, query)]
     return points
 
 
