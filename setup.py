@@ -14,5 +14,7 @@ setup(
     author=chess.__author__.strip(),
     author_email='',
     description=chess.__doc__.strip(),
-    long_description=long_description
+    long_description=long_description,
+    install_requires=['numpy', 'scipy'],
+    python_requires=['>=3.6'],
 )
