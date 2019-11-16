@@ -14,6 +14,8 @@ def search(cluster: Cluster, query: Query) -> List[int]:
 
     :param cluster: cluster to start searching in.
     :param query: point to search around.
+
+    TODO: Benchmark search using all methods below and a method involving creating a new cluster from all points
     """
     clusters = cluster_search(cluster, query)
 

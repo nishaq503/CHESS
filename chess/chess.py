@@ -1,4 +1,6 @@
 """ CHESS API
+
+This class wraps the underlying Cluster structure with a convenient API.
 """
 import pickle
 

@@ -25,7 +25,7 @@ def calculate_distances(x, y, metric: str) -> np.ndarray:
     
     :param x: 2-d array of points.
     :param y: 2-d array of points.
-    :param metric: distance metric from scikit-learn pairwise to use.
+    :param metric: distance metric from scipy cdist to use.
     
     :return: numpy array of pairwise distances.
     """

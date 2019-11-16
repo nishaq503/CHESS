@@ -1,3 +1,5 @@
+""" Global configuration.
+"""
 import numpy as np
 
 H_MAGNITUDE = 12.2

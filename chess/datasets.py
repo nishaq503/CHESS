@@ -1,3 +1,9 @@
+""" Preconfigured Datasets.
+
+CHESS comes shipped with configurations for Apogee and GreenGenes data,
+both of which should correspond directly to the initial publication of
+the CHESS paper.
+"""
 import logging
 from abc import ABC
 from inspect import isclass

@@ -1,4 +1,6 @@
 """ CHESS Cluster.
+
+This is the underlying structure for CHESS.
 """
 from typing import List, Tuple, Dict, Union, Callable
 

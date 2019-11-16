@@ -1,3 +1,5 @@
+""" k-Nearest-Neighbor Search.
+"""
 from chess.cluster import Cluster
 from chess.query import Query
 
