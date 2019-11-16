@@ -263,6 +263,30 @@ class Cluster:
             for n in self._inorder(node.right):
                 yield n
 
+    def postorder(self):
+        return self._postorder(self)
+
+    def _postorder(self, node):
+        if node.left:
+            for n in self._postorder(node.left):
+                yield n
+        if node.right:
+            for n in self._postorder(node.right):
+                yield n
+        yield node
+
+    def preorder(self):
+        return self._preorder(self)
+
+    def _preorder(self, node):
+        yield node
+        if node.left:
+            for n in self._preorder(node.left):
+                yield n
+        if node.right:
+            for n in self._preorder(node.right):
+                yield n
+
     def leaves(self):
         return self._leaves(self)
 
