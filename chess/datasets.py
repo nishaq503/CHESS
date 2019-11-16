@@ -99,7 +99,7 @@ def filter_duplicates(data: np.memmap, filename: str):
         # No elements were removed.
         return
 
-    def write_memmap(filename, set_to_write):
+    def write_memmap(set_to_write):
         my_memmap = np.memmap(
             filename=filename,
             dtype=data.dtype,
@@ -112,5 +112,5 @@ def filter_duplicates(data: np.memmap, filename: str):
         my_memmap.flush()
         del my_memmap
 
-    write_memmap(filename, set_data)
+    write_memmap(set_data)
     return

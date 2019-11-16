@@ -1,3 +1,7 @@
+""" Distance Functions.
+
+TODO: Integrate GPU Acceleration.
+"""
 import numpy as np
 from scipy.spatial.distance import cdist
 
@@ -26,15 +30,3 @@ def calculate_distances(x, y, metric: str) -> np.ndarray:
     :return: numpy array of pairwise distances.
     """
     return cdist(x, y, metric)
-    # TODO: Remove until we can justify adding GPU deceleration
-    # check_input_array(x)
-    # check_input_array(y)
-    #
-    # if count_calls:
-    #     globals.DF_CALLS += x.shape[0] * y.shape[0]
-    #
-    # if use_tensorflow:
-    #     raise NotImplementedError(f'Tensorflow distances have not yet been ported from old repo.')
-    # else:
-    #     distances = pdist(x, metric)  # pairwise_distances(x, y, metric)
-    #     return np.maximum(distances, np.zeros_like(distances, dtype=globals.RADII_DTYPE))
