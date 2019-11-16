@@ -30,11 +30,9 @@ pandas==0.25.3
 protobuf==3.10.0
 Pygments==2.4.2
 pyparsing==2.4.5
-pypiwin32==223
 python-dateutil==2.8.1
 python-editor==1.0.4
 pytz==2019.3
-pywin32==227
 PyYAML==5.1.2
 querystring-parser==1.2.4
 requests==2.22.0

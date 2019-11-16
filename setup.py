@@ -16,5 +16,5 @@ setup(
     description=chess.__doc__.strip(),
     long_description=long_description,
     install_requires=['numpy', 'scipy'],
-    python_requires=['>=3.6'],
+    python_requires='>=3.6',
 )
