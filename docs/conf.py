@@ -15,16 +15,18 @@ import sys
 
 sys.path.insert(0, os.path.abspath('..'))
 
-import chess
-
 # -- Project information -----------------------------------------------------
 
 project = 'CHESS'
 copyright = '2019, Najib Ishaq'
-author = chess.__author__
+author = 'Najib Ishaq'
 
 # The full version, including alpha/beta/rc tags
-release = chess.__version__
+from pkg_resources import get_distribution
+
+release = get_distribution('myproject').version
+# for example take major/minor
+version = '.'.join(release.split('.')[:2])
 
 # -- General configuration ---------------------------------------------------
 

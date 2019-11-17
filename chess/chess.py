@@ -74,7 +74,7 @@ class CHESS:
             mm[i:i + len(points)] = points[:]
             i += len(points)
         mm.flush()
-        del mm
+        return
 
     def write(self, filename):
         """ Writes the CHESS object to the given filename.
