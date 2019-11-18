@@ -17,7 +17,7 @@ class CHESS:
     """
 
     def __init__(self, data: np.memmap, metric: str):
-        self.cluster = Cluster(data, metric)
+        self.root = Cluster(data, metric)
         self.metric = metric
 
     def __str__(self):
@@ -26,7 +26,7 @@ class CHESS:
         """
         return '\n'.join([
             'name, points',
-            *[str(c) for c in self.cluster.leaves()]
+            *[str(c) for c in self.root.leaves()]
         ])
 
     def __repr__(self):
@@ -35,41 +35,41 @@ class CHESS:
         """
         return '\n'.join([
             'name, number_of_points, center, radius, lfd, is_leaf',
-            *[repr(c) for c in self.cluster.inorder()]
+            *[repr(c) for c in self.root.inorder()]
         ])
 
     def __eq__(self, other):
-        return self.metric == other.metric and self.cluster == other.cluster
+        return self.metric == other.metric and self.root == other.root
 
     def build(self, stopping_criteria=None):
         """ Clusters points recursively until stopping_criteria returns True.
 
         :param stopping_criteria: optional override to cluster.partitionable
         """
-        self.cluster.make_tree(stopping_criteria)
+        self.root.make_tree(stopping_criteria)
         return
 
     def search(self, query, radius):
         """ Searches the clusters for all points within radius of query.
         """
-        return search(self.cluster, Query(point=query, radius=radius))
+        return search(self.root, Query(point=query, radius=radius))
 
     def knn_search(self, query, k):
         """ Searches the clusters for the k-nearest points to the query.
         """
-        return knn_search(self.cluster, Query(point=query, k=k))
+        return knn_search(self.root, Query(point=query, k=k))
 
     def compress(self, filename: str):
         """ Compresses the clusters.
         """
         mm = np.memmap(
             filename,
-            dtype=self.cluster.data.dtype,
+            dtype=self.root.data.dtype,
             mode='w+',
-            shape=self.cluster.data.shape,
+            shape=self.root.data.shape,
         )
         i = 0
-        for cluster in self.cluster.leaves():
+        for cluster in self.root.leaves():
             points = cluster.compress()
             mm[i:i + len(points)] = points[:]
             i += len(points)

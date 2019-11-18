@@ -39,7 +39,7 @@ class TestCHESS(unittest.TestCase):
         CHESS(self.data, 'euclidean')
 
         with self.assertRaises(ValueError):
-            CHESS(self.data, 'boopscooparoop')
+            CHESS(self.data, 'dodo bird')
 
         return
 
@@ -49,7 +49,7 @@ class TestCHESS(unittest.TestCase):
         s = str(chess)
         self.assertGreater(len(s), 0)
         # Do we have the right number of clusters? (Exclude title row)
-        self.assertEqual(len(s.split('\n')[1:]), len([c for c in chess.cluster.leaves()]))
+        self.assertEqual(len(s.split('\n')[1:]), len([c for c in chess.root.leaves()]))
         points = [p for s in s.split('\n')[1:] for p in eval(s[s.index('[') - 1:])]
         self.assertEqual(len(points), 100)
         return
@@ -64,10 +64,10 @@ class TestCHESS(unittest.TestCase):
     def test_build(self):
         chess = CHESS(self.data, 'euclidean')
         chess.build()
-        self.assertTrue(chess.cluster.left and chess.cluster.right)
+        self.assertTrue(chess.root.left and chess.root.right)
         self.assertTrue(
-            (chess.cluster.left.left and chess.cluster.left.right)
-            or (chess.cluster.right.left and chess.cluster.right.right)
+            (chess.root.left.left and chess.root.left.right)
+            or (chess.root.right.left and chess.root.right.right)
         )
         return
 

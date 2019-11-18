@@ -5,7 +5,7 @@ of optional parameters to generate a valid search object.
 """
 import numpy as np
 
-from chess import globals
+from chess import defaults
 
 
 class Query:
@@ -15,7 +15,7 @@ class Query:
             self,
             point: np.ndarray,
             *,
-            radius: globals.RADII_DTYPE = 0,
+            radius: defaults.RADII_DTYPE = 0,
             k: int = 0,
             max_depth: int = np.inf
     ):

@@ -1,4 +1,4 @@
-""" Global configuration.
+""" Default configuration.
 """
 import numpy as np
 

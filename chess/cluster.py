@@ -6,7 +6,7 @@ from typing import List, Tuple, Dict, Union, Callable
 
 import numpy as np
 
-from chess import globals
+from chess import defaults
 from chess.distance import calculate_distances
 from chess.query import Query
 
@@ -24,8 +24,8 @@ class Cluster:
             metric: str,
             points: List[int] = None,
             name: str = '',
-            center: int = None,
-            radius: globals.RADII_DTYPE = None,
+            argcenter: int = None,
+            radius: defaults.RADII_DTYPE = None,
     ):
         """
         Initializes cluster object.
@@ -34,22 +34,22 @@ class Cluster:
         :param points: list of indexes in data of the points in this cluster.
         :param metric: distance metric this cluster uses.
         :param name: name of cluster to track ancestry.
-        :param center: index in data of center of cluster.
+        :param argcenter: index in data of center of cluster.
         :param radius: radius of cluster i.e. the maximum distance from any point in the cluster to the cluster center.
         """
         # Required from constructor, either from user or as defaults.
         self.data: np.memmap = data
         self.metric: str = metric
         self.name: str = name
-        self._radius: globals.RADII_DTYPE = radius
+        self._radius: defaults.RADII_DTYPE = radius
 
         # Provided or computed values. (cached)
         self.points: List[int] = points or list(range(self.data.shape[0]))
-        self.subsample: bool = len(self.points) > globals.SUBSAMPLING_LIMIT
+        self.subsample: bool = len(self.points) > defaults.SUBSAMPLING_LIMIT
         self.samples, self.distances = self._samples()
-        self.center = center or self._center()
+        self.argcenter = argcenter or self._argcenter()
         self.depth: int = len(name)
-        self._all_same: bool = np.max(self.distances) == globals.RADII_DTYPE(0.0)
+        self._all_same: bool = np.max(self.distances) == defaults.RADII_DTYPE(0.0)
 
         # Children.
         self.left = self.right = None
@@ -57,12 +57,12 @@ class Cluster:
         # Invariants after construction.
         assert len(self.points) > 0, f"Empty point indices in {self.name}"
         assert len(self.points) == len(set(self.points)), f"Duplicate point indices in cluster {self.name}:\n{self.points}"
-        assert self.center is not None
+        assert self.argcenter is not None
 
     def __iter__(self):
         """ Iterates over points within the cluster. """
-        for i in range(0, len(self.points), globals.BATCH_SIZE):
-            yield self.data[self.points[i:i + globals.BATCH_SIZE]]
+        for i in range(0, len(self.points), defaults.BATCH_SIZE):
+            yield self.data[self.points[i:i + defaults.BATCH_SIZE]]
 
     def __len__(self) -> int:
         """ Returns the number of points within the cluster. """
@@ -74,7 +74,7 @@ class Cluster:
 
     def __contains__(self, query: Query):
         """ Determines whether or not a query falls into the cluster. """
-        center = np.expand_dims(self.data[self.center], 0)
+        center = np.expand_dims(self.center(), 0)
         distance = calculate_distances(center, [query.point], self.metric)[0, 0]
         return distance <= (self.radius() + query.radius)
 
@@ -85,16 +85,16 @@ class Cluster:
         return ','.join(map(str, [
             self.name,
             len(self.points),
-            self.center,
+            self.argcenter,
             self.radius(),
             self.local_fractal_dimension(),
             self.partitionable(),
         ]))
 
     def __eq__(self, other):
-        return self.metric == other.metric \
-               and self.points == other.points \
-               and np.all(self.data == other.data)
+        return all((self.metric == other.metric,
+                    self.points == other.points,
+                    np.all(self.data == other.data)))  # TODO: Change this to only check elements in self.data that are in self.points.
 
     def dict(self):
         d: Dict[str: Cluster]
@@ -113,7 +113,7 @@ class Cluster:
         points = np.random.choice(list(self.points), n, replace=False)
         distances = calculate_distances(self.data[points], self.data[points], self.metric)
 
-        if np.max(distances) == globals.RADII_DTYPE(0.0):
+        if np.max(distances) == defaults.RADII_DTYPE(0.0):
             # If all sampled points were duplicates, we grab non-duplicate centroids.
             unique = np.unique(self.data[self.points], return_index=True, axis=0)[1]
             points = np.random.choice(unique, n, replace=False) if len(unique) > n else unique
@@ -122,11 +122,15 @@ class Cluster:
 
         return points, distances
 
-    def _center(self):
+    def _argcenter(self):
         """ Returns the index of the centroid of the cluster."""
         return self.samples[int(np.argmin(self.distances.sum(axis=1)))]
 
-    def radius(self) -> globals.RADII_DTYPE:
+    def center(self):
+        """ Returns the center point from self.data. """
+        return self.data[self.argcenter]
+
+    def radius(self) -> defaults.RADII_DTYPE:
         """ Calculates the radius of the cluster.
 
         This is the maximum of the distances of any point in the cluster to the cluster center.
@@ -134,31 +138,29 @@ class Cluster:
         :return: radius of cluster.
         """
         if not self._radius and not self._all_same:
-            assert self.center is not None
-            center = self.data[self.center]
-            center = np.expand_dims(center, 0)
+            assert self.argcenter is not None
+            center = np.expand_dims(self.center(), 0)
             radii = [np.max(calculate_distances(center, b, self.metric)) for b in self]
             self._radius = np.max(radii)
-            self._radius = globals.RADII_DTYPE(self._radius)
+            self._radius = defaults.RADII_DTYPE(self._radius)
 
-        return self._radius or globals.RADII_DTYPE(0.0)
+        return self._radius or defaults.RADII_DTYPE(0.0)
 
-    def local_fractal_dimension(self) -> globals.RADII_DTYPE:
+    def local_fractal_dimension(self) -> defaults.RADII_DTYPE:
         """ Calculates the local fractal dimension of the cluster.
         This is the log2 ratio of the number of points in the cluster to the number of points within half the radius.
 
         :return: local fractal dimension of the cluster.
         """
-        center = self.data[self.center]
-        center = np.expand_dims(center, 0)
+        center = np.expand_dims(self.center(), 0)
 
         if self._all_same:
-            return globals.RADII_DTYPE(0.0)
+            return defaults.RADII_DTYPE(0.0)
         count = [d <= (self.radius() / 2)
                  for batch in self
                  for d in calculate_distances(center, batch, self.metric)[0:]]
-        count = np.sum(count, dtype=globals.RADII_DTYPE)
-        return count or np.log2(globals.RADII_DTYPE(len(self.points)) / count)
+        count = np.sum(count, dtype=defaults.RADII_DTYPE)
+        return count or np.log2(defaults.RADII_DTYPE(len(self.points)) / count)
 
     def partitionable(self) -> bool:
         """ Returns weather or not this cluster can be partitioned.
@@ -166,9 +168,9 @@ class Cluster:
         return all((
             not self._all_same,
             not (self.left or self.right),
-            self.depth < globals.MAX_DEPTH,
-            len(self.points) > globals.MIN_POINTS,
-            self.radius() > globals.MIN_RADIUS,
+            self.depth < defaults.MAX_DEPTH,
+            len(self.points) > defaults.MIN_POINTS,
+            self.radius() > defaults.MIN_RADIUS,
         ))
 
     def partition(self):
@@ -202,7 +204,7 @@ class Cluster:
             left_dist = calculate_distances(left_pole, batch, self.metric)[0, :]
             right_dist = calculate_distances(right_pole, batch, self.metric)[0, :]
             for j, l, r in zip(range(len(batch)), left_dist, right_dist):
-                (left_indices if l < r else right_indices).append(self.points[i * globals.BATCH_SIZE + j])
+                (left_indices if l < r else right_indices).append(self.points[i * defaults.BATCH_SIZE + j])
 
         # Loop termination invariant: there are points in each half.
         assert len(left_indices) > 0, f'Empty left cluster after partitioning {self.name}'
@@ -246,8 +248,8 @@ class Cluster:
         """
         assert not (self.left or self.right), f'Can only compress leaves! Tried to compress {self.name}.'
 
-        step_size = 10 ** (globals.H_MAGNITUDE / (-2.5))
-        center = self.data[self.center]
+        step_size = 10 ** (defaults.H_MAGNITUDE / (-2.5))
+        center = self.center()
         points = [np.asarray(np.ceil((self.data[p] - center) // step_size), dtype=np.int64)
                   for p in self.points]
         return points

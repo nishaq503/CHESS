@@ -12,7 +12,7 @@ class TestCluster(unittest.TestCase):
 
     def test_init(self):
         with self.assertRaises(ValueError):
-            Cluster(self.data, 'boopscooparoop')
+            Cluster(self.data, 'dodo bird')
         c = Cluster(self.data, 'euclidean')
         self.assertEqual(c.data.shape, self.data.shape)
         self.assertEqual(c.metric, 'euclidean')
@@ -28,7 +28,7 @@ class TestCluster(unittest.TestCase):
 
     def test_iter(self):
         data = np.random.randn(100, 100)
-        globals.BATCH_SIZE = 10
+        defaults.BATCH_SIZE = 10
         c = Cluster(data, 'euclidean')
         d = [b for b in c]
         self.assertEqual(len(d), 10)
@@ -47,6 +47,7 @@ class TestCluster(unittest.TestCase):
         self.assertTrue(np.all(np.equal(c[0], data[0])))
         return
 
+    # noinspection PyTypeChecker
     def test_contains(self):
         data = np.random.randn(100, 100) + 100
         self.assertFalse(Query(data[0], radius=0.0) in self.c)
