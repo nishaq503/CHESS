@@ -141,7 +141,16 @@ class TestCluster(unittest.TestCase):
         data = np.random.randn(50, 100)
         c = Cluster(np.concatenate([data - 10, data + 10]), 'euclidean')
         c.partition()
+
         clusters = list(c.leaves())
+        self.assertEqual(len(clusters), 2)
+        self.assertListEqual(['0', '1'], [c.name for c in clusters])
+
+        clusters = list(c.leaves(0))
+        self.assertEqual(len(clusters), 1)
+        self.assertListEqual([''], [c.name for c in clusters])
+
+        clusters = list(c.leaves(1))
         self.assertEqual(len(clusters), 2)
         self.assertListEqual(['0', '1'], [c.name for c in clusters])
         return

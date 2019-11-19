@@ -293,17 +293,18 @@ class Cluster:
             for n in self._preorder(node.right):
                 yield n
 
-    def leaves(self):
-        return self._leaves(self)
+    def leaves(self, depth: int = None):
+        depth = depth if depth is not None else max(map(len, self.dict().keys()))
+        return self._leaves(self, depth)
 
-    def _leaves(self, node):
-        if not (node.left or node.right):
+    def _leaves(self, node, depth):
+        if (not (node.left or node.right)) or depth == node.depth:
             yield node
 
         if node.left:
-            for n in self._leaves(node.left):
+            for n in self._leaves(node.left, depth):
                 yield n
 
         if node.right:
-            for n in self._leaves(node.right):
+            for n in self._leaves(node.right, depth):
                 yield n
