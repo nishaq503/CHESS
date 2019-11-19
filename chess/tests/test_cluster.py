@@ -140,11 +140,16 @@ class TestCluster(unittest.TestCase):
     def test_leaves(self):
         data = np.random.randn(50, 100)
         c = Cluster(np.concatenate([data - 10, data + 10]), 'euclidean')
-        c.partition()
 
+        c.partition()
         clusters = list(c.leaves())
         self.assertEqual(len(clusters), 2)
         self.assertListEqual(['0', '1'], [c.name for c in clusters])
+
+        c.left.partition(), c.right.partition()
+        clusters = list(c.leaves())
+        self.assertEqual(len(clusters), 4)
+        self.assertListEqual(['00', '01', '10', '11'], [c.name for c in clusters])
 
         clusters = list(c.leaves(0))
         self.assertEqual(len(clusters), 1)
@@ -153,6 +158,10 @@ class TestCluster(unittest.TestCase):
         clusters = list(c.leaves(1))
         self.assertEqual(len(clusters), 2)
         self.assertListEqual(['0', '1'], [c.name for c in clusters])
+
+        clusters = list(c.leaves(2))
+        self.assertEqual(len(clusters), 4)
+        self.assertListEqual(['00', '01', '10', '11'], [c.name for c in clusters])
         return
 
     def test_pairwise_distances(self):

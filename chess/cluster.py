@@ -2,7 +2,7 @@
 
 This is the underlying structure for CHESS.
 """
-from typing import List, Tuple, Dict, Union, Callable
+from typing import List, Tuple, Dict, Union
 
 import numpy as np
 
@@ -68,7 +68,7 @@ class Cluster:
         """ Returns the number of points within the cluster. """
         return len(self.points)
 
-    def __getitem__(self, item):
+    def __getitem__(self, item):  # TODO: cover
         """ Gets the point at the index. """
         return self.data[self.points[item]]
 
@@ -155,7 +155,7 @@ class Cluster:
         center = np.expand_dims(self.center(), 0)
 
         if self._all_same:
-            return defaults.RADII_DTYPE(0.0)
+            return defaults.RADII_DTYPE(0.0)  # TODO: cover
         count = [d <= (self.radius() / 2)
                  for batch in self
                  for d in calculate_distances(center, batch, self.metric)[0:]]
@@ -165,13 +165,16 @@ class Cluster:
     def partitionable(self) -> bool:
         """ Returns weather or not this cluster can be partitioned.
         """
-        return all((
+        flag = all((
             not self._all_same,
             not (self.left or self.right),
             self.depth < defaults.MAX_DEPTH,
             len(self.points) > defaults.MIN_POINTS,
             self.radius() > defaults.MIN_RADIUS,
         ))
+        if defaults.STOPPING_CRITERIA:
+            flag = flag and defaults.STOPPING_CRITERIA(self)  # TODO: cover
+        return flag
 
     def partition(self):
         """ Partition this cluster into left and right children.
@@ -225,15 +228,11 @@ class Cluster:
         )
         return
 
-    def make_tree(self, stopping_criteria: Callable[[any], bool] = None):
+    def make_tree(self):
         """
         Build cluster sub-tree starting at this cluster.
         """
-        if stopping_criteria:
-            if stopping_criteria(self):
-                self.partition()
-
-        elif self.partitionable():
+        if self.partitionable():
             self.partition()
 
         if self.left:
@@ -300,11 +299,11 @@ class Cluster:
     def _leaves(self, node, depth):
         if (not (node.left or node.right)) or depth == node.depth:
             yield node
+        else:
+            if node.left:
+                for n in self._leaves(node.left, depth):
+                    yield n
 
-        if node.left:
-            for n in self._leaves(node.left, depth):
-                yield n
-
-        if node.right:
-            for n in self._leaves(node.right, depth):
-                yield n
+            if node.right:
+                for n in self._leaves(node.right, depth):
+                    yield n
