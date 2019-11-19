@@ -88,7 +88,6 @@ class Cluster:
             self.argcenter,
             self.radius(),
             self.local_fractal_dimension(),
-            self.partitionable(),
         ]))
 
     def __eq__(self, other):
@@ -162,18 +161,23 @@ class Cluster:
         count = np.sum(count, dtype=defaults.RADII_DTYPE)
         return count or np.log2(defaults.RADII_DTYPE(len(self.points)) / count)
 
-    def partitionable(self) -> bool:
+    def partitionable(
+            self,
+            max_depth,
+            min_points,
+            min_radius,
+            stopping_criteria
+    ) -> bool:
         """ Returns weather or not this cluster can be partitioned.
         """
         flag = all((
             not self._all_same,
             not (self.left or self.right),
-            self.depth < defaults.MAX_DEPTH,
-            len(self.points) > defaults.MIN_POINTS,
-            self.radius() > defaults.MIN_RADIUS,
+            self.depth < max_depth,
+            len(self.points) > min_points,
+            self.radius() > min_radius,
+            stopping_criteria(self) if stopping_criteria else True
         ))
-        if defaults.STOPPING_CRITERIA:
-            flag = flag and defaults.STOPPING_CRITERIA(self)  # TODO: cover
         return flag
 
     def partition(self):
@@ -228,17 +232,18 @@ class Cluster:
         )
         return
 
-    def make_tree(self):
+    def make_tree(self, *, max_depth, min_points, min_radius, stopping_criteria):
         """
         Build cluster sub-tree starting at this cluster.
         """
-        if self.partitionable():
+        if self.partitionable(max_depth, min_points, min_radius, stopping_criteria):
             self.partition()
 
+        kwargs = {k: v for k, v in locals().items() if k != 'self'}
         if self.left:
-            self.left.make_tree()
+            self.left.make_tree(**kwargs)
         if self.right:
-            self.right.make_tree()
+            self.right.make_tree(**kwargs)
         return
 
     def compress(self):

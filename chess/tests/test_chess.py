@@ -2,10 +2,7 @@ import os
 import tempfile
 import unittest
 
-import numpy as np
-
-from chess import defaults
-from chess.chess import CHESS, update_defaults
+from chess.chess import *
 
 
 class TestCHESS(unittest.TestCase):
@@ -22,18 +19,6 @@ class TestCHESS(unittest.TestCase):
     @classmethod
     def tearDownClass(cls) -> None:
         return
-
-    def test_update_defaults(self):
-        max_depth = 15
-        min_points = 10
-        min_radius = np.float64(0)
-        stopping_criteria = None
-
-        update_defaults(max_depth, min_points, min_radius, stopping_criteria)
-        self.assertEqual(max_depth, defaults.MAX_DEPTH)
-        self.assertEqual(min_points, defaults.MIN_POINTS)
-        self.assertEqual(min_radius, defaults.MIN_RADIUS)
-        self.assertEqual(stopping_criteria, defaults.STOPPING_CRITERIA)
 
     def test_functional(self):
         chess = CHESS(self.data, 'euclidean')
@@ -85,12 +70,12 @@ class TestCHESS(unittest.TestCase):
         return
 
     # noinspection PyTypeChecker
-    def test_add_levels(self):
+    def test_deepen(self):
         data = np.random.randn(2_000, 100)
         chess = CHESS(data, 'euclidean')
-        chess.build(max_depth=5)
+        chess.deepen(levels=5)
         self.assertEqual(5, max(map(len, chess.root.dict().keys())))
-        chess.add_levels(num_levels=5)
+        chess.deepen(levels=5)
         self.assertEqual(10, max(map(len, chess.root.dict().keys())))
 
     def test_search(self):
