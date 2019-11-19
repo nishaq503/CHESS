@@ -88,9 +88,9 @@ class TestCHESS(unittest.TestCase):
     def test_add_levels(self):
         data = np.random.randn(2_000, 100)
         chess = CHESS(data, 'euclidean')
-        chess.build(max_depth=5)
+        chess.deepen(levels=5)
         self.assertEqual(5, max(map(len, chess.root.dict().keys())))
-        chess.add_levels(num_levels=5)
+        chess.deepen(levels=5)
         self.assertEqual(10, max(map(len, chess.root.dict().keys())))
 
     def test_search(self):
