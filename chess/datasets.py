@@ -76,6 +76,7 @@ class GreenGenes(Dataset):
 
 
 # Gather all subclasses of Dataset.
+# noinspection PyTypeChecker
 DATASETS = dict(filter(
     lambda e: isclass(e[1]) and e[1] is not Dataset and issubclass(e[1], Dataset),
     globals().items()

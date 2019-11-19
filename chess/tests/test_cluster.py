@@ -12,7 +12,7 @@ class TestCluster(unittest.TestCase):
 
     def test_init(self):
         with self.assertRaises(ValueError):
-            Cluster(self.data, 'boopscooparoop')
+            Cluster(self.data, 'dodo bird')
         c = Cluster(self.data, 'euclidean')
         self.assertEqual(c.data.shape, self.data.shape)
         self.assertEqual(c.metric, 'euclidean')
@@ -28,7 +28,7 @@ class TestCluster(unittest.TestCase):
 
     def test_iter(self):
         data = np.random.randn(100, 100)
-        globals.BATCH_SIZE = 10
+        defaults.BATCH_SIZE = 10
         c = Cluster(data, 'euclidean')
         d = [b for b in c]
         self.assertEqual(len(d), 10)
@@ -47,6 +47,7 @@ class TestCluster(unittest.TestCase):
         self.assertTrue(np.all(np.equal(c[0], data[0])))
         return
 
+    # noinspection PyTypeChecker
     def test_contains(self):
         data = np.random.randn(100, 100) + 100
         self.assertFalse(Query(data[0], radius=0.0) in self.c)
@@ -61,18 +62,27 @@ class TestCluster(unittest.TestCase):
 
     def test_repr(self):
         s = repr(self.c)
-        self.assertIn(str(self.c.partitionable()), s)
         self.assertIn(str(self.c.name), s)
         return
 
     def test_eq(self):
         self.assertEqual(self.c, self.c)
-        self.c.make_tree()
+        self.c.make_tree(
+            max_depth=defaults.MAX_DEPTH,
+            min_points=defaults.MIN_POINTS,
+            min_radius=defaults.MIN_RADIUS,
+            stopping_criteria=None
+        )
         self.assertNotEqual(self.c.left, self.c.right)
         return
 
     def test_dict(self):
-        self.c.make_tree()
+        self.c.make_tree(
+            max_depth=defaults.MAX_DEPTH,
+            min_points=defaults.MIN_POINTS,
+            min_radius=defaults.MIN_RADIUS,
+            stopping_criteria=None
+        )
         d = self.c.dict()
         self.assertEqual(len(d.keys()), len([c for c in self.c.inorder()]))
         return
@@ -90,9 +100,20 @@ class TestCluster(unittest.TestCase):
         return
 
     def test_partitionable(self):
-        self.assertTrue(self.c.partitionable())
-        self.c.make_tree()
-        [self.assertFalse(c.partitionable()) for c in self.c.leaves()]
+        self.c.make_tree(
+            max_depth=defaults.MAX_DEPTH,
+            min_points=defaults.MIN_POINTS,
+            min_radius=defaults.MIN_RADIUS,
+            stopping_criteria=None
+        )
+        [self.assertFalse(
+            c.partitionable(
+                defaults.MAX_DEPTH,
+                defaults.MIN_POINTS,
+                defaults.MIN_RADIUS,
+                stopping_criteria=None
+            )
+        ) for c in self.c.leaves()]
         return
 
     def test_partition(self):
@@ -103,7 +124,12 @@ class TestCluster(unittest.TestCase):
 
     def test_make_tree(self):
         self.assertFalse(self.c.left or self.c.right)
-        self.c.make_tree()
+        self.c.make_tree(
+            max_depth=defaults.MAX_DEPTH,
+            min_points=defaults.MIN_POINTS,
+            min_radius=defaults.MIN_RADIUS,
+            stopping_criteria=None
+        )
         self.assertGreater(len([c for c in self.c.leaves()]), 2)
         return
 
@@ -139,10 +165,28 @@ class TestCluster(unittest.TestCase):
     def test_leaves(self):
         data = np.random.randn(50, 100)
         c = Cluster(np.concatenate([data - 10, data + 10]), 'euclidean')
+
         c.partition()
         clusters = list(c.leaves())
         self.assertEqual(len(clusters), 2)
         self.assertListEqual(['0', '1'], [c.name for c in clusters])
+
+        c.left.partition(), c.right.partition()
+        clusters = list(c.leaves())
+        self.assertEqual(len(clusters), 4)
+        self.assertListEqual(['00', '01', '10', '11'], [c.name for c in clusters])
+
+        clusters = list(c.leaves(0))
+        self.assertEqual(len(clusters), 1)
+        self.assertListEqual([''], [c.name for c in clusters])
+
+        clusters = list(c.leaves(1))
+        self.assertEqual(len(clusters), 2)
+        self.assertListEqual(['0', '1'], [c.name for c in clusters])
+
+        clusters = list(c.leaves(2))
+        self.assertEqual(len(clusters), 4)
+        self.assertListEqual(['00', '01', '10', '11'], [c.name for c in clusters])
         return
 
     def test_pairwise_distances(self):

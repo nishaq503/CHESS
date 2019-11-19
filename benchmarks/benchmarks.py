@@ -30,4 +30,4 @@ def search(dataset, metric, radius):
 
     with mlflow.start_run(experiment_id="Linear Search"):
         for query in queries:
-            linear_search(chess.cluster, Query(point=query, radius=radius))
+            linear_search(chess.root, Query(point=query, radius=radius))
