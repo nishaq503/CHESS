@@ -14,21 +14,6 @@ from .query import Query
 from .search import search
 
 
-def update_defaults(
-        max_depth: int = None,
-        min_points: int = None,
-        min_radius: defaults.RADII_DTYPE = None,
-        stopping_criteria: Callable[[any], bool] = None,
-):
-    # TODO: consider updating other defaults.
-    # TODO: Consider moving this function elsewhere if it makes more sense.
-    # TODO: Consider exposing this function in __init__.py.
-    defaults.MAX_DEPTH = max_depth if max_depth is not None else defaults.MAX_DEPTH
-    defaults.MIN_POINTS = min_points if min_points is not None else defaults.MIN_POINTS
-    defaults.MIN_RADIUS = min_radius if min_radius is not None else defaults.MIN_RADIUS
-    defaults.STOPPING_CRITERIA = stopping_criteria if stopping_criteria is not None else defaults.STOPPING_CRITERIA
-
-
 class CHESS:
     """ Clustered Hierarchical Entropy-Scaling Search Object.
     """
@@ -91,13 +76,12 @@ class CHESS:
     def deepen(self, levels: int = 1):
         """ Adds upto num_levels of depth to cluster-tree. """
         max_depth = max(l.depth for l in self.root.leaves()) + levels
-        for _ in range(levels):
-            [l.make_tree(
-                max_depth=max_depth,
-                min_points=self.min_points,
-                min_radius=self.min_radius,
-                stopping_criteria=self.stopping_criteria)
-                for l in self.root.leaves()]
+        [l.make_tree(
+            max_depth=max_depth,
+            min_points=self.min_points,
+            min_radius=self.min_radius,
+            stopping_criteria=self.stopping_criteria)
+            for l in self.root.leaves()]
         return
 
     def search(self, query, radius):
