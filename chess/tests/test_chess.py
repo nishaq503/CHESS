@@ -70,7 +70,7 @@ class TestCHESS(unittest.TestCase):
         return
 
     # noinspection PyTypeChecker
-    def test_add_levels(self):
+    def test_deepen(self):
         data = np.random.randn(2_000, 100)
         chess = CHESS(data, 'euclidean')
         chess.deepen(levels=5)
