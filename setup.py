@@ -1,10 +1,12 @@
+import os
+
 from setuptools import setup
 
-with open('README.md', 'r') as f:
+with open(os.path.join(os.path.dirname(__file__), 'README.md'), 'r') as f:
     long_description = f.read()
 
 setup(
-    name='CHESS-python',
+    name='-'.join(['CHESS', 'python'] + (['nightly'] if os.getenv('NIGHTLY', None) else [])),
     use_scm_version=True,
     setup_requires=['setuptools_scm'],
     packages=['chess'],
