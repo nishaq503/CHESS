@@ -151,12 +151,18 @@ class TestCluster(unittest.TestCase):
     def test_connected_components(self):
         data = np.random.randn(100, 100)
         c = Cluster(data, 'euclidean')
-        cc = c.connected_components()
-        self.assertEqual(len(cc), 1)
+        # Singleton cluster.
+        self.assertEqual(len(c.connected_components()), 0)
+
+        # Definite overlap.
         c.partition()
-        self.assertEqual(len(c.connected_components()), 2)
+        self.assertEqual(len(c.connected_components()), 1)
+        c.partition()
+        self.assertEqual(len(c.connected_components()), 1)
+
+        # Remove all overlap.
         c.make_tree(max_depth=np.inf, min_points=1, min_radius=1, stopping_criteria=None)
-        self.assertGreater(len(c.connected_components()), 2)
+        self.assertEqual(len(c.connected_components()), 0)
         return
 
     def test_postorder(self):

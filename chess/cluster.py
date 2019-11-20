@@ -272,6 +272,7 @@ class Cluster:
             c.name: {clusters[di].name for di, d in enumerate(distances[ci]) if (d != 0.0) and (d - c.radius() < 0)}
             for ci, c in enumerate(clusters)
         }
+        components = {k: v for k, v in components.items() if v}
         return components
 
     ###################################
