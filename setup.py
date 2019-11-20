@@ -7,7 +7,9 @@ with open(os.path.join(os.path.dirname(__file__), 'README.md'), 'r') as f:
 
 setup(
     name='-'.join(['CHESS', 'python'] + (['nightly'] if os.getenv('NIGHTLY', None) else [])),
-    use_scm_version=True,
+    use_scm_version={
+        'local_scheme': lambda version: '',
+    },
     setup_requires=['setuptools_scm'],
     packages=['chess'],
     url='https://github.com/nishaq503/CHESS',
