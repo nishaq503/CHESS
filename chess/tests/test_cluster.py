@@ -155,6 +155,8 @@ class TestCluster(unittest.TestCase):
         self.assertEqual(len(cc), 1)
         c.partition()
         self.assertEqual(len(c.connected_components()), 2)
+        c.make_tree(max_depth=np.inf, min_points=1, min_radius=1, stopping_criteria=None)
+        self.assertGreater(len(c.connected_components()), 2)
         return
 
     def test_postorder(self):
