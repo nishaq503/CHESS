@@ -148,6 +148,15 @@ class TestCluster(unittest.TestCase):
         self.assertListEqual(['0', '', '1'], [c.name for c in clusters])
         return
 
+    def test_connected_components(self):
+        data = np.random.randn(100, 100)
+        c = Cluster(data, 'euclidean')
+        cc = c.connected_components()
+        self.assertEqual(len(cc), 1)
+        c.partition()
+        self.assertEqual(len(c.connected_components()), 2)
+        return
+
     def test_postorder(self):
         self.c.partition()
         clusters = list(self.c.postorder())

@@ -258,6 +258,16 @@ class Cluster:
                   for p in self.points]
         return points
 
+    def connected_components(self, depth: int = None):
+        clusters = list(self.leaves(depth))
+        centers = np.array([c.center() for c in clusters])
+        distances = np.triu(calculate_distances(centers, centers, self.metric))
+        components = {
+            c.name: {clusters[di].name for di, d in enumerate(distances[ci]) if (d != 0.0) and (d - c.radius() < 0)}
+            for ci, c in enumerate(clusters)
+        }
+        return components
+
     ###################################
     # Traversals
     ###################################
