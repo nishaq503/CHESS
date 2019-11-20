@@ -258,7 +258,13 @@ class Cluster:
                   for p in self.points]
         return points
 
-    def connected_components(self, depth: int = None):
+    def connected_components(self, depth: int = None) -> dict:
+        """ Returns the connected components at depth.
+
+        The return is a dictionary where keys are cluster names,
+        values are sets of cluster names which are neighbors to
+        the key cluster.
+        """
         clusters = list(self.leaves(depth))
         centers = np.array([c.center() for c in clusters])
         distances = np.triu(calculate_distances(centers, centers, self.metric))
