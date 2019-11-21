@@ -70,3 +70,7 @@ class Graph:
             unvisited -= visited
 
         return components
+
+    # TODO: Think about how to use number of components into a good stopping condition.
+    # TODO: Implement max-flow and min-cut.
+    # TODO: Implement methods to find bottlenecks and "almost disconnected components"

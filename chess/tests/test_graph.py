@@ -45,7 +45,6 @@ class TestGraph(unittest.TestCase):
 
     def test_init(self):
         np.random.seed(42)
-        self.assertEqual(17, self.max_depth)
         for d in range(1, self.max_depth + 1):
             leaves: List[Cluster] = list(self.chess_object.root.leaves(d))
             graph: Graph = Graph(
