@@ -59,6 +59,9 @@ class Cluster:
         assert len(self.points) == len(set(self.points)), f"Duplicate point indices in cluster {self.name}:\n{self.points}"
         assert self.argcenter is not None
 
+    def __hash__(self):
+        return hash(self.name)
+
     def __iter__(self):
         """ Iterates over points within the cluster. """
         for i in range(0, len(self.points), defaults.BATCH_SIZE):
@@ -91,9 +94,10 @@ class Cluster:
         ]))
 
     def __eq__(self, other):
+        # TODO: Change this to only check elements in self.data that are in self.points.
         return all((self.metric == other.metric,
                     self.points == other.points,
-                    np.all(self.data == other.data)))  # TODO: Change this to only check elements in self.data that are in self.points.
+                    np.array_equal(self.data[self.points], other.data[self.points])))
 
     def dict(self):
         d: Dict[str: Cluster]

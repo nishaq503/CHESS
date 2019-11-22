@@ -45,7 +45,7 @@ class TestGraph(unittest.TestCase):
         for d in range(1, self.max_depth + 1):
             leaves: List[Cluster] = list(self.chess_object.root.leaves(d))
             g = graph(leaves)
-            self.assertSetEqual(set([l.name for l in leaves]), set(g.keys()))
+            self.assertSetEqual(set([l for l in leaves]), set(g.keys()))
             self.assertEqual(len(leaves), len(list(g.keys())))
 
     def test_connected_components(self):
