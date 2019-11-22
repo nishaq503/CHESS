@@ -62,11 +62,14 @@ class TestCHESS(unittest.TestCase):
     def test_build(self):
         chess = CHESS(self.data, 'euclidean')
         chess.build()
-        self.assertTrue(chess.root.left and chess.root.right)
-        self.assertTrue(
-            (chess.root.left.left and chess.root.left.right)
-            or (chess.root.right.left and chess.root.right.right)
-        )
+        self.assertTrue(all((
+            chess.root.left,
+            chess.root.right,
+            chess.root.left.left,
+            chess.root.left.right,
+            chess.root.right.left,
+            chess.root.right.right,
+        )))
         return
 
     # noinspection PyTypeChecker
