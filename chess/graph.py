@@ -13,7 +13,7 @@ from chess.cluster import Cluster
 from chess.distance import calculate_distances
 
 
-def graph(clusters: List[Cluster]) -> Dict:
+def graph(clusters: List[Cluster]) -> Dict[Cluster, Set[Cluster]]:
     """ Builds and returns a graph from the given list of clusters. """
     g = {l: set() for l in clusters}
     centers = np.asarray([l.center() for l in clusters], dtype=defaults.RADII_DTYPE)
@@ -27,25 +27,26 @@ def graph(clusters: List[Cluster]) -> Dict:
     return g
 
 
-def depth_first_traversal(graph, start) -> Set[Cluster]:
+def depth_first_traversal(g: Dict[Cluster, Set[Cluster]], start: Cluster) -> Set[Cluster]:
     """ Depth first traversal. """
-    visited, stack = set(), [start]
+    visited: Set[Cluster] = set()
+    stack: List[Cluster] = [start]
     while stack:
         vtx = stack.pop()
         if vtx not in visited:
             visited.add(vtx)
-            stack.extend(graph[vtx] - visited)
+            stack.extend(g[vtx] - visited)
     return visited
 
 
-def connected_components(graph) -> List[Set[Cluster]]:
+def connected_components(g: Dict[Cluster, Set[Cluster]]) -> List[Set[Cluster]]:
     """ Returns all connected components from the given list of clusters. """
 
-    unvisited: Set[str] = set(graph.keys())
+    unvisited: Set[Cluster] = set(g.keys())
     components: List[Set[Cluster]] = []
 
     while unvisited:
-        visited = depth_first_traversal(graph, unvisited.pop())
+        visited = depth_first_traversal(g, unvisited.pop())
         components.append(visited.copy())
         unvisited -= visited
 
