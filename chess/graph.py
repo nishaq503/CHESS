@@ -32,17 +32,18 @@ class Graph:
         self.leaves: List[Cluster] = leaves
         assert len(leaves) > 1, 'Got only one leaf. Need more to build a graph.'
 
-        self.graph: Dict[str, Set[str]] = {l.name: set() for l in leaves}
+        self.graph: Dict[str, Set[str]] = {}
+        self.components: List[Set[Cluster]] = []
 
     def build(self):
         """ Builds the graph by adding edges between leaves that have overlap. """
+        self.graph = {l.name: set() for l in self.leaves}
         centers = np.asarray([l.center() for l in self.leaves], dtype=defaults.RADII_DTYPE)
         distances = calculate_distances(centers, centers, self.metric)
         radii = np.asarray([l.radius() for l in self.leaves], dtype=defaults.RADII_DTYPE)
         radii_matrix = (np.zeros_like(distances, dtype=defaults.RADII_DTYPE) + radii).T + radii
-        edges = np.sign(distances - radii_matrix)
-        np.fill_diagonal(edges, 0)
-        left, right = tuple(map(list, np.where(edges < 0)))
+        np.fill_diagonal(radii_matrix, 0)
+        left, right = tuple(map(list, np.where((distances - radii_matrix) < 0)))
         [self.graph[self.leaves[l].name].add(self.leaves[r].name) for l, r in zip(left, right)]
         return
 
@@ -51,25 +52,27 @@ class Graph:
 
         :return: List of sets of leaf names where each set is a connected component
         """
-        def dft(start):
-            visited_, stack = set(), [start]
-            while stack:
-                vertex = stack.pop()
-                if vertex not in visited_:
-                    visited_.add(vertex)
-                    if vertex in self.graph.keys():
-                        stack.extend(self.graph[vertex] - visited_)
-            return visited_
+        if len(self.components) == 0:
+            def dft(start):
+                visited_, stack = set(), [start]
+                while stack:
+                    vertex = stack.pop()
+                    if vertex not in visited_:
+                        visited_.add(vertex)
+                        if vertex in self.graph.keys():
+                            stack.extend(self.graph[vertex] - visited_)
+                return visited_
 
-        unvisited: Set[str] = set(self.graph.keys())
-        components: List[Set[Cluster]] = []
+            unvisited: Set[str] = set(self.graph.keys())
+            components: List[Set[Cluster]] = []
 
-        while unvisited:
-            visited = dft(unvisited.pop())
-            components.append(visited.copy())
-            unvisited -= visited
+            while unvisited:
+                visited = dft(unvisited.pop())
+                components.append(visited.copy())
+                unvisited -= visited
 
-        return components
+            self.components = components
+        return self.components
 
     # TODO: Think about how to use number of components into a good stopping condition.
     # TODO: Implement max-flow and min-cut.

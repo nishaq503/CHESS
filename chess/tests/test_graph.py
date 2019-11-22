@@ -55,9 +55,21 @@ class TestGraph(unittest.TestCase):
             self.assertEqual(self.data.shape[0], graph.data.shape[0])
             self.assertEqual(self.data.shape[1], graph.data.shape[1])
             self.assertEqual('euclidean', graph.metric)
-            self.assertEqual(len(leaves), len(list(graph.graph.keys())))
-            self.assertFalse(any(graph.graph.values()))
+            self.assertEqual(0, len(list(graph.graph.keys())))
         return
+
+    def test_build(self):
+        np.random.seed(42)
+        for d in range(1, self.max_depth + 1):
+            leaves: List[Cluster] = list(self.chess_object.root.leaves(d))
+            graph: Graph = Graph(
+                data=self.data,
+                metric='euclidean',
+                leaves=leaves
+            )
+            graph.build()
+            self.assertSetEqual(set([l.name for l in leaves]), set(graph.graph.keys()))
+            self.assertEqual(len(leaves), len(list(graph.graph.keys())))
 
     def test_connected_components(self):
         np.random.seed(42)
@@ -70,8 +82,6 @@ class TestGraph(unittest.TestCase):
                 leaves=leaves
             )
             graph.build()
-            self.assertEqual(len(leaves), len(list(graph.graph.keys())))
-
             components = graph.connected_components()
             if d > 1:
                 num_components.append(len(components))
