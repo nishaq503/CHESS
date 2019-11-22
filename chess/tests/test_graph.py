@@ -1,11 +1,8 @@
 import tempfile
 import unittest
-from typing import List
 
-import numpy as np
-from chess import CHESS, defaults
-from chess.cluster import Cluster
-from chess.graph import Graph
+from chess import CHESS
+from chess.graph import *
 
 
 class TestGraph(unittest.TestCase):
@@ -43,46 +40,21 @@ class TestGraph(unittest.TestCase):
     def tearDownClass(cls) -> None:
         return
 
-    def test_init(self):
+    def test_graph_building(self):
         np.random.seed(42)
         for d in range(1, self.max_depth + 1):
             leaves: List[Cluster] = list(self.chess_object.root.leaves(d))
-            graph: Graph = Graph(
-                data=self.data,
-                metric='euclidean',
-                leaves=leaves
-            )
-            self.assertEqual(self.data.shape[0], graph.data.shape[0])
-            self.assertEqual(self.data.shape[1], graph.data.shape[1])
-            self.assertEqual('euclidean', graph.metric)
-            self.assertEqual(0, len(list(graph.graph.keys())))
-        return
-
-    def test_build(self):
-        np.random.seed(42)
-        for d in range(1, self.max_depth + 1):
-            leaves: List[Cluster] = list(self.chess_object.root.leaves(d))
-            graph: Graph = Graph(
-                data=self.data,
-                metric='euclidean',
-                leaves=leaves
-            )
-            graph.build()
-            self.assertSetEqual(set([l.name for l in leaves]), set(graph.graph.keys()))
-            self.assertEqual(len(leaves), len(list(graph.graph.keys())))
+            g = graph(leaves)
+            self.assertSetEqual(set([l.name for l in leaves]), set(g.keys()))
+            self.assertEqual(len(leaves), len(list(g.keys())))
 
     def test_connected_components(self):
         np.random.seed(42)
         num_components = [1]
         for d in range(1, self.max_depth + 1):
             leaves: List[Cluster] = list(self.chess_object.root.leaves(d))
-            graph: Graph = Graph(
-                data=self.data,
-                metric='euclidean',
-                leaves=leaves
-            )
-            graph.build()
-            components = graph.connected_components()
+            g = graph(leaves)
+            components = connected_components(g)
             if d > 1:
                 num_components.append(len(components))
             self.assertTrue(num_components[d - 1] <= len(components))
