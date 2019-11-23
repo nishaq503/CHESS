@@ -5,6 +5,7 @@ import unittest
 from chess.chess import *
 
 
+# noinspection PyTypeChecker
 class TestCHESS(unittest.TestCase):
     tempfile: str
 
@@ -115,3 +116,45 @@ class TestCHESS(unittest.TestCase):
             chess.write(os.path.join(d, 'dump'))
             loaded = CHESS.load(os.path.join(d, 'dump'))
         self.assertEqual(chess, loaded)
+
+    # noinspection DuplicatedCode
+    def _create_ring_data(self):
+        np.random.seed(42)
+        scale, num_points = 12, 10_000
+        samples: np.ndarray = scale * (np.random.rand(2, num_points) - 0.5)
+        distances = np.linalg.norm(samples, axis=0)
+        x = [samples[0, i] for i in range(num_points)
+             if distances[i] < 6 and (distances[i] > 4 or distances[i] < 2)]
+        y = [samples[1, i] for i in range(num_points)
+             if distances[i] < 6 and (distances[i] > 4 or distances[i] < 2)]
+        self.data: np.ndarray = np.asarray((x, y)).T
+        labels = [0 if d < 2 else 1 for d in distances if d < 6 and (d > 4 or d < 2)]
+
+        self.chess = CHESS(
+            data=self.data,
+            metric='euclidean',
+            max_depth=20,
+            min_points=10,
+            min_radius=defaults.RADII_DTYPE(0.05),
+            stopping_criteria=None,
+            labels=labels,
+        )
+        self.chess.build()
+        return
+
+    def test_label_cluster(self):
+        self._create_ring_data()
+        self.assertSetEqual(set(dict(Counter(self.chess.labels)).keys()), set(self.chess.weights.keys()))
+        for name in self.chess.root.dict().keys():
+            classification = self.chess.label_cluster(cluster_name=name)
+            self.assertSetEqual(set(self.chess.weights.keys()), set(classification.keys()))
+            self.assertAlmostEqual(sum(classification.values()), 1., places=10)
+
+    def test_label_cluster_tree(self):
+        self._create_ring_data()
+        self.chess.label_cluster_tree()
+        labels = set(self.chess.weights.keys())
+        c: Cluster
+        for c in self.chess.root.inorder():
+            self.assertSetEqual(labels, set(c.classification.keys()))
+            self.assertAlmostEqual(sum(c.classification.values()), 1., places=10)
