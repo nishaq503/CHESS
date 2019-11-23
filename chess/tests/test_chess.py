@@ -12,7 +12,7 @@ class TestCHESS(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.tempfile = tempfile.NamedTemporaryFile()
-        data = np.random.randn(100, 100)
+        data = np.random.randn(1000, 100)
         cls.data = np.memmap(cls.tempfile, dtype='float32', mode='w+', shape=data.shape)
         cls.data[:] = data[:]
         return
@@ -31,7 +31,7 @@ class TestCHESS(unittest.TestCase):
         self.assertEqual(len(result), 0)
 
         result = chess.search(self.data[0], 20.0)
-        self.assertEqual(len(result), 100)
+        self.assertEqual(len(result), 1000)
         return
 
     def test_init(self):
@@ -50,7 +50,7 @@ class TestCHESS(unittest.TestCase):
         # Do we have the right number of clusters? (Exclude title row)
         self.assertEqual(len(s.split('\n')[1:]), len([c for c in chess.root.leaves()]))
         points = [p for s in s.split('\n')[1:] for p in eval(s[s.index('[') - 1:])]
-        self.assertEqual(len(points), 100)
+        self.assertEqual(len(points), 1000)
         return
 
     def test_repr(self):
@@ -61,7 +61,7 @@ class TestCHESS(unittest.TestCase):
         return
 
     def test_build(self):
-        chess = CHESS(self.data, 'euclidean')
+        chess = CHESS(self.data, 'euclidean', max_depth=5)
         chess.build()
         self.assertTrue(all((
             chess.root.left,
@@ -88,7 +88,7 @@ class TestCHESS(unittest.TestCase):
         self.assertEqual(len(chess.search(self.data[0], 0.0)), 1)
         self.assertEqual(len(chess.search(self.data[0] + 100, 0.0)), 0)
         self.assertGreaterEqual(len(chess.search(self.data[0] + 0.1, 10.0)), 1)
-        self.assertEqual(len(chess.search(self.data[0], 100)), 100)
+        self.assertEqual(len(chess.search(self.data[0], 100)), 1000)
         return
 
     def test_knn_search(self):
@@ -100,7 +100,7 @@ class TestCHESS(unittest.TestCase):
         filepath = tempfile.NamedTemporaryFile()
         chess.compress(filepath)
         data = np.memmap(filepath, mode='r+', dtype='float32', shape=self.data.shape)
-        self.assertEqual(data.shape, (100, 100))
+        self.assertEqual(data.shape, (1000, 100))
         filepath.close()
         return
 
