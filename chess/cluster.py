@@ -94,7 +94,6 @@ class Cluster:
         ]))
 
     def __eq__(self, other):
-        # TODO: Change this to only check elements in self.data that are in self.points.
         return all((self.metric == other.metric,
                     self.points == other.points,
                     np.array_equal(self.data[self.points], other.data[self.points])))
