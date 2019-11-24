@@ -10,6 +10,7 @@ from typing import Callable, List, Dict, Union
 import numpy as np
 
 from chess import defaults
+from chess.graph import connected_components
 from . import graph
 from .cluster import Cluster
 from .query import Query
@@ -129,8 +130,11 @@ class CHESS:
         """
         return graph.graph(list(self.root.leaves(depth)))
 
-    def components(self):
-        pass
+    def components(self, cluster: Cluster):
+        """ Returns the subgraph to which the component belongs. """
+        depth = len(cluster.name)
+        cc = connected_components(self.graph(depth))
+        return filter(lambda c: cluster in c, cc)
 
     def compress(self, filename: str):
         """ Compresses the clusters.
