@@ -138,3 +138,4 @@ logs
 old_logs
 old_notebooks
 plots
+timing.py
