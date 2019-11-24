@@ -47,11 +47,10 @@ class TestCHESS(unittest.TestCase):
         chess = CHESS(data, 'euclidean')
         chess.build()
 
-        c = chess.select('')
-        self.assertEqual(len(c.points), 100)
-
-        c = chess.select('0')
-        self.assertLess(len(c.points), 100)
+        for cluster in chess.root.inorder():
+            c = chess.select(cluster.name)
+            self.assertEqual(c.name, cluster.name)
+            self.assertEqual(c, cluster)
 
         with self.assertRaises(ValueError):
             chess.select('elmo')
