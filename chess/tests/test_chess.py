@@ -60,6 +60,19 @@ class TestCHESS(unittest.TestCase):
         self.assertIsNone(c)
         return
 
+    def test_graph(self):
+        data = np.random.randn(100, 100)
+        chess = CHESS(data, 'euclidean')
+        chess.build()
+
+        g1 = chess.graph(1)
+        g2 = chess.graph(2)
+        self.assertNotEqual(g1, g2)
+
+        [chess.graph(1) for _ in range(100)]
+        self.assertEqual(chess.graph.cache_info().misses, 2)
+        return
+
     def test_all_same(self):
         data = np.ones((100, 100))
         c = CHESS(data, 'euclidean')

@@ -10,8 +10,8 @@ from typing import Callable, List, Dict, Union
 import numpy as np
 
 from chess import defaults
+from . import graph
 from .cluster import Cluster
-from .graph import graph
 from .query import Query
 from .search import search
 
@@ -36,7 +36,6 @@ class CHESS:
         self.min_points = min_points
         self.min_radius = min_radius
         self.stopping_criteria = stopping_criteria
-        self.graph = None
 
         # Classification data
         self.labels = labels
@@ -65,6 +64,9 @@ class CHESS:
 
     def __eq__(self, other):
         return self.metric == other.metric and self.root == other.root
+
+    def __hash__(self):
+        return hash(repr(self))
 
     def build(self, stopping_criteria: Callable[[any], bool] = None):
         """ Clusters points recursively until stopping_criteria returns True.
@@ -125,7 +127,7 @@ class CHESS:
     def graph(self, depth: int = None):
         """ Returns the graph representation of all leaf clusters at depth.
         """
-        return graph(list(self.root.leaves(depth)))
+        return graph.graph(list(self.root.leaves(depth)))
 
     def components(self):
         pass
