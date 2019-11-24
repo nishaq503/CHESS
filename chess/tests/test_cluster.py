@@ -47,6 +47,15 @@ class TestCluster(unittest.TestCase):
         self.assertTrue(np.all(np.equal(c[0], data[0])))
         return
 
+    def test_all_same(self):
+        data = np.ones((100, 100))
+        c = Cluster(data, 'euclidean')
+        with self.assertRaises(RuntimeError):
+            c.partition()
+        self.assertIsNone(c.left)
+        self.assertIsNone(c.right)
+        return
+
     # noinspection PyTypeChecker
     def test_contains(self):
         data = np.random.randn(100, 100) + 100
