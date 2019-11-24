@@ -5,13 +5,14 @@ import unittest
 from chess.chess import *
 
 
+# noinspection PyTypeChecker
 class TestCHESS(unittest.TestCase):
     tempfile: str
 
     @classmethod
     def setUpClass(cls) -> None:
         cls.tempfile = tempfile.NamedTemporaryFile()
-        data = np.random.randn(100, 100)
+        data = np.random.randn(1000, 100)
         cls.data = np.memmap(cls.tempfile, dtype='float32', mode='w+', shape=data.shape)
         cls.data[:] = data[:]
         return
@@ -30,7 +31,7 @@ class TestCHESS(unittest.TestCase):
         self.assertEqual(len(result), 0)
 
         result = chess.search(self.data[0], 20.0)
-        self.assertEqual(len(result), 100)
+        self.assertEqual(len(result), 1000)
         return
 
     def test_init(self):
@@ -49,7 +50,7 @@ class TestCHESS(unittest.TestCase):
         # Do we have the right number of clusters? (Exclude title row)
         self.assertEqual(len(s.split('\n')[1:]), len([c for c in chess.root.leaves()]))
         points = [p for s in s.split('\n')[1:] for p in eval(s[s.index('[') - 1:])]
-        self.assertEqual(len(points), 100)
+        self.assertEqual(len(points), 1000)
         return
 
     def test_repr(self):
@@ -60,13 +61,16 @@ class TestCHESS(unittest.TestCase):
         return
 
     def test_build(self):
-        chess = CHESS(self.data, 'euclidean')
+        chess = CHESS(self.data, 'euclidean', max_depth=5)
         chess.build()
-        self.assertTrue(chess.root.left and chess.root.right)
-        self.assertTrue(
-            (chess.root.left.left and chess.root.left.right)
-            or (chess.root.right.left and chess.root.right.right)
-        )
+        self.assertTrue(all((
+            chess.root.left,
+            chess.root.right,
+            chess.root.left.left,
+            chess.root.left.right,
+            chess.root.right.left,
+            chess.root.right.right,
+        )))
         return
 
     # noinspection PyTypeChecker
@@ -84,7 +88,7 @@ class TestCHESS(unittest.TestCase):
         self.assertEqual(len(chess.search(self.data[0], 0.0)), 1)
         self.assertEqual(len(chess.search(self.data[0] + 100, 0.0)), 0)
         self.assertGreaterEqual(len(chess.search(self.data[0] + 0.1, 10.0)), 1)
-        self.assertEqual(len(chess.search(self.data[0], 100)), 100)
+        self.assertEqual(len(chess.search(self.data[0], 100)), 1000)
         return
 
     def test_knn_search(self):
@@ -96,7 +100,7 @@ class TestCHESS(unittest.TestCase):
         filepath = tempfile.NamedTemporaryFile()
         chess.compress(filepath)
         data = np.memmap(filepath, mode='r+', dtype='float32', shape=self.data.shape)
-        self.assertEqual(data.shape, (100, 100))
+        self.assertEqual(data.shape, (1000, 100))
         filepath.close()
         return
 
@@ -112,3 +116,44 @@ class TestCHESS(unittest.TestCase):
             chess.write(os.path.join(d, 'dump'))
             loaded = CHESS.load(os.path.join(d, 'dump'))
         self.assertEqual(chess, loaded)
+
+    # noinspection DuplicatedCode
+    def _create_ring_data(self):
+        np.random.seed(42)
+        scale, num_points = 12, 10_000
+        samples: np.ndarray = scale * (np.random.rand(2, num_points) - 0.5)
+        distances = np.linalg.norm(samples, axis=0)
+        x = [samples[0, i] for i in range(num_points)
+             if distances[i] < 6 and (distances[i] > 4 or distances[i] < 2)]
+        y = [samples[1, i] for i in range(num_points)
+             if distances[i] < 6 and (distances[i] > 4 or distances[i] < 2)]
+        self.data: np.ndarray = np.asarray((x, y)).T
+        labels = [0 if d < 2 else 1 for d in distances if d < 6 and (d > 4 or d < 2)]
+
+        self.chess = CHESS(
+            data=self.data,
+            metric='euclidean',
+            max_depth=20,
+            min_points=10,
+            min_radius=defaults.RADII_DTYPE(0.05),
+            stopping_criteria=None,
+            labels=labels,
+        )
+        self.chess.build()
+        return
+
+    def test_label_cluster(self):
+        self._create_ring_data()
+        self.assertSetEqual(set(dict(Counter(self.chess.labels)).keys()), set(self.chess.weights.keys()))
+        for cluster in self.chess.root.inorder():
+            classification = self.chess.label_cluster(cluster=cluster)
+            self.assertSetEqual(set(self.chess.weights.keys()), set(classification.keys()))
+            self.assertAlmostEqual(sum(classification.values()), 1., places=10)
+
+    def test_label_cluster_tree(self):
+        self._create_ring_data()
+        self.chess.label_cluster_tree()
+        labels = set(self.chess.weights.keys())
+        for c in self.chess.root.inorder():
+            self.assertSetEqual(labels, set(c.classification.keys()))
+            self.assertAlmostEqual(sum(c.classification.values()), 1., places=10)

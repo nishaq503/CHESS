@@ -208,3 +208,27 @@ class TestCluster(unittest.TestCase):
         c = Cluster(np.random.randn(100, 100), 'euclidean')
         self.assertEqual(len(c.samples), 100)
         return
+
+    # noinspection DuplicatedCode
+    def _create_ring_data(self):
+        np.random.seed(42)
+        scale, num_points = 12, 10_000
+        samples: np.ndarray = scale * (np.random.rand(2, num_points) - 0.5)
+        distances = np.linalg.norm(samples, axis=0)
+        x = [samples[0, i] for i in range(num_points)
+             if distances[i] < 6 and (distances[i] > 4 or distances[i] < 2)]
+        y = [samples[1, i] for i in range(num_points)
+             if distances[i] < 6 and (distances[i] > 4 or distances[i] < 2)]
+        self.data: np.ndarray = np.asarray((x, y)).T
+
+        self.labels = [0 if d < 2 else 1 for d in distances if d < 6 and (d > 4 or d < 2)]
+        self.weights = {k: v / len(self.labels) for k, v in dict(Counter(self.labels)).items()}
+
+        self.c = Cluster(data=self.data, metric='euclidean')
+        return
+
+    def test_classify_cluster(self):
+        self._create_ring_data()
+        self.c.class_distribution(data_labels=self.labels, data_weights=self.weights)
+        self.assertSetEqual(set(self.weights.keys()), set(self.c.classification.keys()))
+        self.assertTrue(all([(1. / len(self.weights.keys()) == v) for v in self.c.classification.values()]))
