@@ -132,15 +132,13 @@ class CHESS:
         """
         return graph(list(self.root.leaves(depth)))
 
-    @staticmethod
-    def connected_components(g: Dict[Cluster, Set[Cluster]]) -> List[Set[Cluster]]:
+    def connected_components(self, depth: int = None) -> List[Set[Cluster]]:
         """ Returns the connected components of the given graph. """
-        return connected_components(g)
+        return connected_components(self.graph(depth))
 
     def connected_subgraph(self, cluster: Cluster) -> Dict[Cluster, Set[Cluster]]:
         """ Returns the sub-graph to which the cluster belongs. """
-        depth: int = len(cluster.name)
-        cc: List[Set[Cluster]] = connected_components(self.graph(depth))
+        cc: List[Set[Cluster]] = self.connected_components(len(cluster.name))
         component: Set[Cluster] = next(filter(lambda c: cluster in c, cc))
         return {k: v for k, v in self.graph(len(cluster.name)).items() if k in component}
 
