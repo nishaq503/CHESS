@@ -42,6 +42,24 @@ class TestCHESS(unittest.TestCase):
 
         return
 
+    def test_select(self):
+        data = np.random.randn(100, 100)
+        chess = CHESS(data, 'euclidean')
+        chess.build()
+
+        c = chess.select('')
+        self.assertEqual(len(c.points), 100)
+
+        c = chess.select('0')
+        self.assertLess(len(c.points), 100)
+
+        with self.assertRaises(ValueError):
+            chess.select('elmo')
+
+        c = chess.select('0' * 1_000)
+        self.assertIsNone(c)
+        return
+
     def test_all_same(self):
         data = np.ones((100, 100))
         c = CHESS(data, 'euclidean')

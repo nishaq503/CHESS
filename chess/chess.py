@@ -94,8 +94,17 @@ class CHESS:
 
     def select(self, cluster_name: str) -> Cluster:
         """ Returns the cluster with the given name. """
-        # TODO: This should be a early-stopping traversal.
-        return self.root.dict()[cluster_name]
+        cluster_name = list(reversed(cluster_name))
+        c = self.root
+        while c and cluster_name:
+            if cluster_name[-1] == '0':
+                c = c.left
+            elif cluster_name[-1] == '1':
+                c = c.right
+            else:
+                raise ValueError(f'Invalid character in cluster name: {cluster_name[-1]}')
+            cluster_name.pop()
+        return c or None
 
     def compress(self, filename: str):
         """ Compresses the clusters.
