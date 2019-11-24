@@ -248,7 +248,6 @@ class Cluster:
 
     def compress(self):
         """ Compresses a leaf cluster.
-        # TODO: Migrate away from pickle. Perhaps we can build a new memmap?
         """
         assert not (self.left or self.right), f'Can only compress leaves! Tried to compress {self.name}.'
 
