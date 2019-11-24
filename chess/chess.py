@@ -10,7 +10,6 @@ import numpy as np
 
 from chess import defaults
 from .cluster import Cluster
-from .knn_search import knn_search
 from .query import Query
 from .search import search
 
@@ -92,11 +91,6 @@ class CHESS:
         """ Searches the clusters for all points within radius of query.
         """
         return search(self.root, Query(point=query, radius=radius))
-
-    def knn_search(self, query: np.ndarray, k: int):
-        """ Searches the clusters for the k-nearest points to the query.
-        """
-        return knn_search(self.root, Query(point=query, k=k))
 
     def compress(self, filename: str):
         """ Compresses the clusters.
