@@ -131,9 +131,8 @@ class CHESS:
 
     def label_cluster_tree(self):
         """ Classifies each cluster in the cluster tree. """
-        self.root.classify_tree(data_labels=self.labels, data_weights=self.weights)
-        return
+        return {c: c.class_distribution(data_labels=self.labels, data_weights=self.weights) for c in self.root.inorder()}
 
-    def label_cluster(self, cluster_name: str) -> Dict:
+    def label_cluster(self, cluster: Cluster) -> Dict:
         """ Returns the probability of the cluster having each label. """
-        return (self.root.dict()[cluster_name]).classify_cluster(data_labels=self.labels, data_weights=self.weights)
+        return cluster.class_distribution(data_labels=self.labels, data_weights=self.weights)

@@ -145,8 +145,8 @@ class TestCHESS(unittest.TestCase):
     def test_label_cluster(self):
         self._create_ring_data()
         self.assertSetEqual(set(dict(Counter(self.chess.labels)).keys()), set(self.chess.weights.keys()))
-        for name in self.chess.root.dict().keys():
-            classification = self.chess.label_cluster(cluster_name=name)
+        for cluster in self.chess.root.inorder():
+            classification = self.chess.label_cluster(cluster=cluster)
             self.assertSetEqual(set(self.chess.weights.keys()), set(classification.keys()))
             self.assertAlmostEqual(sum(classification.values()), 1., places=10)
 
@@ -154,7 +154,6 @@ class TestCHESS(unittest.TestCase):
         self._create_ring_data()
         self.chess.label_cluster_tree()
         labels = set(self.chess.weights.keys())
-        c: Cluster
         for c in self.chess.root.inorder():
             self.assertSetEqual(labels, set(c.classification.keys()))
             self.assertAlmostEqual(sum(c.classification.values()), 1., places=10)

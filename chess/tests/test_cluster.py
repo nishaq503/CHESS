@@ -229,15 +229,6 @@ class TestCluster(unittest.TestCase):
 
     def test_classify_cluster(self):
         self._create_ring_data()
-        self.c.classify_cluster(data_labels=self.labels, data_weights=self.weights)
+        self.c.class_distribution(data_labels=self.labels, data_weights=self.weights)
         self.assertSetEqual(set(self.weights.keys()), set(self.c.classification.keys()))
         self.assertTrue(all([(1. / len(self.weights.keys()) == v) for v in self.c.classification.values()]))
-
-    def test_classify_tree(self):
-        self._create_ring_data()
-        self.c.make_tree(max_depth=20, min_points=10, min_radius=0.05, stopping_criteria=None)
-        self.c.classify_tree(data_labels=self.labels, data_weights=self.weights)
-        for c in self.c.inorder():
-            self.assertEqual(len(self.weights.keys()), len(c.classification.keys()))
-            self.assertSetEqual(set(self.weights.keys()), set(c.classification.keys()))
-            self.assertAlmostEqual(sum(c.classification.values()), 1., places=10)

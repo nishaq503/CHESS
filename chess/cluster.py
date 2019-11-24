@@ -258,7 +258,7 @@ class Cluster:
                   for p in self.points]
         return points
 
-    def classify_cluster(self, data_labels: List, data_weights: Dict) -> Dict:
+    def class_distribution(self, data_labels: List, data_weights: Dict) -> Dict:
         """ Determines the probability of the cluster belonging to each class data_classes.
 
         :param data_labels: labels of each item in data.
@@ -275,15 +275,6 @@ class Cluster:
             absent_labels = list(set(data_weights.keys()) - set(weights.keys()))
             self.classification.update({l: 0. for l in absent_labels})
         return self.classification
-
-    def classify_tree(self, data_labels: List, data_weights: Dict):
-        """ Labels the subtree of this cluster.
-
-        :param data_labels: labels of each item in data.
-        :param data_weights: proportion of each label in data_labels.
-        """
-        [c.classify_cluster(data_labels=data_labels, data_weights=data_weights) for c in self.inorder()]
-        return
 
     ###################################
     # Traversals
