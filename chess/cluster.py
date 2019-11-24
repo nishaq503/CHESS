@@ -201,7 +201,7 @@ class Cluster:
         left_pole, right_pole = np.expand_dims(left_pole, 0), np.expand_dims(right_pole, 0)
 
         if np.array_equal(left_pole, right_pole):
-            raise RuntimeError(f'Cluster {self.name} contains only duplicates.')
+            raise RuntimeError(f'Left pole and right pole are equal in Cluster {self.name}.')
 
         left_indices, right_indices = [], []
         for i, batch in enumerate(self):
