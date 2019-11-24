@@ -197,10 +197,11 @@ class Cluster:
         left_pole_index = self.samples[max_col]
         right_pole_index = self.samples[max_row]
 
-        assert left_pole_index != right_pole_index, f'Left pole and right pole are equal in cluster {self.name}'
-
         left_pole, right_pole = self.data[left_pole_index], self.data[right_pole_index]
         left_pole, right_pole = np.expand_dims(left_pole, 0), np.expand_dims(right_pole, 0)
+
+        if np.array_equal(left_pole, right_pole):
+            raise RuntimeError(f'Left pole and right pole are equal in Cluster {self.name}.')
 
         left_indices, right_indices = [], []
         for i, batch in enumerate(self):

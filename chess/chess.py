@@ -92,6 +92,32 @@ class CHESS:
         """
         return search(self.root, Query(point=query, radius=radius))
 
+    def select(self, cluster_name: str) -> Union[Cluster, None]:
+        """ Returns the cluster with the given name.
+
+        This function steps down the tree from the root node,
+        until it either finds the requested node or runs out
+        of nodes to check. At which point it returns either
+        the node in the former case or None in the latter.
+
+        :param cluster_name: the name of the requested cluster.
+        :returns either a Cluster if it is found or None.
+        """
+        cluster_name = list(reversed(cluster_name))
+        c = self.root
+        while c and cluster_name:
+            # Go either left or right.
+            if cluster_name[-1] == '0':
+                c = c.left
+            elif cluster_name[-1] == '1':
+                c = c.right
+            else:
+                raise ValueError(f'Invalid character in cluster name: {cluster_name[-1]}')
+
+            # Then, advance to the next direction.
+            cluster_name.pop()
+        return c
+
     def compress(self, filename: str):
         """ Compresses the clusters.
         """
