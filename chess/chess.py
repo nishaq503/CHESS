@@ -10,6 +10,7 @@ import numpy as np
 
 from chess import defaults
 from .cluster import Cluster
+from .graph import graph
 from .query import Query
 from .search import search
 
@@ -34,6 +35,7 @@ class CHESS:
         self.min_points = min_points
         self.min_radius = min_radius
         self.stopping_criteria = stopping_criteria
+        self.graph = None
 
         # Classification data
         self.labels = labels
@@ -91,6 +93,12 @@ class CHESS:
         """ Searches the clusters for all points within radius of query.
         """
         return search(self.root, Query(point=query, radius=radius))
+
+    def graph(self, depth: int = None):
+        """ Returns the graph representation of all leaf clusters at depth.
+        """
+        self.graph = graph(list(self.root.leaves(depth)))
+        return self.graph
 
     def compress(self, filename: str):
         """ Compresses the clusters.
