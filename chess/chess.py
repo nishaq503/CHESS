@@ -10,9 +10,8 @@ from typing import Callable, List, Dict, Union
 import numpy as np
 
 from chess import defaults
-from chess.graph import connected_components
-from . import graph
 from .cluster import Cluster
+from .graph import graph, connected_components
 from .query import Query
 from .search import search
 
@@ -128,7 +127,7 @@ class CHESS:
     def graph(self, depth: int = None):
         """ Returns the graph representation of all leaf clusters at depth.
         """
-        return graph.graph(list(self.root.leaves(depth)))
+        return graph(list(self.root.leaves(depth)))
 
     def components(self, cluster: Cluster):
         """ Returns the subgraph to which the component belongs. """
