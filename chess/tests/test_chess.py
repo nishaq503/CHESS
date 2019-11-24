@@ -91,9 +91,6 @@ class TestCHESS(unittest.TestCase):
         self.assertEqual(len(chess.search(self.data[0], 100)), 1000)
         return
 
-    def test_knn_search(self):
-        pass
-
     def test_compress(self):
         chess = CHESS(self.data, 'euclidean')
         chess.build()
