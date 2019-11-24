@@ -132,15 +132,15 @@ class CHESS:
         """
         return graph(list(self.root.leaves(depth)))
 
-    def connected_components(self, depth: int = None) -> List[Set[Cluster]]:
+    def connected_components(self, depth: int = None) -> List[Dict[Cluster, Set[Cluster]]]:
         """ Returns the connected components of the given graph. """
         return connected_components(self.graph(depth))
 
     def connected_subgraph(self, cluster: Cluster) -> Dict[Cluster, Set[Cluster]]:
         """ Returns the sub-graph to which the cluster belongs. """
-        cc: List[Set[Cluster]] = self.connected_components(len(cluster.name))
-        component: Set[Cluster] = next(filter(lambda c: cluster in c, cc))
-        return {k: v for k, v in self.graph(len(cluster.name)).items() if k in component}
+        depth: int = len(cluster.name)
+        cc: List[Dict[Cluster, Set[Cluster]]] = self.connected_components(depth)
+        return next(filter(lambda c: cluster in set(c.keys()), cc))
 
     def compress(self, filename: str):
         """ Compresses the clusters.

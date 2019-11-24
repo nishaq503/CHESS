@@ -39,15 +39,15 @@ def depth_first_traversal(g: Dict[Cluster, Set[Cluster]], start: Cluster) -> Set
     return visited
 
 
-def connected_components(g: Dict[Cluster, Set[Cluster]]) -> List[Set[Cluster]]:
+def connected_components(g: Dict[Cluster, Set[Cluster]]) -> List[Dict[Cluster, Set[Cluster]]]:
     """ Returns all connected components from the given list of clusters. """
 
     unvisited: Set[Cluster] = set(g.keys())
-    components: List[Set[Cluster]] = []
+    component_nodes: List[Set[Cluster]] = []
 
     while unvisited:
         visited: Set[Cluster] = depth_first_traversal(g, unvisited.pop())
-        components.append(visited)
+        component_nodes.append(visited)
         unvisited -= visited
 
-    return components
+    return [{k: v for k, v in g.items() if k in c} for c in component_nodes]
