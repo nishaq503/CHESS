@@ -68,9 +68,19 @@ class TestCHESS(unittest.TestCase):
         g1 = chess.graph(1)
         g2 = chess.graph(2)
         self.assertNotEqual(g1, g2)
+        self.assertDictEqual(g2, graph(list(chess.root.leaves(2))))
 
         [chess.graph(1) for _ in range(100)]
         self.assertEqual(chess.graph.cache_info().misses, 2)
+        return
+
+    def test_component(self):
+        data = np.random.randn(100, 100)
+        chess = CHESS(np.concatenate([data - 1_000, data + 1_000]), 'euclidean')
+        chess.build()
+
+        leaves = list(chess.root.leaves())
+        [self.assertLessEqual(len(chess.component(c)), len(leaves) // 2) for c in leaves]
         return
 
     def test_all_same(self):
