@@ -42,6 +42,19 @@ class TestCHESS(unittest.TestCase):
 
         return
 
+    def test_all_same(self):
+        data = np.ones((100, 100))
+        c = CHESS(data, 'euclidean')
+        c.build()
+        self.assertIsNone(c.root.left)
+        self.assertIsNone(c.root.right)
+
+        c = CHESS(np.concatenate([data - 100, data + 100]), 'euclidean')
+        c.build()
+        self.assertIsNotNone(c.root.left)
+        self.assertIsNotNone(c.root.right)
+        return
+
     def test_str(self):
         chess = CHESS(self.data, 'euclidean')
         chess.build()
