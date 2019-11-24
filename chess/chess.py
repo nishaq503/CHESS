@@ -92,6 +92,11 @@ class CHESS:
         """
         return search(self.root, Query(point=query, radius=radius))
 
+    def select(self, cluster_name):
+        """ Returns the cluster with the given name. """
+        # TODO: This should be a early-stopping traversal.
+        return self.root.dict()[cluster_name]
+
     def compress(self, filename: str):
         """ Compresses the clusters.
         """
