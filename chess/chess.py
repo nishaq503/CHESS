@@ -5,7 +5,7 @@ This class wraps the underlying Cluster structure with a convenient API.
 import pickle
 from collections import Counter
 from functools import lru_cache
-from typing import Callable, List, Dict, Union
+from typing import Callable, List, Dict, Union, Set
 
 import numpy as np
 
@@ -130,10 +130,15 @@ class CHESS:
         return graph(list(self.root.leaves(depth)))
 
     def components(self, cluster: Cluster):
-        """ Returns the subgraph to which the component belongs. """
-        depth = len(cluster.name)
-        cc = connected_components(self.graph(depth))
-        return filter(lambda c: cluster in c, cc)
+        """ Returns the sub-graph to which the component belongs. """
+        depth: int = len(cluster.name)
+        cc: List[Set[Cluster]] = connected_components(self.graph(depth))
+        component: Set[Cluster] = set()
+        for c in cc:
+            if cluster in c:
+                component = c
+                break
+        return {k: v for k, v in self.graph(depth) if k in component}
 
     def compress(self, filename: str):
         """ Compresses the clusters.
