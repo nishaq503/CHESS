@@ -17,9 +17,9 @@ class TestGraph(unittest.TestCase):
         samples = scale * (np.random.rand(2, num_points) - 0.5)
         distances = np.linalg.norm(samples, axis=0)
         x = [samples[0, i] for i in range(num_points)
-             if distances[i] < 6 and (distances[i] > 4 or distances[i] < 2)]
-        y = [samples[1, i] for i in range(num_points)
-             if distances[i] < 6 and (distances[i] > 4 or distances[i] < 2)]
+             if distances[i] < 2 or (4 < distances[i] < 6)]
+        y = [samples[0, i] for i in range(num_points)
+             if distances[i] < 2 or (4 < distances[i] < 6)]
 
         data = np.asarray((x, y), dtype=defaults.RADII_DTYPE).T
         cls.data = np.memmap(cls.tempfile, dtype='float32', mode='w+', shape=data.shape)
