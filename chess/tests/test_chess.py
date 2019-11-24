@@ -74,13 +74,13 @@ class TestCHESS(unittest.TestCase):
         self.assertEqual(chess.graph.cache_info().misses, 2)
         return
 
-    def test_component(self):
+    def test_connected_subgraph(self):
         data = np.random.randn(100, 100)
         chess = CHESS(np.concatenate([data - 1_000, data + 1_000]), 'euclidean')
         chess.build()
 
         leaves = list(chess.root.leaves())
-        [self.assertLessEqual(len(chess.component(c)), len(leaves) // 2) for c in leaves]
+        [self.assertLessEqual(len(set(chess.connected_subgraph(c).keys())), len(leaves) // 2) for c in leaves]
         return
 
     def test_all_same(self):

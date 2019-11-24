@@ -124,16 +124,25 @@ class CHESS:
         return c
 
     @lru_cache()
-    def graph(self, depth: int = None):
+    def graph(self, depth: int = None) -> Dict[Cluster, Set[Cluster]]:
         """ Returns the graph representation of all leaf clusters at depth.
+
+        :param depth: max-depth of the leaf-clusters in the graph.
+        :return: dict of {cluster: neighbors} representing a graph.
         """
         return graph(list(self.root.leaves(depth)))
 
-    def component(self, cluster: Cluster):
-        """ Returns the sub-graph to which the component belongs. """
+    @staticmethod
+    def connected_components(g: Dict[Cluster, Set[Cluster]]) -> List[Set[Cluster]]:
+        """ Returns the connected components of the given graph. """
+        return connected_components(g)
+
+    def connected_subgraph(self, cluster: Cluster) -> Dict[Cluster, Set[Cluster]]:
+        """ Returns the sub-graph to which the cluster belongs. """
         depth: int = len(cluster.name)
         cc: List[Set[Cluster]] = connected_components(self.graph(depth))
-        return next(filter(lambda c: cluster in c, cc))
+        component: Set[Cluster] = next(filter(lambda c: cluster in c, cc))
+        return {k: v for k, v in self.graph(len(cluster.name)).items() if k in component}
 
     def compress(self, filename: str):
         """ Compresses the clusters.
