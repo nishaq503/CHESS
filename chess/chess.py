@@ -92,7 +92,7 @@ class CHESS:
         """
         return search(self.root, Query(point=query, radius=radius))
 
-    def select(self, cluster_name: str) -> Cluster:
+    def select(self, cluster_name: str) -> Union[Cluster, None]:
         """ Returns the cluster with the given name. """
         cluster_name = list(reversed(cluster_name))
         c = self.root
@@ -104,7 +104,7 @@ class CHESS:
             else:
                 raise ValueError(f'Invalid character in cluster name: {cluster_name[-1]}')
             cluster_name.pop()
-        return c or None
+        return c
 
     def compress(self, filename: str):
         """ Compresses the clusters.
