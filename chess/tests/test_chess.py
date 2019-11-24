@@ -42,37 +42,6 @@ class TestCHESS(unittest.TestCase):
 
         return
 
-    def test_select(self):
-        data = np.random.randn(100, 100)
-        chess = CHESS(data, 'euclidean')
-        chess.build()
-        clusters = list(chess.root.inorder())
-
-        for cluster in clusters:
-            c = chess.select(cluster.name)
-            self.assertEqual(c.name, cluster.name)
-            self.assertEqual(c, cluster)
-
-        with self.assertRaises(ValueError):
-            chess.select('elmo')
-
-        c = chess.select(sorted(clusters, key=lambda c: len(c.name), reverse=True)[0].name + '0')
-        self.assertIsNone(c)
-        return
-
-    def test_all_same(self):
-        data = np.ones((100, 100))
-        c = CHESS(data, 'euclidean')
-        c.build()
-        self.assertIsNone(c.root.left)
-        self.assertIsNone(c.root.right)
-
-        c = CHESS(np.concatenate([data - 100, data + 100]), 'euclidean')
-        c.build()
-        self.assertIsNotNone(c.root.left)
-        self.assertIsNotNone(c.root.right)
-        return
-
     def test_str(self):
         chess = CHESS(self.data, 'euclidean')
         chess.build()
