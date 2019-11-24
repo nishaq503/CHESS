@@ -4,6 +4,7 @@ This class wraps the underlying Cluster structure with a convenient API.
 """
 import pickle
 from collections import Counter
+from functools import lru_cache
 from typing import Callable, List, Dict, Union
 
 import numpy as np
@@ -120,11 +121,14 @@ class CHESS:
             cluster_name.pop()
         return c
 
+    @lru_cache()
     def graph(self, depth: int = None):
         """ Returns the graph representation of all leaf clusters at depth.
         """
-        self.graph = graph(list(self.root.leaves(depth)))
-        return self.graph
+        return graph(list(self.root.leaves(depth)))
+
+    def components(self):
+        pass
 
     def compress(self, filename: str):
         """ Compresses the clusters.
