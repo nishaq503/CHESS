@@ -129,16 +129,16 @@ class CHESS:
         """
         return graph(list(self.root.leaves(depth)))
 
-    def components(self, cluster: Cluster):
+    def component(self, cluster: Cluster):
         """ Returns the sub-graph to which the component belongs. """
         depth: int = len(cluster.name)
         cc: List[Set[Cluster]] = connected_components(self.graph(depth))
-        component: Set[Cluster] = set()
+        comp: Set[Cluster] = set()
         for c in cc:
             if cluster in c:
-                component = c
+                comp = c
                 break
-        return {k: v for k, v in self.graph(depth) if k in component}
+        return {k: v for k, v in self.graph(depth) if k in comp}
 
     def compress(self, filename: str):
         """ Compresses the clusters.
