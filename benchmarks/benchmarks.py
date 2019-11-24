@@ -3,8 +3,8 @@ import logging
 import click as click
 import mlflow
 
+from benchmarks.datasets import load
 from chess import CHESS
-from chess.datasets import load
 from chess.query import Query
 from chess.search import linear_search
 

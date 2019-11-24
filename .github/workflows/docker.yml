@@ -13,7 +13,7 @@ jobs:
         run: docker build --no-cache -t chess .
 
       - name: Unit Tests
-        run: docker run chess
+        run: docker run chess python -m unittest discover
 
       - name: Generate Coverage Report
         run: |

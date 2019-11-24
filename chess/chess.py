@@ -3,13 +3,13 @@
 This class wraps the underlying Cluster structure with a convenient API.
 """
 import pickle
-from typing import Callable
+from collections import Counter
+from typing import Callable, List, Dict, Union
 
 import numpy as np
 
 from chess import defaults
 from .cluster import Cluster
-from .knn_search import knn_search
 from .query import Query
 from .search import search
 
@@ -20,12 +20,13 @@ class CHESS:
 
     def __init__(
             self,
-            data: np.memmap,
+            data: Union[np.memmap, np.ndarray],
             metric: str,
             max_depth: int = defaults.MAX_DEPTH,
             min_points: int = defaults.MIN_POINTS,
             min_radius: defaults.RADII_DTYPE = defaults.MIN_RADIUS,
             stopping_criteria: Callable[[any], bool] = None,
+            labels: List = None,
     ):
         self.data = data
         self.metric = metric
@@ -33,6 +34,11 @@ class CHESS:
         self.min_points = min_points
         self.min_radius = min_radius
         self.stopping_criteria = stopping_criteria
+
+        # Classification data
+        self.labels = labels
+        frequencies = dict(Counter(self.labels))
+        self.weights = {k: frequencies[k] / sum(frequencies.values()) for k in frequencies.keys()}
 
         self.root = Cluster(self.data, self.metric)
 
@@ -57,10 +63,7 @@ class CHESS:
     def __eq__(self, other):
         return self.metric == other.metric and self.root == other.root
 
-    def build(
-            self,
-            stopping_criteria: Callable[[any], bool] = None,
-    ):
+    def build(self, stopping_criteria: Callable[[any], bool] = None):
         """ Clusters points recursively until stopping_criteria returns True.
 
         :param stopping_criteria: callable function that takes a cluster and has additional user-defined stopping criteria.
@@ -84,15 +87,10 @@ class CHESS:
             for l in self.root.leaves()]
         return
 
-    def search(self, query, radius):
+    def search(self, query: np.ndarray, radius: defaults.RADII_DTYPE):
         """ Searches the clusters for all points within radius of query.
         """
         return search(self.root, Query(point=query, radius=radius))
-
-    def knn_search(self, query, k):
-        """ Searches the clusters for the k-nearest points to the query.
-        """
-        return knn_search(self.root, Query(point=query, k=k))
 
     def compress(self, filename: str):
         """ Compresses the clusters.
@@ -111,7 +109,7 @@ class CHESS:
         mm.flush()
         return
 
-    def write(self, filename):
+    def write(self, filename: str):
         """ Writes the CHESS object to the given filename.
         """
         with open(filename, 'wb') as f:
@@ -119,8 +117,16 @@ class CHESS:
         return
 
     @staticmethod
-    def load(filename):
+    def load(filename: str):
         """ Loads the CHESS object from the given file.
         """
         with open(filename, 'rb') as f:
             return pickle.load(f)
+
+    def label_cluster_tree(self):
+        """ Classifies each cluster in the cluster tree. """
+        return {c: c.class_distribution(data_labels=self.labels, data_weights=self.weights) for c in self.root.inorder()}
+
+    def label_cluster(self, cluster: Cluster) -> Dict:
+        """ Returns the probability of the cluster having each label. """
+        return cluster.class_distribution(data_labels=self.labels, data_weights=self.weights)

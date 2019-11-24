@@ -2,6 +2,7 @@
 
 This is the underlying structure for CHESS.
 """
+from collections import Counter
 from typing import List, Tuple, Dict, Union
 
 import numpy as np
@@ -54,10 +55,16 @@ class Cluster:
         # Children.
         self.left = self.right = None
 
+        # Classification
+        self.classification: Dict = {}
+
         # Invariants after construction.
         assert len(self.points) > 0, f"Empty point indices in {self.name}"
         assert len(self.points) == len(set(self.points)), f"Duplicate point indices in cluster {self.name}:\n{self.points}"
         assert self.argcenter is not None
+
+    def __hash__(self):
+        return hash(self.name)
 
     def __iter__(self):
         """ Iterates over points within the cluster. """
@@ -93,9 +100,9 @@ class Cluster:
     def __eq__(self, other):
         return all((self.metric == other.metric,
                     self.points == other.points,
-                    np.all(self.data == other.data)))  # TODO: Change this to only check elements in self.data that are in self.points.
+                    np.array_equal(self.data[self.points], other.data[self.points])))
 
-    def dict(self):
+    def dict(self) -> Dict:
         d: Dict[str: Cluster]
         d = {c.name: c for c in self.inorder()}
         return d
@@ -161,15 +168,8 @@ class Cluster:
         count = np.sum(count, dtype=defaults.RADII_DTYPE)
         return count or np.log2(defaults.RADII_DTYPE(len(self.points)) / count)
 
-    def partitionable(
-            self,
-            max_depth,
-            min_points,
-            min_radius,
-            stopping_criteria
-    ) -> bool:
-        """ Returns weather or not this cluster can be partitioned.
-        """
+    def partitionable(self, max_depth, min_points, min_radius, stopping_criteria) -> bool:
+        """ Returns weather or not this cluster can be partitioned. """
         flag = all((
             not self._all_same,
             not (self.left or self.right),
@@ -248,7 +248,6 @@ class Cluster:
 
     def compress(self):
         """ Compresses a leaf cluster.
-        # TODO: Migrate away from pickle. Perhaps we can build a new memmap?
         """
         assert not (self.left or self.right), f'Can only compress leaves! Tried to compress {self.name}.'
 
@@ -257,6 +256,24 @@ class Cluster:
         points = [np.asarray(np.ceil((self.data[p] - center) // step_size), dtype=np.int64)
                   for p in self.points]
         return points
+
+    def class_distribution(self, data_labels: List, data_weights: Dict) -> Dict:
+        """ Determines the probability of the cluster belonging to each class data_classes.
+
+        :param data_labels: labels of each item in data.
+        :param data_weights: proportion of each label in data_labels.
+        :return: dict labels as keys and probability as value.
+        """
+        if len(set(self.classification.keys())) == 0:
+            labels = [data_labels[p] for p in self.points]
+            frequencies = dict(Counter(labels))
+            weights = frequencies.copy()
+            for k in frequencies.keys():
+                weights[k] /= (sum(frequencies.values()) * data_weights[k])
+            self.classification = {k: weights[k] / sum(weights.values()) for k in weights.keys()}
+            absent_labels = list(set(data_weights.keys()) - set(weights.keys()))
+            self.classification.update({l: 0. for l in absent_labels})
+        return self.classification
 
     ###################################
     # Traversals
