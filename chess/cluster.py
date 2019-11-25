@@ -86,15 +86,14 @@ class Cluster:
         return distance <= (self.radius() + query.radius)
 
     def __str__(self):
-        return f'{self.name}, [{", ".join([str(p) for p in self.points])}]'
+        return self.name
 
     def __repr__(self):
-        return ','.join(map(str, [
+        return '\t'.join(map(str, [
             self.name,
-            len(self.points),
-            self.argcenter,
             self.radius(),
-            self.local_fractal_dimension(),
+            self.argcenter,
+            ','.join(map(str, self.points))
         ]))
 
     def __eq__(self, other):
