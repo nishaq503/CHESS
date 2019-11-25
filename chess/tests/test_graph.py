@@ -82,5 +82,9 @@ class TestGraph(unittest.TestCase):
             tom = subgraphs(g)
             najib = connected_subgraphs(g)
             self.assertEqual(len(tom), len(najib))
-            # for tg, ng in zip(tom, najib):
-            #     self.assertDictEqual(tg, ng)
+            for tg in tom:
+                c = list(tg.keys())[0]
+                for ng in najib:
+                    if c in ng:
+                        self.assertDictEqual(tg, ng)
+                        break
