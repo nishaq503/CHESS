@@ -80,7 +80,7 @@ class TestCHESS(unittest.TestCase):
         chess.build()
 
         leaves = list(chess.root.leaves())
-        [self.assertLessEqual(len(set(chess.subgraph(c).keys())), len(leaves) // 2) for c in leaves]
+        [self.assertLessEqual(len(set(chess.subgraph(c).keys())), len(leaves)) for c in leaves]
         return
 
     def test_all_same(self):
