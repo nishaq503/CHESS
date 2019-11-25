@@ -29,7 +29,7 @@ class TestGraph(unittest.TestCase):
             data=data,
             metric='euclidean',
             max_depth=25,
-            min_points=1,
+            min_points=10,
             min_radius=defaults.RADII_DTYPE(0)
         )
         cls.chess_object.build()
@@ -41,7 +41,6 @@ class TestGraph(unittest.TestCase):
         return
 
     def test_graph_building(self):
-        np.random.seed(42)
         for d in range(1, self.max_depth + 1):
             leaves: List[Cluster] = list(self.chess_object.root.leaves(d))
             g = graph(leaves)
@@ -49,7 +48,6 @@ class TestGraph(unittest.TestCase):
             self.assertEqual(len(leaves), len(list(g.keys())))
 
     def test_connected_clusters(self):
-        np.random.seed(42)
         num_components = [1]
         for d in range(1, self.max_depth + 1):
             leaves: List[Cluster] = list(self.chess_object.root.leaves(d))
@@ -59,11 +57,10 @@ class TestGraph(unittest.TestCase):
                 num_components.append(len(_components))
             self.assertTrue(num_components[d - 1] <= len(_components))
             if d == self.max_depth:
-                self.assertEqual(len(_components), self.data.shape[0])
+                self.assertLessEqual(len(_components), self.data.shape[0])
         return
 
     def test_subgraphs(self):
-        np.random.seed(42)
         num_components = [1]
         for d in range(1, self.max_depth + 1):
             g = graph(list(self.chess_object.root.leaves(d)))
@@ -72,5 +69,5 @@ class TestGraph(unittest.TestCase):
                 num_components.append(len(_components))
             self.assertTrue(num_components[d - 1] <= len(_components))
             if d == self.max_depth:
-                self.assertEqual(len(_components), self.data.shape[0])
+                self.assertLessEqual(len(_components), self.data.shape[0])
         return
