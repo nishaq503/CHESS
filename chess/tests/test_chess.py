@@ -56,8 +56,31 @@ class TestCHESS(unittest.TestCase):
         with self.assertRaises(ValueError):
             chess.select('elmo')
 
-        c = chess.select(sorted(clusters, key=lambda c: len(c.name), reverse=True)[0].name + '0')
+        c = chess.select(sorted(clusters, key=lambda c_: len(c_.name), reverse=True)[0].name + '0')
         self.assertIsNone(c)
+        return
+
+    def test_graph(self):
+        data = np.random.randn(100, 100)
+        chess = CHESS(data, 'euclidean')
+        chess.build()
+        chess.graph.cache_clear()
+        g1 = chess.graph(1)
+        g2 = chess.graph(2)
+        self.assertNotEqual(g1, g2)
+        self.assertDictEqual(g2, graph(list(chess.root.leaves(2))))
+
+        [chess.graph(1) for _ in range(100)]
+        self.assertEqual(chess.graph.cache_info().misses, 2)
+        return
+
+    def test_connected_subgraph(self):
+        data = np.random.randn(100, 100)
+        chess = CHESS(np.concatenate([data - 1_000, data + 1_000]), 'euclidean')
+        chess.build()
+
+        leaves = list(chess.root.leaves())
+        [self.assertLessEqual(len(set(chess.subgraph(c).keys())), len(leaves)) for c in leaves]
         return
 
     def test_all_same(self):
@@ -80,8 +103,6 @@ class TestCHESS(unittest.TestCase):
         self.assertGreater(len(s), 0)
         # Do we have the right number of clusters? (Exclude title row)
         self.assertEqual(len(s.split('\n')[1:]), len([c for c in chess.root.leaves()]))
-        points = [p for s in s.split('\n')[1:] for p in eval(s[s.index('[') - 1:])]
-        self.assertEqual(len(points), 1000)
         return
 
     def test_repr(self):
@@ -185,3 +206,13 @@ class TestCHESS(unittest.TestCase):
         for c in self.chess.root.inorder():
             self.assertSetEqual(labels, set(c.classification.keys()))
             self.assertAlmostEqual(sum(c.classification.values()), 1., places=10)
+
+    def test_connected_clusters(self):
+        data = np.random.randn(100, 100)
+        chess = CHESS(np.concatenate([data - 100, data + 100]), 'euclidean')
+        chess.build()
+        results = chess.connected_clusters(0)
+        self.assertEqual(len(results), 1)
+        results = chess.connected_clusters()
+        self.assertGreater(len(results), 1)
+        return

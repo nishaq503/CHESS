@@ -4,12 +4,14 @@ This class wraps the underlying Cluster structure with a convenient API.
 """
 import pickle
 from collections import Counter
-from typing import Callable, List, Dict, Union
+from functools import lru_cache
+from typing import Callable, List, Dict, Union, Set
 
 import numpy as np
 
 from chess import defaults
 from .cluster import Cluster
+from .graph import graph, subgraphs, connected_clusters
 from .query import Query
 from .search import search
 
@@ -56,12 +58,15 @@ class CHESS:
         :return: CSV-style string with more attributes, one row per cluster, generated inorder.
         """
         return '\n'.join([
-            'name, number_of_points, center, radius, lfd, is_leaf',
+            '\t'.join(['name', 'radius', 'argcenter', 'points']),
             *[repr(c) for c in self.root.inorder()]
         ])
 
     def __eq__(self, other):
         return self.metric == other.metric and self.root == other.root
+
+    def __hash__(self):
+        return hash(repr(self))
 
     def build(self, stopping_criteria: Callable[[any], bool] = None):
         """ Clusters points recursively until stopping_criteria returns True.
@@ -117,6 +122,33 @@ class CHESS:
             # Then, advance to the next direction.
             cluster_name.pop()
         return c
+
+    @lru_cache()
+    def graph(self, depth: int = None) -> Dict[Cluster, Set[Cluster]]:
+        """ Returns the graph representation of all leaf clusters at depth.
+
+        :param depth: max-depth of the leaf-clusters in the graph.
+        :return: dict of {cluster: neighbors} representing a graph.
+        """
+        return graph(list(self.root.leaves(depth)))
+
+    @lru_cache()
+    def subgraphs(self, depth: int = None) -> List[Dict[Cluster, Set[Cluster]]]:
+        """ Returns the connected subgraphs of the given graph. """
+        return subgraphs(self.graph(depth))
+
+    @lru_cache()
+    def subgraph(self, cluster: Cluster) -> Dict[Cluster, Set[Cluster]]:
+        """ Returns the sub-graph to which a given cluster belongs. """
+        depth: int = len(cluster.name)
+        cc: List[Dict[Cluster, Set[Cluster]]] = self.subgraphs(depth)
+        return next(filter(lambda c: cluster in set(c.keys()), cc))
+
+    def connected_clusters(self, depth: int = None):
+        """ Returns a list of sets of clusters, where each set contains all clusters from a component.
+        """
+        g = self.graph(depth)
+        return connected_clusters(g)
 
     def compress(self, filename: str):
         """ Compresses the clusters.

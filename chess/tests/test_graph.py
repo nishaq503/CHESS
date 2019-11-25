@@ -1,4 +1,3 @@
-import tempfile
 import unittest
 
 from chess import CHESS
@@ -11,27 +10,10 @@ class TestGraph(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         np.random.seed(42)
-        cls.tempfile = tempfile.NamedTemporaryFile()
-
-        scale, num_points = 12, 10_000
-        samples = scale * (np.random.rand(2, num_points) - 0.5)
-        distances = np.linalg.norm(samples, axis=0)
-        x = [samples[0, i] for i in range(num_points)
-             if distances[i] < 2 or (4 < distances[i] < 6)]
-        y = [samples[0, i] for i in range(num_points)
-             if distances[i] < 2 or (4 < distances[i] < 6)]
-
-        data = np.asarray((x, y), dtype=defaults.RADII_DTYPE).T
-        cls.data = np.memmap(cls.tempfile, dtype='float32', mode='w+', shape=data.shape)
-        cls.data[:] = data[:]
-
-        cls.chess_object: CHESS = CHESS(
-            data=data,
-            metric='euclidean',
-            max_depth=25,
-            min_points=1,
-            min_radius=defaults.RADII_DTYPE(0)
-        )
+        data = np.random.randn(1_000, 100)
+        cls.data = np.concatenate([data - 10_000, data + 10_000])
+        # noinspection PyTypeChecker
+        cls.chess_object = CHESS(data=cls.data, metric='euclidean', max_depth=10, min_points=10, min_radius=0.5)
         cls.chess_object.build()
         cls.max_depth = max(map(len, cls.chess_object.root.dict().keys()))
         return
@@ -41,23 +23,39 @@ class TestGraph(unittest.TestCase):
         return
 
     def test_graph_building(self):
-        np.random.seed(42)
         for d in range(1, self.max_depth + 1):
             leaves: List[Cluster] = list(self.chess_object.root.leaves(d))
             g = graph(leaves)
             self.assertSetEqual(set([l for l in leaves]), set(g.keys()))
             self.assertEqual(len(leaves), len(list(g.keys())))
 
-    def test_connected_components(self):
-        np.random.seed(42)
+    # TODO: Think of better tests that confirm the components are actually disconnected.
+    def test_connected_clusters(self):
         num_components = [1]
         for d in range(1, self.max_depth + 1):
-            leaves: List[Cluster] = list(self.chess_object.root.leaves(d))
-            g = graph(leaves)
-            components = connected_components(g)
+            g = graph(list(self.chess_object.root.leaves(d)))
+            components = connected_clusters(g)
+            self.assertTrue(num_components[-1] <= len(components))
+            num_components.append(len(components))
+            if d == self.max_depth:
+                self.assertLessEqual(len(components), self.data.shape[0])
+        self.assertTrue(len(num_components) > 1)
+        self.assertTrue(any([nc == 2 for nc in num_components]))
+        self.assertTrue(num_components[-1] > num_components[0])
+        return
+
+    # TODO: Think of better tests that confirm the subgraphs are actually disconnected.
+    def test_subgraphs(self):
+        num_components = [1]
+        for d in range(1, self.max_depth + 1):
+            g = graph(list(self.chess_object.root.leaves(d)))
+            components = subgraphs(g)
+            self.assertTrue(num_components[-1] <= len(components))
             if d > 1:
                 num_components.append(len(components))
-            self.assertTrue(num_components[d - 1] <= len(components))
             if d == self.max_depth:
-                self.assertEqual(len(components), self.data.shape[0])
+                self.assertLessEqual(len(components), self.data.shape[0])
+        self.assertTrue(len(num_components) > 1)
+        self.assertTrue(any([nc == 2 for nc in num_components]))
+        self.assertTrue(num_components[-1] > num_components[0])
         return
