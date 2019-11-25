@@ -11,7 +11,7 @@ import numpy as np
 
 from chess import defaults
 from .cluster import Cluster
-from .graph import graph, subgraphs
+from .graph import graph, subgraphs, connected_clusters
 from .query import Query
 from .search import search
 
@@ -141,6 +141,12 @@ class CHESS:
         depth: int = len(cluster.name)
         cc: List[Dict[Cluster, Set[Cluster]]] = self.subgraphs(depth)
         return next(filter(lambda c: cluster in set(c.keys()), cc))
+
+    def connected_clusters(self, depth: int = None):
+        """ Returns a list of sets of clusters, where each set contains all clusters from a component.
+        """
+        g = self.graph(depth)
+        return connected_clusters(g)
 
     def compress(self, filename: str):
         """ Compresses the clusters.
