@@ -53,6 +53,6 @@ def connected_clusters(g: Dict[Cluster, Set[Cluster]]) -> List[Set[Cluster]]:
 
 
 def subgraphs(g: Dict[Cluster, Set[Cluster]]) -> List[Dict[Cluster, Set[Cluster]]]:
-    """ Returns all connected subgraphs from the given list of clusters. """
+    """ Returns all connected subgraphs from the given graph. """
     components = connected_clusters(g)
     return [{cluster: g[cluster] for cluster in component} for component in components]
