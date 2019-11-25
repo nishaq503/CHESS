@@ -61,3 +61,26 @@ class TestGraph(unittest.TestCase):
             if d == self.max_depth:
                 self.assertEqual(len(_components), self.data.shape[0])
         return
+
+    def test_connected_subgraphs(self):
+        np.random.seed(42)
+        num_components = [1]
+        for d in range(1, self.max_depth + 1):
+            g = graph(list(self.chess_object.root.leaves(d)))
+            _components = connected_subgraphs(g)
+            if d > 1:
+                num_components.append(len(_components))
+            self.assertTrue(num_components[d - 1] <= len(_components))
+            if d == self.max_depth:
+                self.assertEqual(len(_components), self.data.shape[0])
+        return
+
+    def test_compare_components(self):
+        np.random.seed(42)
+        for d in range(1, self.max_depth + 1):
+            g = graph(list(self.chess_object.root.leaves(d)))
+            tom = subgraphs(g)
+            najib = subgraphs(g)
+            self.assertEqual(len(tom), len(najib))
+            for tg, ng in zip(tom, najib):
+                self.assertDictEqual(tg, ng)
