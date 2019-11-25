@@ -11,7 +11,7 @@ import numpy as np
 
 from chess import defaults
 from .cluster import Cluster
-from .graph import graph, components
+from .graph import graph, subgraphs
 from .query import Query
 from .search import search
 
@@ -132,14 +132,14 @@ class CHESS:
         """
         return graph(list(self.root.leaves(depth)))
 
-    def connected_components(self, depth: int = None) -> List[Dict[Cluster, Set[Cluster]]]:
-        """ Returns the connected _components of the given graph. """
-        return components(self.graph(depth))
+    def subgraphs(self, depth: int = None) -> List[Dict[Cluster, Set[Cluster]]]:
+        """ Returns the connected subgraphs of the given graph. """
+        return subgraphs(self.graph(depth))
 
-    def connected_subgraph(self, cluster: Cluster) -> Dict[Cluster, Set[Cluster]]:
-        """ Returns the sub-graph to which the cluster belongs. """
+    def subgraph(self, cluster: Cluster) -> Dict[Cluster, Set[Cluster]]:
+        """ Returns the sub-graph to which a given cluster belongs. """
         depth: int = len(cluster.name)
-        cc: List[Dict[Cluster, Set[Cluster]]] = self.connected_components(depth)
+        cc: List[Dict[Cluster, Set[Cluster]]] = self.subgraphs(depth)
         return next(filter(lambda c: cluster in set(c.keys()), cc))
 
     def compress(self, filename: str):

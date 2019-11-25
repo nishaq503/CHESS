@@ -39,8 +39,8 @@ def depth_first_traversal(g: Dict[Cluster, Set[Cluster]], start: Cluster) -> Set
     return visited
 
 
-def components(g: Dict[Cluster, Set[Cluster]]) -> List[Dict[Cluster, Set[Cluster]]]:
-    """ Returns all connected components from the given list of clusters. """
+def subgraphs(g: Dict[Cluster, Set[Cluster]]) -> List[Dict[Cluster, Set[Cluster]]]:
+    """ Returns all connected subgraphs from the given list of clusters. """
     unvisited: Set[Cluster] = set(g.keys())
     _components: List[Dict[Cluster, Set[Cluster]]] = []
 
