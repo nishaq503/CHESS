@@ -4,12 +4,14 @@ This class wraps the underlying Cluster structure with a convenient API.
 """
 import pickle
 from collections import Counter
-from typing import Callable, List, Dict, Union
+from functools import lru_cache
+from typing import Callable, List, Dict, Union, Set
 
 import numpy as np
 
 from chess import defaults
 from .cluster import Cluster
+from .graph import graph, subgraphs, connected_clusters
 from .query import Query
 from .search import search
 
@@ -56,12 +58,15 @@ class CHESS:
         :return: CSV-style string with more attributes, one row per cluster, generated inorder.
         """
         return '\n'.join([
-            'name, number_of_points, center, radius, lfd, is_leaf',
+            '\t'.join(['name', 'radius', 'argcenter', 'points']),
             *[repr(c) for c in self.root.inorder()]
         ])
 
     def __eq__(self, other):
         return self.metric == other.metric and self.root == other.root
+
+    def __hash__(self):
+        return hash(repr(self))
 
     def build(self, stopping_criteria: Callable[[any], bool] = None):
         """ Clusters points recursively until stopping_criteria returns True.
@@ -130,3 +135,4 @@ class CHESS:
     def label_cluster(self, cluster: Cluster) -> Dict:
         """ Returns the probability of the cluster having each label. """
         return cluster.class_distribution(data_labels=self.labels, data_weights=self.weights)
+
