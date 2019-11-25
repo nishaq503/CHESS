@@ -88,3 +88,5 @@ class TestGraph(unittest.TestCase):
                     if c in ng:
                         self.assertDictEqual(tg, ng)
                         break
+                else:
+                    self.assertTrue(False)
