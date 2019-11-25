@@ -54,10 +54,10 @@ class TestGraph(unittest.TestCase):
         for d in range(1, self.max_depth + 1):
             leaves: List[Cluster] = list(self.chess_object.root.leaves(d))
             g = graph(leaves)
-            components = connected_components(g)
+            _components = components(g)
             if d > 1:
-                num_components.append(len(components))
-            self.assertTrue(num_components[d - 1] <= len(components))
+                num_components.append(len(_components))
+            self.assertTrue(num_components[d - 1] <= len(_components))
             if d == self.max_depth:
-                self.assertEqual(len(components), self.data.shape[0])
+                self.assertEqual(len(_components), self.data.shape[0])
         return

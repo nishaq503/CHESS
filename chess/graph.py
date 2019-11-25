@@ -1,8 +1,8 @@
 """ Graph Functions.
 
-TODO: Think about how to use number of components into a good stopping condition.
+TODO: Think about how to use number of _components into a good stopping condition.
 TODO: Implement max-flow and min-cut.
-TODO: Implement methods to find bottlenecks and "almost disconnected components"
+TODO: Implement methods to find bottlenecks and "almost disconnected _components"
 TODO: Implement shortest-path methods as possible alternative to min-cut for finding bottleneck edges.
 """
 from typing import List, Dict, Set
@@ -39,15 +39,24 @@ def depth_first_traversal(g: Dict[Cluster, Set[Cluster]], start: Cluster) -> Set
     return visited
 
 
-def connected_components(g: Dict[Cluster, Set[Cluster]]) -> List[Dict[Cluster, Set[Cluster]]]:
+def components(g: Dict[Cluster, Set[Cluster]]) -> List[Dict[Cluster, Set[Cluster]]]:
     """ Returns all connected components from the given list of clusters. """
-
     unvisited: Set[Cluster] = set(g.keys())
-    component_nodes: List[Set[Cluster]] = []
+    _components: List[Dict[Cluster, Set[Cluster]]] = []
+
+    def dft(start: Cluster) -> Dict[Cluster, Set[Cluster]]:
+        c: Dict[Cluster, Set[Cluster]] = {}
+        stack: List[Cluster] = [start]
+        while stack:
+            vtx = stack.pop()
+            if vtx not in c:
+                c[vtx] = g[vtx]
+                stack.extend(g[vtx] - c.keys())
+        return c
 
     while unvisited:
-        visited: Set[Cluster] = depth_first_traversal(g, unvisited.pop())
-        component_nodes.append(visited)
-        unvisited -= visited
+        component = dft(unvisited.pop())
+        unvisited -= component.keys()
+        _components.append(component)
 
-    return [{k: v for k, v in g.items() if k in c} for c in component_nodes]
+    return _components

@@ -11,7 +11,7 @@ import numpy as np
 
 from chess import defaults
 from .cluster import Cluster
-from .graph import graph, connected_components
+from .graph import graph, components
 from .query import Query
 from .search import search
 
@@ -58,7 +58,7 @@ class CHESS:
         :return: CSV-style string with more attributes, one row per cluster, generated inorder.
         """
         return '\n'.join([
-            'name, number_of_points, center, radius, lfd, is_leaf',
+            '\t'.join(['name', 'radius', 'argcenter', 'points']),
             *[repr(c) for c in self.root.inorder()]
         ])
 
@@ -133,8 +133,8 @@ class CHESS:
         return graph(list(self.root.leaves(depth)))
 
     def connected_components(self, depth: int = None) -> List[Dict[Cluster, Set[Cluster]]]:
-        """ Returns the connected components of the given graph. """
-        return connected_components(self.graph(depth))
+        """ Returns the connected _components of the given graph. """
+        return components(self.graph(depth))
 
     def connected_subgraph(self, cluster: Cluster) -> Dict[Cluster, Set[Cluster]]:
         """ Returns the sub-graph to which the cluster belongs. """

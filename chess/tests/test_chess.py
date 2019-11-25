@@ -64,14 +64,14 @@ class TestCHESS(unittest.TestCase):
         data = np.random.randn(100, 100)
         chess = CHESS(data, 'euclidean')
         chess.build()
-
+        chess.graph.cache_clear()
         g1 = chess.graph(1)
         g2 = chess.graph(2)
         self.assertNotEqual(g1, g2)
         self.assertDictEqual(g2, graph(list(chess.root.leaves(2))))
 
         [chess.graph(1) for _ in range(100)]
-        self.assertGreaterEqual(chess.graph.cache_info().misses, 2)
+        self.assertEqual(chess.graph.cache_info().misses, 2)
         return
 
     def test_connected_subgraph(self):
@@ -103,8 +103,8 @@ class TestCHESS(unittest.TestCase):
         self.assertGreater(len(s), 0)
         # Do we have the right number of clusters? (Exclude title row)
         self.assertEqual(len(s.split('\n')[1:]), len([c for c in chess.root.leaves()]))
-        points = [p for s in s.split('\n')[1:] for p in eval(s[s.index('[') - 1:])]
-        self.assertEqual(len(points), 1000)
+        points = sum([int(s.split()[1]) for s in s.split('\n')[1:]])
+        self.assertEqual(points, 1000)
         return
 
     def test_repr(self):
