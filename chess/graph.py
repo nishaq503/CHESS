@@ -52,30 +52,7 @@ def connected_clusters(g: Dict[Cluster, Set[Cluster]]) -> List[Set[Cluster]]:
     return components
 
 
-def connected_subgraphs(g: Dict[Cluster, Set[Cluster]]) -> List[Dict[Cluster, Set[Cluster]]]:
+def subgraphs(g: Dict[Cluster, Set[Cluster]]) -> List[Dict[Cluster, Set[Cluster]]]:
     """ Returns all connected subgraphs from the given list of clusters. """
     components = connected_clusters(g)
     return [{cluster: g[cluster] for cluster in component} for component in components]
-
-
-def subgraphs(g: Dict[Cluster, Set[Cluster]]) -> List[Dict[Cluster, Set[Cluster]]]:
-    """ Returns all connected subgraphs from the given list of clusters. """
-    unvisited: Set[Cluster] = set(g.keys())
-    _components: List[Dict[Cluster, Set[Cluster]]] = []
-
-    def dft(start: Cluster) -> Dict[Cluster, Set[Cluster]]:
-        c: Dict[Cluster, Set[Cluster]] = {}
-        stack: List[Cluster] = [start]
-        while stack:
-            vtx = stack.pop()
-            if vtx not in c:
-                c[vtx] = g[vtx]
-                stack.extend(g[vtx] - c.keys())
-        return c
-
-    while unvisited:
-        component = dft(unvisited.pop())
-        unvisited -= component.keys()
-        _components.append(component)
-
-    return _components

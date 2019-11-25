@@ -48,12 +48,25 @@ class TestGraph(unittest.TestCase):
             self.assertSetEqual(set([l for l in leaves]), set(g.keys()))
             self.assertEqual(len(leaves), len(list(g.keys())))
 
-    def test_connected_components(self):
+    def test_connected_clusters(self):
         np.random.seed(42)
         num_components = [1]
         for d in range(1, self.max_depth + 1):
             leaves: List[Cluster] = list(self.chess_object.root.leaves(d))
             g = graph(leaves)
+            _components = connected_clusters(g)
+            if d > 1:
+                num_components.append(len(_components))
+            self.assertTrue(num_components[d - 1] <= len(_components))
+            if d == self.max_depth:
+                self.assertEqual(len(_components), self.data.shape[0])
+        return
+
+    def test_subgraphs(self):
+        np.random.seed(42)
+        num_components = [1]
+        for d in range(1, self.max_depth + 1):
+            g = graph(list(self.chess_object.root.leaves(d)))
             _components = subgraphs(g)
             if d > 1:
                 num_components.append(len(_components))
@@ -61,32 +74,3 @@ class TestGraph(unittest.TestCase):
             if d == self.max_depth:
                 self.assertEqual(len(_components), self.data.shape[0])
         return
-
-    def test_connected_subgraphs(self):
-        np.random.seed(42)
-        num_components = [1]
-        for d in range(1, self.max_depth + 1):
-            g = graph(list(self.chess_object.root.leaves(d)))
-            _components = connected_subgraphs(g)
-            if d > 1:
-                num_components.append(len(_components))
-            self.assertTrue(num_components[d - 1] <= len(_components))
-            if d == self.max_depth:
-                self.assertEqual(len(_components), self.data.shape[0])
-        return
-
-    def test_compare_components(self):
-        np.random.seed(42)
-        for d in range(1, self.max_depth + 1):
-            g = graph(list(self.chess_object.root.leaves(d)))
-            tom = subgraphs(g)
-            najib = connected_subgraphs(g)
-            self.assertEqual(len(tom), len(najib))
-            for tg in tom:
-                c = list(tg.keys())[0]
-                for ng in najib:
-                    if c in ng:
-                        self.assertDictEqual(tg, ng)
-                        break
-                else:
-                    self.assertTrue(False)
