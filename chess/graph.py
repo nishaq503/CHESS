@@ -1,6 +1,6 @@
 """ Graph Functions.
 
-TODO: Think about how to use number of _components into a good stopping condition.
+TODO: Think about how to use number of components into a good stopping condition.
 TODO: Implement max-flow and min-cut.
 TODO: Implement methods to find bottlenecks and "almost disconnected components"
 TODO: Implement shortest-path methods as possible alternative to min-cut for finding bottleneck edges.

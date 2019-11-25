@@ -65,7 +65,7 @@ class TestCluster(unittest.TestCase):
 
     def test_str(self):
         s = str(self.c)
-        self.assertIn(str(len(self.c.points)), s)
+        self.assertIn(self.c.name, s)
         return
 
     def test_repr(self):

@@ -132,10 +132,12 @@ class CHESS:
         """
         return graph(list(self.root.leaves(depth)))
 
+    @lru_cache()
     def subgraphs(self, depth: int = None) -> List[Dict[Cluster, Set[Cluster]]]:
         """ Returns the connected subgraphs of the given graph. """
         return subgraphs(self.graph(depth))
 
+    @lru_cache()
     def subgraph(self, cluster: Cluster) -> Dict[Cluster, Set[Cluster]]:
         """ Returns the sub-graph to which a given cluster belongs. """
         depth: int = len(cluster.name)

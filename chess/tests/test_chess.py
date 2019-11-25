@@ -103,8 +103,6 @@ class TestCHESS(unittest.TestCase):
         self.assertGreater(len(s), 0)
         # Do we have the right number of clusters? (Exclude title row)
         self.assertEqual(len(s.split('\n')[1:]), len([c for c in chess.root.leaves()]))
-        points = sum([int(s.split()[1]) for s in s.split('\n')[1:]])
-        self.assertEqual(points, 1000)
         return
 
     def test_repr(self):
@@ -208,3 +206,13 @@ class TestCHESS(unittest.TestCase):
         for c in self.chess.root.inorder():
             self.assertSetEqual(labels, set(c.classification.keys()))
             self.assertAlmostEqual(sum(c.classification.values()), 1., places=10)
+
+    def test_connected_clusters(self):
+        data = np.random.randn(100, 100)
+        chess = CHESS(np.concatenate([data - 100, data + 100]), 'euclidean')
+        chess.build()
+        results = chess.connected_clusters(0)
+        self.assertEqual(len(results), 1)
+        results = chess.connected_clusters()
+        self.assertGreater(len(results), 1)
+        return
