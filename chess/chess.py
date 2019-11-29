@@ -30,7 +30,6 @@ class CHESS:
             min_radius: defaults.RADII_DTYPE = defaults.MIN_RADIUS,
             stopping_criteria: Callable[[any], bool] = None,
             labels: List = None,
-            root: Cluster = None
     ):
         self.data = data
         self.metric = metric
@@ -192,7 +191,7 @@ class CHESS:
         return
 
     @staticmethod
-    def load(filename: str, data: Union[np.memmap, np.ndarray], labels: List = None):
+    def load(filename: str, data: Union[np.memmap, np.ndarray]):
         """ Loads the CHESS object from the given file.
         """
         with open(filename, 'r') as f:
@@ -206,7 +205,6 @@ class CHESS:
             min_radius=d['min_radius'],
             stopping_criteria=d['stopping_criteria'],
             labels=d['labels'],
-            root=Cluster.from_json(d['root'], data),
         )
 
     def write_to_tsv(self, filename: str):
