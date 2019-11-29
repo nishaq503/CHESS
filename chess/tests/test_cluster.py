@@ -240,3 +240,23 @@ class TestCluster(unittest.TestCase):
         self.c.class_distribution(data_labels=self.labels, data_weights=self.weights)
         self.assertSetEqual(set(self.weights.keys()), set(self.c.classification.keys()))
         self.assertTrue(all([(1. / len(self.weights.keys()) == v) for v in self.c.classification.values()]))
+        return
+
+    def test_json(self):
+        data = np.random.randn(100, 100)
+        # Testing 1 level deep.
+        original = Cluster(data, 'euclidean')
+        d = json.loads(original.json())
+        self.assertIn('points', d)
+        self.assertFalse(d['left'])
+        self.assertFalse(d['right'])
+        # Reloading 1 level
+        loaded = Cluster.from_json(original.json(), data)
+        self.assertEqual(original, loaded)
+
+        # Full Tree.
+        original.make_tree(max_depth=np.inf, min_points=1, min_radius=0.0, stopping_criteria=None)
+        loaded = Cluster.from_json(original.json(), data)
+        self.assertEqual(original, loaded)
+        self.assertEqual(original.left, loaded.left)
+        return
