@@ -197,7 +197,7 @@ class CHESS:
         with open(filename, 'r') as f:
             d = json.load(f)
         # TODO: stopping criteria
-        return CHESS(
+        co = CHESS(
             data=data,
             metric=d['metric'],
             max_depth=d['max_depth'],
@@ -206,6 +206,8 @@ class CHESS:
             stopping_criteria=d['stopping_criteria'],
             labels=d['labels'],
         )
+        co.root = Cluster.from_json(d['root'], data)
+        return co
 
     def write_to_tsv(self, filename: str):
         """ Writes the CHESS object to the given filename. """
