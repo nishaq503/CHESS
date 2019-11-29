@@ -2,6 +2,7 @@
 
 This class wraps the underlying Cluster structure with a convenient API.
 """
+import pickle
 from collections import Counter
 from functools import lru_cache
 from typing import Callable, List, Dict, Union, Set
@@ -168,6 +169,16 @@ class CHESS:
 
     def write(self, filename: str):
         """ Writes the CHESS object to the given filename. """
+        with open(filename, 'wb') as f:
+            pickle.dump(self, f)
+        return
+
+    @staticmethod
+    def load(filename: str):
+        """ Loads the CHESS object from the given file. """
+        with open(filename, 'rb') as f:
+            return pickle.load(f)
+
         with open(filename, 'w') as f:
             f.write('\t'.join(['name', 'radius', 'argcenter', 'points']) + '\n')
             for c in self.root.inorder():
