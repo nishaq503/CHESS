@@ -2,7 +2,6 @@
 
 This class wraps the underlying Cluster structure with a convenient API.
 """
-import pickle
 from collections import Counter
 from functools import lru_cache
 from typing import Callable, List, Dict, Union, Set
@@ -168,18 +167,45 @@ class CHESS:
         return
 
     def write(self, filename: str):
-        """ Writes the CHESS object to the given filename.
-        """
-        with open(filename, 'wb') as f:
-            pickle.dump(self, f)
+        """ Writes the CHESS object to the given filename. """
+        with open(filename, 'w') as f:
+            f.write('\t'.join(['name', 'radius', 'argcenter', 'points']) + '\n')
+            for c in self.root.inorder():
+                f.write(repr(c) + '\n')
         return
 
-    @staticmethod
-    def load(filename: str):
-        """ Loads the CHESS object from the given file.
-        """
-        with open(filename, 'rb') as f:
-            return pickle.load(f)
+    def load(self, filename: str):
+        """ Loads the CHESS object from the given file. """
+        name_to_info: Dict[str, Dict] = {}
+        with open(filename, 'r') as f:
+            f.readline()
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+                [name, radius, argcenter, points] = line.split('\t')
+                radius = defaults.RADII_DTYPE(radius)
+                argcenter = int(argcenter)
+                points = [int(p) for p in points.split(',')]
+                name_to_info[name] = {'radius': radius, 'argcenter': argcenter, 'points': points}
+
+        def load_tree(cluster_name: str) -> Cluster:
+            c: Cluster = Cluster(
+                data=self.data,
+                metric=self.metric,
+                points=name_to_info[cluster_name]['points'],
+                name=cluster_name,
+                argcenter=name_to_info[cluster_name]['argcenter'],
+                radius=name_to_info[cluster_name]['radius'],
+            )
+            if cluster_name + '0' in name_to_info.keys():
+                c.left = load_tree(cluster_name + '0')
+            if cluster_name + '1' in name_to_info.keys():
+                c.right = load_tree(cluster_name + '1')
+            return c
+
+        self.root = load_tree('')
+        return
 
     def label_cluster_tree(self):
         """ Classifies each cluster in the cluster tree. """
