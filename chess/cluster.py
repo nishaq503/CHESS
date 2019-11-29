@@ -26,6 +26,7 @@ class Cluster:
             metric: str,
             points: List[int],
             name: str,
+            *,
             argcenter: int = None,
             radius: defaults.RADII_DTYPE = None,
             left=None, right=None

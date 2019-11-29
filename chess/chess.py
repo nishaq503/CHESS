@@ -24,12 +24,13 @@ class CHESS:
             self,
             data: Union[np.memmap, np.ndarray],
             metric: str,
-            fraction: float = 1.,
+            *,
             max_depth: int = defaults.MAX_DEPTH,
             min_points: int = defaults.MIN_POINTS,
             min_radius: defaults.RADII_DTYPE = defaults.MIN_RADIUS,
             stopping_criteria: Callable[[any], bool] = None,
             labels: List = None,
+            fraction: float = 1.,
             root: Cluster = None,
     ):
         self.data = data
