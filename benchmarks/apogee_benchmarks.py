@@ -2,6 +2,7 @@ import os
 from time import time
 
 import numpy as np
+
 from chess import CHESS
 
 
@@ -44,25 +45,26 @@ if __name__ == '__main__':
 
     for fraction in [0.2]:  # , 0.4, 0.6, 0.8, 1.]:
         np.random.seed(42)
-        co = CHESS(
-            data=data_memmap,
-            metric='euclidean',
-            max_depth=0,
-            min_points=10,
-            fraction=fraction,
-        )
-
         old_depth = 0
-        if old_depth > 0:
-            s = time()
-            co.load(filename=f'logs/chess_apogee2_{fraction:.1f}_{old_depth}.json', data=data_memmap)
-            e = time()
-            print(f'loading chess object with fraction {fraction:.1f} and depth {old_depth} took {e - s:.5f} seconds.')
         for d in range(old_depth, 20, 5):
+            co = CHESS(
+                data=data_memmap,
+                metric='euclidean',
+                max_depth=0,
+                min_points=10,
+                fraction=fraction,
+            )
+            if d > 0:
+                s = time()
+                co = co.load(filename=f'logs/chess_apogee2_{fraction:.1f}_{d}.json', data=data_memmap)
+                e = time()
+                print(f'loading chess object with fraction {fraction:.1f} and depth {d} took {e - s:.5f} seconds.')
+            print(list(co.root.dict().keys()))
             co = benchmark_clustering(
                 chess_object=co,
                 timing_file=clustering_benchmarks_file,
                 staring_depth=d + 1,
                 ending_depth=d + 5,
             )
+            print(list(co.root.dict().keys()))
             co.write(filename=f'logs/chess_apogee2_{fraction:.1f}_{d + 5}.json')
