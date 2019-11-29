@@ -35,7 +35,6 @@ class CHESS:
     ):
         self.data = data
         self.metric = metric
-        self.fraction: float = fraction
         self.max_depth = max_depth
         self.min_points = min_points
         self.min_radius = min_radius
@@ -46,6 +45,7 @@ class CHESS:
         frequencies = dict(Counter(self.labels))
         self.weights = {k: frequencies[k] / sum(frequencies.values()) for k in frequencies.keys()}
 
+        self.fraction: float = fraction
         points = list(np.random.choice(a=self.data.shape[0], size=(int(self.fraction * self.data.shape[0]), ), replace=False))
         self.root = root if root is not None else Cluster(data=self.data, metric=self.metric, points=points, name='')
 
