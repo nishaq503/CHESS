@@ -50,16 +50,17 @@ if __name__ == '__main__':
         min_points=10,
     )
 
-    old_depth = 15
+    old_depth = 10
     s = time()
-    co.load(filename=f'logs/chess_apogee2_{old_depth}.csv')
+    co.load_from_tsv(filename=f'logs/chess_apogee2_{old_depth}.tsv')
     e = time()
     print(f'loading chess object of depth {old_depth} took {e - s:.5f} seconds.')
-    for d in range(old_depth, 100, 5):
-        co = benchmark_clustering(
-            chess_object=co,
-            timing_file=clustering_benchmarks_file,
-            staring_depth=d + 1,
-            ending_depth=d + 5,
-        )
-        co.write(filename=f'logs/chess_apogee2_{d + 5}.csv')
+    # co.write_to_tsv(filename=f'logs/chess_apogee2_{old_depth}.tsv')
+    # for d in range(old_depth, 100, 5):
+    #     co = benchmark_clustering(
+    #         chess_object=co,
+    #         timing_file=clustering_benchmarks_file,
+    #         staring_depth=d + 1,
+    #         ending_depth=d + 5,
+    #     )
+    #     co.write_to_tsv(filename=f'logs/chess_apogee2_{d + 5}.csv')
