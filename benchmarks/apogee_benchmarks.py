@@ -52,9 +52,12 @@ if __name__ == '__main__':
             min_points=10,
             fraction=fraction,
         )
-        # co = co.load(filename=f'logs/chess_apogee2_{fraction:.1f}_{d}.json', data=data_memmap)
         old_depth = 0
-        for d in range(old_depth, 20, 5):
+        if old_depth > 0:
+            s = time()
+            co = co.load(filename=f'logs/chess_apogee2_{fraction:.1f}_{old_depth}.json', data=data_memmap)
+            print(f'reading from json for fraction {fraction} and depth {old_depth} took {time() - s:.4f} seconds.')
+        for d in range(old_depth, 100, 5):
             co = benchmark_clustering(
                 chess_object=co,
                 timing_file=clustering_benchmarks_file,
