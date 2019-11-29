@@ -30,6 +30,7 @@ class CHESS:
             min_radius: defaults.RADII_DTYPE = defaults.MIN_RADIUS,
             stopping_criteria: Callable[[any], bool] = None,
             labels: List = None,
+            root: Cluster = None,
     ):
         self.data = data
         self.metric = metric
@@ -45,7 +46,7 @@ class CHESS:
         self.weights = {k: frequencies[k] / sum(frequencies.values()) for k in frequencies.keys()}
 
         points = list(np.random.choice(a=self.data.shape[0], size=(int(self.fraction * self.data.shape[0]), ), replace=False))
-        self.root = Cluster(data=self.data, metric=self.metric, points=points, name='')
+        self.root = root if root is not None else Cluster(data=self.data, metric=self.metric, points=points, name='')
 
     def __str__(self):
         """
@@ -171,9 +172,7 @@ class CHESS:
         return
 
     def write(self, filename: str):
-        """ Writes the CHESS object to the given filename.
-        """
-        import inspect
+        """ Writes the CHESS object to the given filename. """
         with open(filename, 'w') as f:
             json.dump(
                 {
@@ -181,7 +180,6 @@ class CHESS:
                     'max_depth': self.max_depth,
                     'min_points': self.min_points,
                     'min_radius': self.min_radius,
-                    'stopping_criteria': str(inspect.getsource(self.stopping_criteria)) if self.stopping_criteria else '',
                     'labels': self.labels,
                     'root': self.root.json(),
                 },
@@ -192,73 +190,18 @@ class CHESS:
 
     @staticmethod
     def load(filename: str, data: Union[np.memmap, np.ndarray]):
-        """ Loads the CHESS object from the given file.
-        """
+        """ Loads the CHESS object from the given file. """
         with open(filename, 'r') as f:
             d = json.load(f)
-        # TODO: stopping criteria
-        co = CHESS(
+        return CHESS(
             data=data,
             metric=d['metric'],
             max_depth=d['max_depth'],
             min_points=d['min_points'],
             min_radius=d['min_radius'],
-            stopping_criteria=d['stopping_criteria'],
             labels=d['labels'],
+            root=Cluster.from_json(d['root'], data),
         )
-        co.root = Cluster.from_json(d['root'], data)
-        return co
-
-    def write_to_tsv(self, filename: str):
-        """ Writes the CHESS object to the given filename. """
-        with open(filename, 'w') as f:
-            f.write('\t'.join(['name', 'radius', 'argcenter', 'points']) + '\n')
-            for c in self.root.leaves():
-                f.write(repr(c) + '\n')
-        return
-
-    def load_from_tsv(self, filename: str):
-        """ Loads the CHESS object from the given file. """
-        name_to_info: Dict[str, Dict] = {}
-        with open(filename, 'r') as f:
-            f.readline()
-            while True:
-                line = f.readline()
-                if not line:
-                    break
-                [name, radius, argcenter, points] = line.split('\t')
-                radius = defaults.RADII_DTYPE(radius)
-                argcenter = int(argcenter)
-                points = [int(p) for p in points.split(',')]
-                name_to_info[name] = {'radius': radius, 'argcenter': argcenter, 'points': points}
-
-        cluster_dict: Dict[str, Cluster] = {}
-        for name, info in name_to_info.items():
-            cluster_dict[name] = Cluster(
-                data=self.data,
-                metric=self.metric,
-                points=info['points'],
-                name=name,
-                argcenter=info['argcenter'],
-                radius=info['radius'],
-            )
-
-        max_depth = max(map(len, cluster_dict.keys()))
-        for d in reversed(range(max_depth + 1)):
-            names = [n for n in cluster_dict.keys() if len(n) == d]
-            for name in names:
-                parent = name[:-1]
-                if parent not in cluster_dict.keys():
-                    left, right = parent + '0', parent + '1'
-                    cluster_dict[parent] = Cluster(
-                        data=self.data,
-                        metric=self.metric,
-                        points=cluster_dict[left].points.copy() + cluster_dict[right].points.copy(),
-                        name=parent,
-                    )
-
-        self.root = cluster_dict['']
-        return
 
     def label_cluster_tree(self):
         """ Classifies each cluster in the cluster tree. """
