@@ -11,8 +11,7 @@ def benchmark_clustering(chess_object: CHESS, timing_file: str, staring_depth: i
         chess_object.deepen(levels=1)
         end = time()
         with open(timing_file, 'a') as outfile:
-            outfile.write(f'{depth}, {end - start:.5f}\n')
-        print(f'at depth {depth}, we had {len(list(chess_object.root.leaves()))} leaves.')
+            outfile.write(f'{fraction:.1f}, {depth}, {len(list(chess_object.root.leaves()))}, {end - start:.5f}\n')
 
     return chess_object
 
@@ -41,26 +40,29 @@ if __name__ == '__main__':
     clustering_benchmarks_file = 'logs/apogee2_clustering_times.csv'
     if not os.path.exists(clustering_benchmarks_file):
         with open(clustering_benchmarks_file, 'w') as of:
-            of.write('new_depth, time_taken\n')
+            of.write('fraction, new_depth, num_leaves, time_taken\n')
 
-    co = CHESS(
-        data=data_memmap,
-        metric='euclidean',
-        max_depth=0,
-        min_points=10,
-    )
+    for fraction in [0.2, 0.4, 0.6, 0.8, 1.]:
+        np.random.seed(42)
+        co = CHESS(
+            data=data_memmap,
+            metric='euclidean',
+            max_depth=0,
+            min_points=10,
+            fraction=fraction,
+        )
 
-    old_depth = 10
-    s = time()
-    co.load_from_tsv(filename=f'logs/chess_apogee2_{old_depth}.tsv')
-    e = time()
-    print(f'loading chess object of depth {old_depth} took {e - s:.5f} seconds.')
-    # co.write_to_tsv(filename=f'logs/chess_apogee2_{old_depth}.tsv')
-    # for d in range(old_depth, 100, 5):
-    #     co = benchmark_clustering(
-    #         chess_object=co,
-    #         timing_file=clustering_benchmarks_file,
-    #         staring_depth=d + 1,
-    #         ending_depth=d + 5,
-    #     )
-    #     co.write_to_tsv(filename=f'logs/chess_apogee2_{d + 5}.csv')
+        old_depth = 0
+        if old_depth > 0:
+            s = time()
+            co.load_from_tsv(filename=f'logs/chess_apogee2_{fraction:.1f}_{old_depth}.tsv')
+            e = time()
+            print(f'loading chess object with fraction {fraction:.1f} and depth {old_depth} took {e - s:.5f} seconds.')
+        for d in range(old_depth, 100, 5):
+            co = benchmark_clustering(
+                chess_object=co,
+                timing_file=clustering_benchmarks_file,
+                staring_depth=d + 1,
+                ending_depth=d + 5,
+            )
+            co.write_to_tsv(filename=f'logs/chess_apogee2_{fraction:.1f}_{d + 5}.csv')

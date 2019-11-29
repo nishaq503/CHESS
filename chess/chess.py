@@ -24,6 +24,7 @@ class CHESS:
             self,
             data: Union[np.memmap, np.ndarray],
             metric: str,
+            fraction: float = 1.,
             max_depth: int = defaults.MAX_DEPTH,
             min_points: int = defaults.MIN_POINTS,
             min_radius: defaults.RADII_DTYPE = defaults.MIN_RADIUS,
@@ -33,6 +34,7 @@ class CHESS:
     ):
         self.data = data
         self.metric = metric
+        self.fraction: float = fraction
         self.max_depth = max_depth
         self.min_points = min_points
         self.min_radius = min_radius
@@ -43,7 +45,8 @@ class CHESS:
         frequencies = dict(Counter(self.labels))
         self.weights = {k: frequencies[k] / sum(frequencies.values()) for k in frequencies.keys()}
 
-        self.root = root or Cluster(self.data, self.metric)
+        points = list(np.random.choice(a=self.data.shape[0], size=(int(self.fraction * self.data.shape[0]), ), replace=False))
+        self.root = Cluster(data=self.data, metric=self.metric, points=points, name='')
 
     def __str__(self):
         """

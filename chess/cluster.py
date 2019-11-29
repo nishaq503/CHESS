@@ -24,9 +24,8 @@ class Cluster:
             self,
             data: Union[np.memmap, np.ndarray],
             metric: str,
-            *,
-            points: List[int] = None,
-            name: str = '',
+            points: List[int],
+            name: str,
             argcenter: int = None,
             radius: defaults.RADII_DTYPE = None,
             left=None, right=None
@@ -44,11 +43,11 @@ class Cluster:
         # Required from constructor, either from user or as defaults.
         self.data: np.memmap = data
         self.metric: str = metric
+        self.points: List[int] = points
         self.name: str = name
         self._radius: defaults.RADII_DTYPE = radius
 
         # Provided or computed values. (cached)
-        self.points: List[int] = points or list(range(self.data.shape[0]))
         self.subsample: bool = len(self.points) > defaults.SUBSAMPLING_LIMIT
         self.samples, self.distances = self._samples()
         self.argcenter = argcenter or self._argcenter()
