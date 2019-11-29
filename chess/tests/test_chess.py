@@ -163,7 +163,7 @@ class TestCHESS(unittest.TestCase):
         chess = CHESS(self.data, 'euclidean')
         with tempfile.TemporaryDirectory() as d:
             chess.write(os.path.join(d, 'dump'))
-            loaded = CHESS.load(os.path.join(d, 'dump'))
+            loaded = CHESS.load(os.path.join(d, 'dump'), self.data)
         self.assertEqual(chess, loaded)
 
     # noinspection DuplicatedCode
