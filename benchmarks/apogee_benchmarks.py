@@ -42,7 +42,7 @@ if __name__ == '__main__':
         with open(clustering_benchmarks_file, 'w') as of:
             of.write('fraction, new_depth, num_leaves, time_taken\n')
 
-    for fraction in [0.2, 0.4, 0.6, 0.8, 1.]:
+    for fraction in [0.2]:  # , 0.4, 0.6, 0.8, 1.]:
         np.random.seed(42)
         co = CHESS(
             data=data_memmap,
@@ -55,14 +55,14 @@ if __name__ == '__main__':
         old_depth = 0
         if old_depth > 0:
             s = time()
-            co.load_from_tsv(filename=f'logs/chess_apogee2_{fraction:.1f}_{old_depth}.tsv')
+            co.load(filename=f'logs/chess_apogee2_{fraction:.1f}_{old_depth}.json', data=data_memmap)
             e = time()
             print(f'loading chess object with fraction {fraction:.1f} and depth {old_depth} took {e - s:.5f} seconds.')
-        for d in range(old_depth, 100, 5):
+        for d in range(old_depth, 20, 5):
             co = benchmark_clustering(
                 chess_object=co,
                 timing_file=clustering_benchmarks_file,
                 staring_depth=d + 1,
                 ending_depth=d + 5,
             )
-            co.write_to_tsv(filename=f'logs/chess_apogee2_{fraction:.1f}_{d + 5}.csv')
+            co.write(filename=f'logs/chess_apogee2_{fraction:.1f}_{d + 5}.json')
