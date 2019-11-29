@@ -2,6 +2,7 @@
 
 This is the underlying structure for CHESS.
 """
+import json
 from collections import Counter
 from typing import List, Tuple, Dict, Union
 
@@ -23,10 +24,12 @@ class Cluster:
             self,
             data: Union[np.memmap, np.ndarray],
             metric: str,
+            *,
             points: List[int] = None,
             name: str = '',
             argcenter: int = None,
             radius: defaults.RADII_DTYPE = None,
+            left=None, right=None
     ):
         """
         Initializes cluster object.
@@ -53,7 +56,8 @@ class Cluster:
         self._all_same: bool = np.max(self.distances) == defaults.RADII_DTYPE(0.0)
 
         # Children.
-        self.left = self.right = None
+        self.left = left
+        self.right = right
 
         # Classification
         self.classification: Dict = {}
@@ -273,6 +277,39 @@ class Cluster:
             absent_labels = list(set(data_weights.keys()) - set(weights.keys()))
             self.classification.update({l: 0. for l in absent_labels})
         return self.classification
+
+    def _json(self):
+        return {
+            'name': self.name,
+            'metric': self.metric,
+            'points': self.points,
+            'argcenter': int(self.argcenter),
+            'left': self.left._json() if self.left else '',
+            'right': self.right._json() if self.right else '',
+        }
+
+    def json(self, **kwargs):
+        """ Returns the json dump of the cluster and it's children. """
+        return json.dumps(self._json(), **kwargs)
+
+    @staticmethod
+    def from_json(obj: Union[str, dict], data: Union[np.memmap, np.ndarray]):
+        """ Loads a cluster tree from the json object and data source.
+
+        Data source is *not* packaged with the json dump a cluster,
+        since CHESS is built to work with massive datasets, storing
+        the data could pose severe memory costs.
+        """
+        d: dict = json.loads(obj) if type(obj) is str else obj
+        return Cluster(
+            data=data,
+            metric=d['metric'],
+            points=d['points'],
+            name=d['name'],
+            argcenter=d['argcenter'],
+            left=Cluster.from_json(d['left'], data) if d['left'] else None,
+            right=None if not d['right'] else Cluster.from_json(d['right'], data)
+        )
 
     ###################################
     # Traversals
