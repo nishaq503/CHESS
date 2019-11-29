@@ -139,3 +139,4 @@ old_logs
 old_notebooks
 plots
 timing.py
+benchmarks/logs
