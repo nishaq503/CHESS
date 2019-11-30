@@ -43,7 +43,7 @@ if __name__ == '__main__':
         with open(clustering_benchmarks_file, 'w') as of:
             of.write('fraction, new_depth, num_leaves, time_taken\n')
 
-    for fraction in [0.2, 0.4, 0.6, 0.8, 1.]:
+    for fraction in [1.]:  # , 0.4, 0.6, 0.8, 1.]:
         np.random.seed(42)
         co = CHESS(
             data=data_memmap,
@@ -57,11 +57,12 @@ if __name__ == '__main__':
             s = time()
             co = co.load(filename=f'logs/chess_apogee2_{fraction:.1f}_{old_depth}.json', data=data_memmap)
             print(f'reading from json for fraction {fraction} and depth {old_depth} took {time() - s:.4f} seconds.')
-        for d in range(old_depth, 100, 5):
+        step = 1
+        for d in range(old_depth, 20, step):
             co = benchmark_clustering(
                 chess_object=co,
                 timing_file=clustering_benchmarks_file,
                 staring_depth=d + 1,
-                ending_depth=d + 5,
+                ending_depth=d + step,
             )
-            co.write(filename=f'logs/chess_apogee2_{fraction:.1f}_{d + 5}.json')
+            co.write(filename=f'logs/chess_apogee2_{fraction:.1f}_{d + step}.json')
