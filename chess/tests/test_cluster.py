@@ -249,6 +249,7 @@ class TestCluster(unittest.TestCase):
         self.assertTrue(all([(1. / len(self.weights.keys()) == v) for v in self.c.classification.values()]))
         return
 
+    # noinspection DuplicatedCode
     def test_json(self):
         data = np.random.randn(100, 100)
         # Testing 1 level deep.
@@ -259,11 +260,14 @@ class TestCluster(unittest.TestCase):
         self.assertFalse(d['right'])
         # Reloading 1 level
         loaded = Cluster.from_json(original.json(), data)
-        self.assertEqual(original, loaded)
+        self.assertSetEqual(set(original.dict().keys()),  set(loaded.dict().keys()))
+        for co, cl in zip(original.inorder(), loaded.inorder()):
+            self.assertSetEqual(set(co.points), set(cl.points))
 
         # Full Tree.
         original.make_tree(max_depth=np.inf, min_points=1, min_radius=0.0, stopping_criteria=None)
         loaded = Cluster.from_json(original.json(), data)
-        self.assertEqual(original, loaded)
-        self.assertEqual(original.left, loaded.left)
+        self.assertSetEqual(set(original.dict().keys()),  set(loaded.dict().keys()))
+        for co, cl in zip(original.inorder(), loaded.inorder()):
+            self.assertSetEqual(set(co.points), set(cl.points))
         return

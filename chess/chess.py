@@ -194,7 +194,7 @@ class CHESS:
         """ Loads the CHESS object from the given file. """
         with open(filename, 'r') as f:
             d = json.load(f)
-        return CHESS(
+        co = CHESS(
             data=data,
             metric=d['metric'],
             max_depth=d['max_depth'],
@@ -203,6 +203,8 @@ class CHESS:
             labels=d['labels'],
             root=Cluster.from_json(d['root'], data),
         )
+        co.root.points = co.root.reconstitute_points()
+        return co
 
     def label_cluster_tree(self):
         """ Classifies each cluster in the cluster tree. """

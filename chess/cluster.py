@@ -29,7 +29,9 @@ class Cluster:
             *,
             argcenter: int = None,
             radius: defaults.RADII_DTYPE = None,
-            left=None, right=None
+            left=None,
+            right=None,
+            reading=False,
     ):
         """
         Initializes cluster object.
@@ -46,14 +48,8 @@ class Cluster:
         self.metric: str = metric
         self.points: List[int] = points
         self.name: str = name
-        self._radius: defaults.RADII_DTYPE = radius
-
-        # Provided or computed values. (cached)
-        self.subsample: bool = len(self.points) > defaults.SUBSAMPLING_LIMIT
-        self.samples, self.distances = self._samples()
-        self.argcenter = argcenter or self._argcenter()
         self.depth: int = len(name)
-        self._all_same: bool = np.max(self.distances) == defaults.RADII_DTYPE(0.0)
+        self._radius: defaults.RADII_DTYPE = radius
 
         # Children.
         self.left = left
@@ -62,10 +58,19 @@ class Cluster:
         # Classification
         self.classification: Dict = {}
 
-        # Invariants after construction.
-        assert len(self.points) > 0, f"Empty point indices in {self.name}"
-        assert len(self.points) == len(set(self.points)), f"Duplicate point indices in cluster {self.name}:\n{self.points}"
-        assert self.argcenter is not None
+        if reading:
+            self.argcenter = argcenter
+        else:
+            # Provided or computed values. (cached)
+            self.subsample: bool = len(self.points) > defaults.SUBSAMPLING_LIMIT
+            self.samples, self.distances = self._samples()
+            self.argcenter = argcenter or self._argcenter()
+            self._all_same: bool = np.max(self.distances) == defaults.RADII_DTYPE(0.0)
+
+            # Invariants after construction.
+            assert len(self.points) > 0, f"Empty point indices in {self.name}"
+            assert len(self.points) == len(set(self.points)), f"Duplicate point indices in cluster {self.name}:\n{self.points}"
+            assert self.argcenter is not None
 
     def __hash__(self):
         return hash(self.name)
@@ -284,7 +289,7 @@ class Cluster:
         return {
             'name': self.name,
             'metric': self.metric,
-            'points': self.points,
+            'points': [] if (self.left is not None or self.right is not None) else self.points,
             'radius': self.radius(),
             'argcenter': int(self.argcenter),
             'left': self.left._json() if self.left is not None else '',
@@ -310,7 +315,7 @@ class Cluster:
         the data could pose severe memory costs.
         """
         d: dict = json.loads(obj) if type(obj) is str else obj
-        return Cluster(
+        c = Cluster(
             data=data,
             metric=d['metric'],
             points=d['points'],
@@ -319,7 +324,22 @@ class Cluster:
             radius=d['radius'],
             left=Cluster.from_json(d['left'], data) if d['left'] != '' else None,
             right=Cluster.from_json(d['right'], data) if d['right'] != '' else None,
+            reading=True,
         )
+        c.points = c.reconstitute_points()
+        return c
+
+    def reconstitute_points(self) -> List[int]:
+        if self.left is None:
+            return self.points.copy()
+        if self.right is None:
+            return self.points.copy()
+        if len(self.left.points) == 0:
+            self.left.points = self.left.reconstitute_points()
+        if len(self.right.points) == 0:
+            self.right.points = self.right.reconstitute_points()
+        self.points = self.left.points.copy() + self.right.points.copy()
+        return self.points.copy()
 
     ###################################
     # Traversals
