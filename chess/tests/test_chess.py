@@ -159,12 +159,23 @@ class TestCHESS(unittest.TestCase):
             chess.write(os.path.join(d, 'dump'))
             self.assertTrue(os.path.exists(os.path.join(d, 'dump')))
 
+    # noinspection DuplicatedCode
     def test_load(self):
         chess = CHESS(self.data, 'euclidean')
         with tempfile.TemporaryDirectory() as d:
             chess.write(os.path.join(d, 'dump'))
             loaded = CHESS.load(os.path.join(d, 'dump'), self.data)
-        self.assertEqual(chess, loaded)
+        self.assertSetEqual(set(chess.root.dict().keys()), set(loaded.root.dict().keys()))
+        for co, cl in zip(chess.root.inorder(), loaded.root.inorder()):
+            self.assertSetEqual(set(co.points), set(cl.points))
+
+        chess.deepen(levels=2)
+        with tempfile.TemporaryDirectory() as d:
+            chess.write(os.path.join(d, 'dump'))
+            loaded = CHESS.load(os.path.join(d, 'dump'), self.data)
+        self.assertSetEqual(set(chess.root.dict().keys()), set(loaded.root.dict().keys()))
+        for co, cl in zip(chess.root.inorder(), loaded.root.inorder()):
+            self.assertSetEqual(set(co.points), set(cl.points))
 
     # noinspection DuplicatedCode
     def _create_ring_data(self):
