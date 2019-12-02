@@ -7,13 +7,13 @@ class TestCluster(unittest.TestCase):
 
     def setUp(self) -> None:
         self.data = np.concatenate([np.random.randn(50, 100) - 10, np.random.randn(50, 100) + 10])
-        self.c = Cluster(self.data, 'euclidean')
+        self.c = Cluster(self.data, 'euclidean', points=list(range(self.data.shape[0])), name='')
         return
 
     def test_init(self):
         with self.assertRaises(ValueError):
-            Cluster(self.data, 'dodo bird')
-        c = Cluster(self.data, 'euclidean')
+            Cluster(self.data, 'dodo bird', points=list(range(self.data.shape[0])), name='')
+        c = Cluster(self.data, 'euclidean', points=list(range(self.data.shape[0])), name='')
         self.assertEqual(c.data.shape, self.data.shape)
         self.assertEqual(c.metric, 'euclidean')
         self.assertEqual(c.name, '')
@@ -29,7 +29,7 @@ class TestCluster(unittest.TestCase):
     def test_iter(self):
         data = np.random.randn(100, 100)
         defaults.BATCH_SIZE = 10
-        c = Cluster(data, 'euclidean')
+        c = Cluster(data, 'euclidean', points=list(range(data.shape[0])), name='')
         d = [b for b in c]
         self.assertEqual(len(d), 10)
         self.assertTrue(np.all(np.equal(data, np.concatenate(d))))
@@ -37,16 +37,28 @@ class TestCluster(unittest.TestCase):
 
     def test_len(self):
         data = np.random.randn(100, 100)
-        c = Cluster(data, 'euclidean')
+        c = Cluster(data, 'euclidean', points=list(range(data.shape[0])), name='')
         self.assertEqual(len(c), 100)
         return
 
     def test_getitem(self):
         data = np.random.randn(100, 100)
-        c = Cluster(data, 'euclidean')
+        c = Cluster(data, 'euclidean', points=list(range(data.shape[0])), name='')
         self.assertTrue(np.all(np.equal(c[0], data[0])))
         return
 
+<<<<<<< HEAD
+=======
+    def test_all_same(self):
+        data = np.ones((100, 100))
+        c = Cluster(data, 'euclidean', points=list(range(data.shape[0])), name='')
+        with self.assertRaises(RuntimeError):
+            c.partition()
+        self.assertIsNone(c.left)
+        self.assertIsNone(c.right)
+        return
+
+>>>>>>> Found more useful improvements from running benchmarks (#18)
     # noinspection PyTypeChecker
     def test_contains(self):
         data = np.random.randn(100, 100) + 100
@@ -88,13 +100,13 @@ class TestCluster(unittest.TestCase):
 
     def test_radius(self):
         data = np.random.randn(100, 100)
-        c = Cluster(data, 'euclidean')
+        c = Cluster(data, 'euclidean', points=list(range(data.shape[0])), name='')
         self.assertGreater(c.radius(), 0)
         return
 
     def test_local_fractal_dimension(self):
         data = np.random.randn(100, 100)
-        c = Cluster(data, 'euclidean')
+        c = Cluster(data, 'euclidean', points=list(range(data.shape[0])), name='')
         self.assertGreater(c.local_fractal_dimension(), 0)
         return
 
@@ -138,9 +150,11 @@ class TestCluster(unittest.TestCase):
         self.assertEqual(len(points[0]), self.data.shape[1])
         return
 
+    # noinspection DuplicatedCode
     def test_inorder(self):
         data = np.random.randn(50, 100)
-        c = Cluster(np.concatenate([data - 10, data + 10]), 'euclidean')
+        temp_data = np.concatenate([data - 10, data + 10])
+        c = Cluster(temp_data, 'euclidean', points=list(range(temp_data.shape[0])), name='')
         c.partition()
         clusters = list(c.inorder())
         self.assertEqual(len(clusters), 3)
@@ -161,9 +175,11 @@ class TestCluster(unittest.TestCase):
         self.assertListEqual(['', '0', '1'], [c.name for c in clusters])
         return
 
+    # noinspection DuplicatedCode
     def test_leaves(self):
         data = np.random.randn(50, 100)
-        c = Cluster(np.concatenate([data - 10, data + 10]), 'euclidean')
+        temp_data = np.concatenate([data - 10, data + 10])
+        c = Cluster(temp_data, 'euclidean', points=list(range(temp_data.shape[0])), name='')
 
         c.partition()
         clusters = list(c.leaves())
@@ -188,15 +204,17 @@ class TestCluster(unittest.TestCase):
         self.assertListEqual(['00', '01', '10', '11'], [c.name for c in clusters])
         return
 
+    # noinspection DuplicatedCode
     def test_pairwise_distances(self):
         data = np.random.randn(50, 100) + 1
-        c1 = Cluster(data, 'euclidean')
+        c1 = Cluster(data, 'euclidean', points=list(range(data.shape[0])), name='')
         distances = c1.distances
         self.assertEqual(distances.shape, (50, 50))
         self.assertGreater(distances.sum(), 0)
         self.assertEqual(np.diagonal(distances).sum().round(), 0)
 
-        c2 = Cluster(np.concatenate((data, data)), 'euclidean')
+        temp_data = np.concatenate((data, data))
+        c2 = Cluster(temp_data, 'euclidean', points=list(range(temp_data.shape[0])), name='')
         distances = c2.distances
         self.assertEqual(distances.shape, (100, 100))
         self.assertGreater(distances.sum(), 0)
@@ -204,7 +222,8 @@ class TestCluster(unittest.TestCase):
         return
 
     def test_sample_random_data(self):
-        c = Cluster(np.random.randn(100, 100), 'euclidean')
+        data = np.random.randn(100, 100)
+        c = Cluster(data, 'euclidean', points=list(range(data.shape[0])), name='')
         self.assertEqual(len(c.samples), 100)
         return
 
@@ -223,7 +242,7 @@ class TestCluster(unittest.TestCase):
         self.labels = [0 if d < 2 else 1 for d in distances if d < 6 and (d > 4 or d < 2)]
         self.weights = {k: v / len(self.labels) for k, v in dict(Counter(self.labels)).items()}
 
-        self.c = Cluster(data=self.data, metric='euclidean')
+        self.c = Cluster(data=self.data, metric='euclidean', points=list(range(self.data.shape[0])), name='')
         return
 
     def test_classify_cluster(self):
@@ -233,21 +252,25 @@ class TestCluster(unittest.TestCase):
         self.assertTrue(all([(1. / len(self.weights.keys()) == v) for v in self.c.classification.values()]))
         return
 
+    # noinspection DuplicatedCode
     def test_json(self):
         data = np.random.randn(100, 100)
         # Testing 1 level deep.
-        original = Cluster(data, 'euclidean')
+        original = Cluster(data, 'euclidean', points=list(range(data.shape[0])), name='')
         d = json.loads(original.json())
         self.assertIn('points', d)
         self.assertFalse(d['left'])
         self.assertFalse(d['right'])
         # Reloading 1 level
         loaded = Cluster.from_json(original.json(), data)
-        self.assertEqual(original, loaded)
+        self.assertSetEqual(set(original.dict().keys()),  set(loaded.dict().keys()))
+        for co, cl in zip(original.inorder(), loaded.inorder()):
+            self.assertSetEqual(set(co.points), set(cl.points))
 
         # Full Tree.
         original.make_tree(max_depth=np.inf, min_points=1, min_radius=0.0, stopping_criteria=None)
         loaded = Cluster.from_json(original.json(), data)
-        self.assertEqual(original, loaded)
-        self.assertEqual(original.left, loaded.left)
+        self.assertSetEqual(set(original.dict().keys()),  set(loaded.dict().keys()))
+        for co, cl in zip(original.inorder(), loaded.inorder()):
+            self.assertSetEqual(set(co.points), set(cl.points))
         return

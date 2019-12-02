@@ -24,12 +24,14 @@ class Cluster:
             self,
             data: Union[np.memmap, np.ndarray],
             metric: str,
+            points: List[int],
+            name: str,
             *,
-            points: List[int] = None,
-            name: str = '',
             argcenter: int = None,
             radius: defaults.RADII_DTYPE = None,
-            left=None, right=None
+            left=None,
+            right=None,
+            reading=False,
     ):
         """
         Initializes cluster object.
@@ -44,16 +46,10 @@ class Cluster:
         # Required from constructor, either from user or as defaults.
         self.data: np.memmap = data
         self.metric: str = metric
+        self.points: List[int] = points
         self.name: str = name
-        self._radius: defaults.RADII_DTYPE = radius
-
-        # Provided or computed values. (cached)
-        self.points: List[int] = points or list(range(self.data.shape[0]))
-        self.subsample: bool = len(self.points) > defaults.SUBSAMPLING_LIMIT
-        self.samples, self.distances = self._samples()
-        self.argcenter = argcenter or self._argcenter()
         self.depth: int = len(name)
-        self._all_same: bool = np.max(self.distances) == defaults.RADII_DTYPE(0.0)
+        self._radius: defaults.RADII_DTYPE = radius
 
         # Children.
         self.left = left
@@ -62,10 +58,19 @@ class Cluster:
         # Classification
         self.classification: Dict = {}
 
-        # Invariants after construction.
-        assert len(self.points) > 0, f"Empty point indices in {self.name}"
-        assert len(self.points) == len(set(self.points)), f"Duplicate point indices in cluster {self.name}:\n{self.points}"
-        assert self.argcenter is not None
+        if reading:
+            self.argcenter = argcenter
+        else:
+            # Provided or computed values. (cached)
+            self.subsample: bool = len(self.points) > defaults.SUBSAMPLING_LIMIT
+            self.samples, self.distances = self._samples()
+            self.argcenter = argcenter or self._argcenter()
+            self._all_same: bool = np.max(self.distances) == defaults.RADII_DTYPE(0.0)
+
+            # Invariants after construction.
+            assert len(self.points) > 0, f"Empty point indices in {self.name}"
+            assert len(self.points) == len(set(self.points)), f"Duplicate point indices in cluster {self.name}:\n{self.points}"
+            assert self.argcenter is not None
 
     def __hash__(self):
         return hash(self.name)
@@ -278,38 +283,62 @@ class Cluster:
             self.classification.update({l: 0. for l in absent_labels})
         return self.classification
 
+    # noinspection PyProtectedMember
     def _json(self):
         return {
             'name': self.name,
             'metric': self.metric,
-            'points': self.points,
+            'points': [] if (self.left is not None or self.right is not None) else self.points,
+            'radius': self.radius(),
             'argcenter': int(self.argcenter),
-            'left': self.left._json() if self.left else '',
-            'right': self.right._json() if self.right else '',
+            'left': self.left._json() if self.left is not None else '',
+            'right': self.right._json() if self.right is not None else '',
         }
 
     def json(self, **kwargs):
         """ Returns the json dump of the cluster and it's children. """
-        return json.dumps(self._json(), **kwargs)
+        def convert(o):
+            if isinstance(o, np.int64):
+                return int(o)
+            if isinstance(o, defaults.RADII_DTYPE):
+                return float(o)
+            return o
+        return json.dumps(self._json(), default=convert, **kwargs)
 
     @staticmethod
     def from_json(obj: Union[str, dict], data: Union[np.memmap, np.ndarray]):
         """ Loads a cluster tree from the json object and data source.
 
-        Data source is *not* packaged with the json dump a cluster,
+        Data source is *not* packaged with the json dump,
         since CHESS is built to work with massive datasets, storing
         the data could pose severe memory costs.
         """
         d: dict = json.loads(obj) if type(obj) is str else obj
-        return Cluster(
+        c = Cluster(
             data=data,
             metric=d['metric'],
             points=d['points'],
             name=d['name'],
             argcenter=d['argcenter'],
-            left=Cluster.from_json(d['left'], data) if d['left'] else None,
-            right=None if not d['right'] else Cluster.from_json(d['right'], data)
+            radius=d['radius'],
+            left=Cluster.from_json(d['left'], data) if d['left'] != '' else None,
+            right=Cluster.from_json(d['right'], data) if d['right'] != '' else None,
+            reading=True,
         )
+        c.points = c.reconstitute_points()
+        return c
+
+    def reconstitute_points(self) -> List[int]:
+        if self.left is None:
+            return self.points.copy()
+        if self.right is None:
+            return self.points.copy()
+        if len(self.left.points) == 0:
+            self.left.points = self.left.reconstitute_points()
+        if len(self.right.points) == 0:
+            self.right.points = self.right.reconstitute_points()
+        self.points = self.left.points.copy() + self.right.points.copy()
+        return self.points.copy()
 
     ###################################
     # Traversals
