@@ -17,6 +17,9 @@ class TestDistanceFunctions(unittest.TestCase):
         x = np.asarray([[]])
         self.assertRaises(ValueError, check_input_array, x)
 
+        x = np.zeros(shape=(0, 0))
+        self.assertRaises(ValueError, check_input_array, x)
+
         x = np.asarray([[1, 1], [2, 2], [3, 3]])
         self.assertTrue(check_input_array(x))
 
