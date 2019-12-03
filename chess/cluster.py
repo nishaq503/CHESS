@@ -50,6 +50,7 @@ class Cluster:
         self.name: str = name
         self.depth: int = len(name)
         self._radius: defaults.RADII_DTYPE = radius
+        self._partitionable: bool = True
 
         # Children.
         self.left = left
@@ -62,15 +63,19 @@ class Cluster:
             self.argcenter = argcenter
         else:
             # Provided or computed values. (cached)
-            self.subsample: bool = len(self.points) > defaults.SUBSAMPLING_LIMIT
-            self.samples, self.distances = self._samples()
+            self._set_internals()
             self.argcenter = argcenter or self._argcenter()
-            self._all_same: bool = np.max(self.distances) == defaults.RADII_DTYPE(0.0)
 
             # Invariants after construction.
             assert len(self.points) > 0, f"Empty point indices in {self.name}"
             assert len(self.points) == len(set(self.points)), f"Duplicate point indices in cluster {self.name}:\n{self.points}"
             assert self.argcenter is not None
+
+    def _set_internals(self):
+        self.subsample: bool = len(self.points) > defaults.SUBSAMPLING_LIMIT
+        self.samples, self.distances = self._samples()
+        self._all_same: bool = np.max(self.distances) == defaults.RADII_DTYPE(0.0)
+        return
 
     def __hash__(self):
         return hash(self.name)
@@ -78,7 +83,7 @@ class Cluster:
     def __iter__(self):
         """ Iterates over points within the cluster. """
         for i in range(0, len(self.points), defaults.BATCH_SIZE):
-            yield self.data[self.points[i:min(i + defaults.BATCH_SIZE, len(self.points))]]
+            yield self.data[self.points[i:i + defaults.BATCH_SIZE]]
 
     def __len__(self) -> int:
         """ Returns the number of points within the cluster. """
@@ -90,7 +95,8 @@ class Cluster:
 
     def __contains__(self, query: Query):
         """ Determines whether or not a query falls into the cluster. """
-        distance = calculate_distances([self.center()], [query.point], self.metric)[0, 0]
+        center = np.expand_dims(self.center(), 0)
+        distance = calculate_distances(center, [query.point], self.metric)[0, 0]
         return distance <= (self.radius() + query.radius)
 
     def __str__(self):
@@ -178,6 +184,7 @@ class Cluster:
     def partitionable(self, max_depth, min_points, min_radius, stopping_criteria) -> bool:
         """ Returns weather or not this cluster can be partitioned. """
         flag = all((
+            self._partitionable,
             not self._all_same,
             not (self.left or self.right),
             self.depth < max_depth,
@@ -197,12 +204,16 @@ class Cluster:
             * Partition the points in this cluster by the pole that the points are closer to.
             * Assign the partitioned points to the left and right child clusters appropriately.
         """
+        assert np.max(self.distances) > 0., f'max of self.distances was <= 0. in cluster {self.name}.'
+        assert np.max(np.triu(self.distances, k=1)) > 0., f'max of triu self.distances was <= 0. in cluster {self.name}.'
+
         max_pair_index = np.argmax(np.triu(self.distances, k=1))
         max_col = max_pair_index // len(self.distances)
         max_row = max_pair_index % len(self.distances)
 
         left_pole_index = self.samples[max_col]
         right_pole_index = self.samples[max_row]
+        assert left_pole_index != right_pole_index, f'left and right poles had same index {left_pole_index} in cluster {self.name}.'
 
         left_pole, right_pole = self.data[left_pole_index], self.data[right_pole_index]
         left_pole, right_pole = np.expand_dims(left_pole, 0), np.expand_dims(right_pole, 0)
@@ -220,6 +231,10 @@ class Cluster:
             right_dist = calculate_distances(right_pole, batch, self.metric)[0, :]
             for j, l, r in zip(range(len(batch)), left_dist, right_dist):
                 (left_indices if l < r else right_indices).append(self.points[i * defaults.BATCH_SIZE + j])
+
+        if len(left_indices) == 0 or len(right_indices) == 0:
+            self._partitionable = False
+            return
 
         # Loop termination invariant: there are points in each half.
         assert len(left_indices) > 0, f'Empty left cluster after partitioning {self.name}'
@@ -330,14 +345,17 @@ class Cluster:
 
     def reconstitute_points(self) -> List[int]:
         if self.left is None:
+            self._set_internals()
             return self.points.copy()
         if self.right is None:
+            self._set_internals()
             return self.points.copy()
         if len(self.left.points) == 0:
             self.left.points = self.left.reconstitute_points()
         if len(self.right.points) == 0:
             self.right.points = self.right.reconstitute_points()
         self.points = self.left.points.copy() + self.right.points.copy()
+        self._set_internals()
         return self.points.copy()
 
     ###################################

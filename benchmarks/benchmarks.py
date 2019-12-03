@@ -38,7 +38,7 @@ def benchmark_apogee2():
     #     shape=(10_000, num_dims),
     # )
 
-    clustering_benchmarks_file = 'logs/apogee2_clustering_times.csv'
+    clustering_benchmarks_file = '../benchmarks/logs/apogee2_clustering_times.csv'
     if not os.path.exists(clustering_benchmarks_file):
         with open(clustering_benchmarks_file, 'w') as of:
             of.write('fraction, new_depth, num_leaves, time_taken\n')
@@ -52,10 +52,10 @@ def benchmark_apogee2():
             min_points=10,
             fraction=fraction,
         )
-        old_depth = 0
+        old_depth = 20
         if old_depth > 0:
             s = time()
-            co = co.load(filename=f'logs/chess_apogee2_{fraction:.1f}_{old_depth}.json', data=data_memmap)
+            co = co.load(filename=f'../benchmarks/logs/chess_apogee2_{fraction:.1f}_{old_depth}.json', data=data_memmap)
             print(f'reading from json for fraction {fraction} and depth {old_depth} took {time() - s:.4f} seconds.')
         step = 1
         for d in range(old_depth, 20, step):
@@ -65,7 +65,7 @@ def benchmark_apogee2():
                 staring_depth=d + 1,
                 ending_depth=d + step,
             )
-            co.write(filename=f'logs/chess_apogee2_{fraction:.1f}_{d + step}.json')
+            co.write(filename=f'../benchmarks/logs/chess_apogee2_{fraction:.1f}_{d + step}.json')
     return
 
 
@@ -104,7 +104,7 @@ def benchmark_greengenes():
             min_points=10,
             fraction=fraction,
         )
-        old_depth = 0
+        old_depth = 20
         if old_depth > 0:
             s = time()
             co = co.load(filename=f'logs/chess_gg_{fraction:.1f}_{old_depth}.json', data=data_memmap)
