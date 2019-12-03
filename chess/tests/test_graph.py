@@ -1,6 +1,6 @@
 import unittest
 
-from chess import CHESS
+from chess import Manifold
 from chess.graph import *
 
 
@@ -13,7 +13,7 @@ class TestGraph(unittest.TestCase):
         data = np.random.randn(1_000, 100)
         cls.data = np.concatenate([data - 10_000, data + 10_000])
         # noinspection PyTypeChecker
-        cls.chess_object = CHESS(data=cls.data, metric='euclidean', max_depth=10, min_points=10, min_radius=0.5)
+        cls.chess_object = Manifold(data=cls.data, metric='euclidean', max_depth=10, min_points=10, min_radius=0.5)
         cls.chess_object.build()
         cls.max_depth = max(map(len, cls.chess_object.root.dict().keys()))
         return

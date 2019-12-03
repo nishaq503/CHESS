@@ -16,7 +16,7 @@ from .query import Query
 from .search import search
 
 
-class CHESS:
+class Manifold:
     """ Clustered Hierarchical Entropy-Scaling Search Object.
     """
 
@@ -194,7 +194,7 @@ class CHESS:
         """ Loads the CHESS object from the given file. """
         with open(filename, 'r') as f:
             d = json.load(f)
-        co = CHESS(
+        co = Manifold(
             data=data,
             metric=d['metric'],
             max_depth=d['max_depth'],

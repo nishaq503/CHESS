@@ -1,6 +1,6 @@
 """ Clustered Hierarchical Entropy-Scaling Search
 """
 
-__all__ = ['CHESS']
+__all__ = ['Manifold']
 
-from .chess import CHESS
+from .manifold import Manifold

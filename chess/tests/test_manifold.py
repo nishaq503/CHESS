@@ -2,9 +2,9 @@ import os
 import tempfile
 import unittest
 
-from chess.chess import *
 # noinspection PyTypeChecker
 from chess.datasets import ring
+from chess.manifold import *
 
 
 class TestCHESS(unittest.TestCase):
@@ -23,7 +23,7 @@ class TestCHESS(unittest.TestCase):
         return
 
     def test_functional(self):
-        chess = CHESS(self.data, 'euclidean')
+        chess = Manifold(self.data, 'euclidean')
         chess.build()
         result = chess.search(self.data[0], 0.0)
         self.assertEqual(len(result), 1)
@@ -36,16 +36,16 @@ class TestCHESS(unittest.TestCase):
         return
 
     def test_init(self):
-        CHESS(self.data, 'euclidean')
+        Manifold(self.data, 'euclidean')
 
         with self.assertRaises(ValueError):
-            CHESS(self.data, 'dodo bird')
+            Manifold(self.data, 'dodo bird')
 
         return
 
     def test_select(self):
         data = np.random.randn(100, 100)
-        chess = CHESS(data, 'euclidean')
+        chess = Manifold(data, 'euclidean')
         chess.build()
         clusters = list(chess.root.inorder())
 
@@ -63,7 +63,7 @@ class TestCHESS(unittest.TestCase):
 
     def test_graph(self):
         data = np.random.randn(100, 100)
-        chess = CHESS(data, 'euclidean')
+        chess = Manifold(data, 'euclidean')
         chess.build()
         chess.graph.cache_clear()
         g1 = chess.graph(1)
@@ -77,7 +77,7 @@ class TestCHESS(unittest.TestCase):
 
     def test_connected_subgraph(self):
         data = np.random.randn(100, 100)
-        chess = CHESS(np.concatenate([data - 1_000, data + 1_000]), 'euclidean')
+        chess = Manifold(np.concatenate([data - 1_000, data + 1_000]), 'euclidean')
         chess.build()
 
         leaves = list(chess.root.leaves())
@@ -86,19 +86,19 @@ class TestCHESS(unittest.TestCase):
 
     def test_all_same(self):
         data = np.ones((100, 100))
-        c = CHESS(data, 'euclidean')
+        c = Manifold(data, 'euclidean')
         c.build()
         self.assertIsNone(c.root.left)
         self.assertIsNone(c.root.right)
 
-        c = CHESS(np.concatenate([data - 100, data + 100]), 'euclidean')
+        c = Manifold(np.concatenate([data - 100, data + 100]), 'euclidean')
         c.build()
         self.assertIsNotNone(c.root.left)
         self.assertIsNotNone(c.root.right)
         return
 
     def test_str(self):
-        chess = CHESS(self.data, 'euclidean')
+        chess = Manifold(self.data, 'euclidean')
         chess.build()
         s = str(chess)
         self.assertGreater(len(s), 0)
@@ -107,14 +107,14 @@ class TestCHESS(unittest.TestCase):
         return
 
     def test_repr(self):
-        chess = CHESS(self.data, 'euclidean')
+        chess = Manifold(self.data, 'euclidean')
         chess.build()
         s = repr(chess)
         self.assertGreater(len(s), 0)
         return
 
     def test_build(self):
-        chess = CHESS(self.data, 'euclidean', max_depth=5)
+        chess = Manifold(self.data, 'euclidean', max_depth=5)
         chess.build()
         self.assertTrue(all((
             chess.root.left,
@@ -129,14 +129,14 @@ class TestCHESS(unittest.TestCase):
     # noinspection PyTypeChecker
     def test_deepen(self):
         data = np.random.randn(2_000, 100)
-        chess = CHESS(data, 'euclidean')
+        chess = Manifold(data, 'euclidean')
         chess.deepen(levels=5)
         self.assertEqual(5, max(map(len, chess.root.dict().keys())))
         chess.deepen(levels=5)
         self.assertEqual(10, max(map(len, chess.root.dict().keys())))
 
     def test_search(self):
-        chess = CHESS(self.data, 'euclidean')
+        chess = Manifold(self.data, 'euclidean')
         chess.build()
         self.assertEqual(len(chess.search(self.data[0], 0.0)), 1)
         self.assertEqual(len(chess.search(self.data[0] + 100, 0.0)), 0)
@@ -145,7 +145,7 @@ class TestCHESS(unittest.TestCase):
         return
 
     def test_compress(self):
-        chess = CHESS(self.data, 'euclidean')
+        chess = Manifold(self.data, 'euclidean')
         chess.build()
         filepath = tempfile.NamedTemporaryFile()
         chess.compress(filepath)
@@ -155,17 +155,17 @@ class TestCHESS(unittest.TestCase):
         return
 
     def test_write(self):
-        chess = CHESS(self.data, 'euclidean')
+        chess = Manifold(self.data, 'euclidean')
         with tempfile.TemporaryDirectory() as d:
             chess.write(os.path.join(d, 'dump'))
             self.assertTrue(os.path.exists(os.path.join(d, 'dump')))
 
     # noinspection DuplicatedCode
     def test_load(self):
-        chess = CHESS(self.data, 'euclidean')
+        chess = Manifold(self.data, 'euclidean')
         with tempfile.TemporaryDirectory() as d:
             chess.write(os.path.join(d, 'dump'))
-            loaded = CHESS.load(os.path.join(d, 'dump'), self.data)
+            loaded = Manifold.load(os.path.join(d, 'dump'), self.data)
         self.assertSetEqual(set(chess.root.dict().keys()), set(loaded.root.dict().keys()))
         for co, cl in zip(chess.root.inorder(), loaded.root.inorder()):
             self.assertSetEqual(set(co.points), set(cl.points))
@@ -173,7 +173,7 @@ class TestCHESS(unittest.TestCase):
         chess.deepen(levels=2)
         with tempfile.TemporaryDirectory() as d:
             chess.write(os.path.join(d, 'dump'))
-            loaded = CHESS.load(os.path.join(d, 'dump'), self.data)
+            loaded = Manifold.load(os.path.join(d, 'dump'), self.data)
         self.assertSetEqual(set(chess.root.dict().keys()), set(loaded.root.dict().keys()))
         for co, cl in zip(chess.root.inorder(), loaded.root.inorder()):
             self.assertSetEqual(set(co.points), set(cl.points))
@@ -181,7 +181,7 @@ class TestCHESS(unittest.TestCase):
     # noinspection DuplicatedCode
     def _create_ring_data(self):
         data, labels = ring()
-        self.chess = CHESS(
+        self.chess = Manifold(
             data=self.data,
             metric='euclidean',
             max_depth=20,
@@ -211,7 +211,7 @@ class TestCHESS(unittest.TestCase):
 
     def test_connected_clusters(self):
         data = np.random.randn(100, 100)
-        chess = CHESS(np.concatenate([data - 100, data + 100]), 'euclidean')
+        chess = Manifold(np.concatenate([data - 100, data + 100]), 'euclidean')
         chess.build()
         results = chess.connected_clusters(0)
         self.assertEqual(len(results), 1)

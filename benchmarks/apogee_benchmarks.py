@@ -3,10 +3,10 @@ from time import time
 
 import numpy as np
 
-from chess import CHESS
+from chess import Manifold
 
 
-def benchmark_clustering(chess_object: CHESS, timing_file: str, staring_depth: int, ending_depth: int) -> CHESS:
+def benchmark_clustering(chess_object: Manifold, timing_file: str, staring_depth: int, ending_depth: int) -> Manifold:
     for depth in range(staring_depth, ending_depth + 1):
         start = time()
         chess_object.deepen(levels=1)
@@ -45,7 +45,7 @@ if __name__ == '__main__':
 
     for fraction in [1.]:  # , 0.4, 0.6, 0.8, 1.]:
         np.random.seed(42)
-        co = CHESS(
+        co = Manifold(
             data=data_memmap,
             metric='euclidean',
             max_depth=0,

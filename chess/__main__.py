@@ -4,7 +4,7 @@ Loads important variables into the environment,
 then presents a REPL.
 """
 
-from chess import CHESS, defaults
+from chess import Manifold, defaults
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
@@ -26,7 +26,7 @@ if __name__ == '__main__':
     """)
 
     data = np.memmap(args.dataset, dtype=args.dtype[0], mode='r', shape=tuple(args.shape))
-    chess = CHESS(
+    chess = Manifold(
         data,
         args.metric,
         max_depth=args.max_depth,

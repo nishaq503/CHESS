@@ -22,6 +22,7 @@ class Cluster:
 
     def __init__(
             self,
+            manifold,
             data: Union[np.memmap, np.ndarray],
             metric: str,
             points: List[int],

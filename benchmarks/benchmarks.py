@@ -4,7 +4,7 @@ import click as click
 import mlflow
 
 from benchmarks.datasets import load
-from chess import CHESS
+from chess import Manifold
 from chess.query import Query
 from chess.search import linear_search
 
@@ -20,7 +20,7 @@ def search(dataset, metric, radius):
 
     # Clustering Runtime.
     with mlflow.start_run(experiment_id="Clustering"):
-        chess = CHESS(data, metric)
+        chess = Manifold(data, metric)
     queries = dataset.get_queries()
 
     # Searching.
