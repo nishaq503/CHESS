@@ -2,7 +2,7 @@
 
 This class wraps the underlying Cluster structure with a convenient API.
 """
-import pickle
+import json
 from collections import Counter
 from functools import lru_cache
 from typing import Callable, List, Dict, Union, Set
@@ -24,11 +24,14 @@ class CHESS:
             self,
             data: Union[np.memmap, np.ndarray],
             metric: str,
+            *,
             max_depth: int = defaults.MAX_DEPTH,
             min_points: int = defaults.MIN_POINTS,
             min_radius: defaults.RADII_DTYPE = defaults.MIN_RADIUS,
             stopping_criteria: Callable[[any], bool] = None,
             labels: List = None,
+            fraction: float = 1.,
+            root: Cluster = None,
     ):
         self.data = data
         self.metric = metric
@@ -42,7 +45,9 @@ class CHESS:
         frequencies = dict(Counter(self.labels))
         self.weights = {k: frequencies[k] / sum(frequencies.values()) for k in frequencies.keys()}
 
-        self.root = Cluster(self.data, self.metric)
+        self.fraction: float = fraction
+        points = list(np.random.choice(a=self.data.shape[0], size=(int(self.fraction * self.data.shape[0]), ), replace=False))
+        self.root = root if root is not None else Cluster(data=self.data, metric=self.metric, points=points, name='')
 
     def __str__(self):
         """
@@ -168,18 +173,38 @@ class CHESS:
         return
 
     def write(self, filename: str):
-        """ Writes the CHESS object to the given filename.
-        """
-        with open(filename, 'wb') as f:
-            pickle.dump(self, f)
+        """ Writes the CHESS object to the given filename. """
+        with open(filename, 'w') as f:
+            json.dump(
+                {
+                    'metric': self.metric,
+                    'max_depth': self.max_depth,
+                    'min_points': self.min_points,
+                    'min_radius': self.min_radius,
+                    'labels': self.labels,
+                    'root': self.root.json(),
+                },
+                f,
+                indent=4,
+            )
         return
 
     @staticmethod
-    def load(filename: str):
-        """ Loads the CHESS object from the given file.
-        """
-        with open(filename, 'rb') as f:
-            return pickle.load(f)
+    def load(filename: str, data: Union[np.memmap, np.ndarray]):
+        """ Loads the CHESS object from the given file. """
+        with open(filename, 'r') as f:
+            d = json.load(f)
+        co = CHESS(
+            data=data,
+            metric=d['metric'],
+            max_depth=d['max_depth'],
+            min_points=d['min_points'],
+            min_radius=d['min_radius'],
+            labels=d['labels'],
+            root=Cluster.from_json(d['root'], data),
+        )
+        co.root.points = co.root.reconstitute_points()
+        return co
 
     def label_cluster_tree(self):
         """ Classifies each cluster in the cluster tree. """
