@@ -1,13 +1,19 @@
+from collections import deque
+from functools import lru_cache
 from typing import Set, Dict, TextIO, Iterable
 
-from scipy.spatial.distance import pdist
+from scipy.spatial.distance import pdist, squareform, cdist
 
 from chess.types import *
 
 SUBSAMPLE_LIMIT = 10
+BATCH_SIZE = 10
 
 
 class Cluster:
+    # TODO: argpoints -> indices?
+    # TODO: Siblings? Maybe a boolean like sibling(other) -> bool?
+
     def __init__(self, manifold: 'Manifold', argpoints: Vector, name: str, **kwargs):
         if len(argpoints) == 0:
             raise ValueError("Clusters need argpoints.")
@@ -41,9 +47,26 @@ class Cluster:
     def __len__(self):
         return len(self.argpoints)
 
+    def __iter__(self) -> Vector:
+        for i in range(0, len(self), BATCH_SIZE):
+            yield self.argpoints[i:i + BATCH_SIZE]
+
+    def __getitem__(self, item: int) -> Data:
+        return self.data[self.argpoints][item]
+
+    def __contains__(self, point: Data) -> bool:
+        return cdist(
+            np.expand_dims(self.center, 0),
+            np.expand_dims(point, 0),
+            self.metric)[0][0] <= self.radius
+
     @property
     def metric(self):
         return self.manifold.metric
+
+    @property
+    def depth(self):
+        return len(self.name)
 
     @property
     def data(self):
@@ -83,23 +106,33 @@ class Cluster:
         return len(self.argsamples)
 
     @property
-    def argcenter(self):
-        pass
+    def center(self):
+        return self.data[self.argcenter]
 
     @property
-    def center(self):
-        pass
+    def argcenter(self):
+        if '_argcenter' not in self.__dict__:
+            self.__dict__['_argcenter'] = self.argsamples[int(np.argmin(squareform(pdist(self.samples)).sum(axis=1)))]
+        return self.__dict__['_argcenter']
 
     @property
     def radius(self):
-        pass
+        if '_radius' not in self.__dict__:
+            self.__dict__['_radius'] = np.max(cdist(np.expand_dims(self.center, 0), self.points, self.metric))
+        return self.__dict__['_radius']
 
     @property
     def local_fractal_dimension(self):
-        pass
+        if self.nsamples == 1:
+            return Radius(0.0)
+        count = [d <= (self.radius() / 2)
+                 for batch in self
+                 for d in cdist(np.expand_dims(self.center, 0), self.data[batch], self.metric)[0]]
+        count = np.sum(count)
+        return count if count == 0.0 else np.log2(len(self.points) / count)
 
     def clear_cache(self):
-        for prop in ['_argsamples']:
+        for prop in ['_argsamples', '_argcenter', '_radius']:
             try:
                 del self.__dict__[prop]
             except KeyError:
@@ -111,17 +144,60 @@ class Cluster:
 
     def prune(self) -> None:
         """ Removes children. """
-        pass
+        # TODO: Notify neighbors
+        if not self.children:
+            return
+        [c.prune() for c in self.children]
 
     def partition(self, *criterion) -> Iterable['Cluster']:
-        pass
+        if not all((
+                len(self.points) > 1,
+                len(self.samples) > 1,
+                *(c(self) for c in criterion)
+        )):
+            return {Cluster(self.manifold, self.argpoints, self.name + '0')}
 
-    def update_neighbors(self) -> Set['Cluster']:
+        distances = squareform(pdist(self.samples, self.metric))
+
+        max_pair = np.argmax(np.triu(distances, k=1))
+        max_col, max_row = max_pair // len(distances), max_pair % distances
+        pole1 = np.expand_dims(self.samples[max_col], 0)
+        pole2 = np.expand_dims(self.samples[max_row], 0)
+
+        if np.array_equal(pole1, pole2):
+            raise RuntimeError(f'Poles are equal when trying to partition {self.name}')
+
+        pole1_indices, pole2_indices = [], []
+        for indices in self:
+            pole1_dist = cdist(pole1, self.manifold.data[indices], self.metric)[0]
+            pole2_dist = cdist(pole2, self.manifold.data[indices], self.metric)[0]
+            [(pole1_indices if p1 < p2 else pole2_indices).append(i) for i, p1, p2 in zip(indices, pole1_dist, pole2_dist)]
+
+        self.children = {
+            # TODO: Should this be 1 and 2?
+            Cluster(self.manifold, pole1_indices, self.name + '0'),
+            Cluster(self.manifold, pole2_indices, self.name + '1'),
+        }
+        [c.update_neighbors() for c in self.children]
+        return self.children
+
+    def update_neighbors(self) -> Dict['Cluster', Radius]:
         """ Find neighbors, update them, return the set. """
-        pass
+        # TODO: Find clusters to take depth?
+        self.neighbors = {v: self.distance(v) for v in self.manifold.find_clusters(self.center, self.radius)}
+        for neighbor, distance in self.neighbors.items():
+            neighbor.neighbors[self] = distance
+        return self.neighbors
 
-    def overlaps(self, other: 'Cluster') -> bool:
-        pass
+    def distance(self, other: 'Cluster') -> Radius:
+        return cdist(np.expand_dims(self.center, 0), np.expand_dims(other.center, 0), self.metric)[0]
+
+    def overlaps(self, point: Data, radius: Radius) -> bool:
+        return cdist(
+            np.expand_dims(self.center, 0),
+            np.expand_dims(point, 0),
+            self.metric
+        ) <= (self.radius + radius)
 
     def dump(self, fp) -> None:
         pass
@@ -152,20 +228,44 @@ class Graph:
     def __repr__(self):
         return ';'.join([repr(c) for c in self.clusters])
 
+    def __getitem__(self, cluster: 'Cluster') -> 'Cluster':
+        # TODO: Get multiple? Graph[c1, c2, c3]? I'd be like np
+        return next(iter(self.clusters.intersection(set(cluster))))
+
+    def __contains__(self, cluster: 'Cluster') -> bool:
+        return cluster in self.clusters
+
+    def edges(self) -> Set[Set['Cluster']]:
+        return set({c, n} for c in self.clusters for n in c.neighbors.keys())
+
     def subgraphs(self) -> List['Graph']:
-        pass
+        return [Graph(*component) for component in self.components()]
 
-    def components(self) -> Set[Set['Cluster']]:
-        pass
+    def components(self) -> Iterable[Set['Cluster']]:
+        unvisited = set(self.clusters)
+        while unvisited:
+            component = self.dft(unvisited.pop())
+            unvisited -= component
+            yield component
 
+    @lru_cache
     def component(self, cluster: 'Cluster') -> Set['Cluster']:
-        pass
+        return next(filter(lambda component: cluster in component, self.components()))
 
     def bft(self):
+        # TODO
+        queue = deque()
         pass
 
-    def dft(self):
-        pass
+    def dft(self, start: 'Cluster'):
+        visited = set()
+        stack = [start]
+        while stack:
+            c = stack.pop()
+            if c not in visited:
+                visited.add(c)
+                stack.extend(c.neighbors.keys())
+        return visited
 
 
 class Manifold:
@@ -214,9 +314,18 @@ class Manifold:
         pass
 
     def build(self, *criterion) -> 'Manifold':
+        # TODO: This shouldn't rely on graphs[0] being a root element.
+        self.graphs = self.graphs[0]
+        self.deepen(*criterion)
         return self
 
     def deepen(self, *criterion) -> 'Manifold':
+        while True:
+            g = Graph(*[c for C in self.graphs[-1] for c in C.partition(*criterion)])
+            if g and g != self.graphs[-1]:
+                self.graphs.append(g)
+            else:
+                break
         return self
 
     def select(self, name: str) -> Cluster:
