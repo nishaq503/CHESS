@@ -1,215 +1,230 @@
-""" CHESS API
+from typing import Set, Dict, TextIO, Iterable
 
-This class wraps the underlying Cluster structure with a convenient API.
-"""
-import json
-from collections import Counter
-from functools import lru_cache
-from typing import Callable, List, Dict, Union, Set
+from scipy.spatial.distance import pdist
 
-import numpy as np
+from chess.types import *
 
-from chess import defaults
-from .cluster import Cluster
-from .graph import graph, subgraphs, connected_clusters
-from .query import Query
-from .search import search
+SUBSAMPLE_LIMIT = 10
+
+
+class Cluster:
+    def __init__(self, manifold: 'Manifold', argpoints: Vector, name: str, **kwargs):
+        if len(argpoints) == 0:
+            raise ValueError("Clusters need argpoints.")
+
+        self.manifold: 'Manifold' = manifold
+        self.argpoints: Vector = argpoints
+        self.name: str = name
+
+        self.neighbors: Dict['Cluster', float] = dict()
+        self.children: Set['Cluster'] = set()
+
+        self.__dict__.update(**kwargs)
+        return
+
+    def __eq__(self, other: 'Cluster') -> bool:
+        return all((
+            self.name == other.name,
+            set(self.argpoints) == set(other.argpoints),
+        ))
+
+    def __hash__(self):
+        # TODO: Investigate int base k conversions.
+        return hash(self.name)
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return ';'.join([self.name, ','.join(map(str, self.argpoints))])
+
+    def __len__(self):
+        return len(self.argpoints)
+
+    @property
+    def metric(self):
+        return self.manifold.metric
+
+    @property
+    def data(self):
+        return self.manifold.data
+
+    @property
+    def points(self):
+        return self.data[self.argpoints]
+
+    @property
+    def samples(self):
+        return self.data[self.argsamples]
+
+    @property
+    def argsamples(self):
+        if '_argsamples' not in self.__dict__:
+            if len(self) <= SUBSAMPLE_LIMIT:
+                n = len(self.argpoints)
+                indices = self.argpoints
+            else:
+                n = int(np.sqrt(len(self)))
+                indices = np.random.choice(self.argpoints, n, replace=False)
+
+            # Handle Duplicates.
+            if pdist(self.data[indices], self.metric).max(initial=0.) == 0.:
+                indices = np.unique(self.data[self.argpoints], return_index=True, axis=0)[1]
+                if len(indices) > n:
+                    indices = np.random.choice(indices, n, replace=False)
+                indices = self.argpoints[indices]
+
+            # Cache it.
+            self.__dict__['_argsamples'] = indices
+        return self.__dict__['_argsamples']
+
+    @property
+    def nsamples(self):
+        return len(self.argsamples)
+
+    @property
+    def argcenter(self):
+        pass
+
+    @property
+    def center(self):
+        pass
+
+    @property
+    def radius(self):
+        pass
+
+    @property
+    def local_fractal_dimension(self):
+        pass
+
+    def clear_cache(self):
+        for prop in ['_argsamples']:
+            try:
+                del self.__dict__[prop]
+            except KeyError:
+                pass
+
+    def tree_search(self, point: Data, radius: Radius) -> Set['Cluster']:
+        """ Searches down the tree. """
+        pass
+
+    def prune(self) -> None:
+        """ Removes children. """
+        pass
+
+    def partition(self, *criterion) -> Iterable['Cluster']:
+        pass
+
+    def update_neighbors(self) -> Set['Cluster']:
+        """ Find neighbors, update them, return the set. """
+        pass
+
+    def overlaps(self, other: 'Cluster') -> bool:
+        pass
+
+    def dump(self, fp) -> None:
+        pass
+
+    @staticmethod
+    def load(fp):
+        pass
+
+
+class Graph:
+    def __init__(self, *clusters):
+        self.clusters = set(clusters)
+        assert all()
+        return
+
+    def __eq__(self, other: 'Graph') -> bool:
+        return self.clusters == other.clusters
+
+    def __iter__(self):
+        yield from self.clusters
+
+    def __len__(self):
+        return len(self.clusters)
+
+    def __str__(self):
+        return ';'.join([str(c) for c in self.clusters])
+
+    def __repr__(self):
+        return ';'.join([repr(c) for c in self.clusters])
+
+    def subgraphs(self) -> List['Graph']:
+        pass
+
+    def components(self) -> Set[Set['Cluster']]:
+        pass
+
+    def component(self, cluster: 'Cluster') -> Set['Cluster']:
+        pass
+
+    def bft(self):
+        pass
+
+    def dft(self):
+        pass
 
 
 class Manifold:
-    """ Clustered Hierarchical Entropy-Scaling Search Object.
-    """
+    # TODO: len(manifold)?
 
-    def __init__(
-            self,
-            data: Union[np.memmap, np.ndarray],
-            metric: str,
-            *,
-            max_depth: int = defaults.MAX_DEPTH,
-            min_points: int = defaults.MIN_POINTS,
-            min_radius: defaults.RADII_DTYPE = defaults.MIN_RADIUS,
-            stopping_criteria: Callable[[any], bool] = None,
-            labels: List = None,
-            fraction: float = 1.,
-            root: Cluster = None,
-    ):
-        self.data = data
-        self.metric = metric
-        self.max_depth = max_depth
-        self.min_points = min_points
-        self.min_radius = min_radius
-        self.stopping_criteria = stopping_criteria
+    def __init__(self, data: Data, metric: str, argpoints: Union[Vector, float] = None, **kwargs):
+        self.data: Data = data
+        self.metric: str = metric
 
-        # Classification data
-        self.labels = labels
-        frequencies = dict(Counter(self.labels))
-        self.weights = {k: frequencies[k] / sum(frequencies.values()) for k in frequencies.keys()}
+        if argpoints is None:
+            self.argpoints = list(range(len(self.data)))
+        elif type(argpoints) is list:
+            self.argpoints = list(map(int, argpoints))
+        elif type(argpoints) is float:
+            self.argpoints = list(np.random.choice(len(data), int(len(data) * argpoints), replace=False))
+        else:
+            raise ValueError(f"Invalid argument to argpoints. {argpoints}")
 
-        self.fraction: float = fraction
-        points = list(np.random.choice(a=self.data.shape[0], size=(int(self.fraction * self.data.shape[0]), ), replace=False))
-        self.root = root if root is not None else Cluster(data=self.data, metric=self.metric, points=points, name='')
+        self.graphs: List['Graph'] = [Graph(Cluster(self, self.argpoints, ''))]
+
+        self.__dict__.update(**kwargs)
+        return
+
+    def __eq__(self, other: 'Manifold') -> bool:
+        return all((
+            self.metric == other.metric,
+            self.graphs[-1] == other.graphs[-1],
+        ))
+
+    def __getitem__(self, item):
+        return self.graphs[item]
+
+    def __iter__(self):
+        yield from self.graphs
 
     def __str__(self):
-        """
-        :return: CSV-style string with two columns, name and an array of points, one row per leaf cluster.
-        """
-        return '\n'.join([
-            'name, points',
-            *[str(c) for c in self.root.leaves()]
-        ])
+        return ';'.join([self.metric, str(self.graphs[-1])])
 
     def __repr__(self):
-        """
-        :return: CSV-style string with more attributes, one row per cluster, generated inorder.
-        """
-        return '\n'.join([
-            '\t'.join(['name', 'radius', 'argcenter', 'points']),
-            *[repr(c) for c in self.root.inorder()]
-        ])
+        return ';'.join([self.metric, repr(self.graphs[-1])])
 
-    def __eq__(self, other):
-        return self.metric == other.metric and self.root == other.root
+    def find_points(self, point: Data, radius: Radius) -> Vector:
+        pass
 
-    def __hash__(self):
-        return hash(repr(self))
+    def find_clusters(self, point: Data, radius: Radius) -> Set['Cluster']:
+        pass
 
-    def build(self, stopping_criteria: Callable[[any], bool] = None):
-        """ Clusters points recursively until stopping_criteria returns True.
+    def build(self, *criterion) -> 'Manifold':
+        return self
 
-        :param stopping_criteria: callable function that takes a cluster and has additional user-defined stopping criteria.
-        """
-        self.root.make_tree(
-            max_depth=self.max_depth,
-            min_points=self.min_points,
-            min_radius=self.min_radius,
-            stopping_criteria=stopping_criteria or self.stopping_criteria
-        )
-        return
+    def deepen(self, *criterion) -> 'Manifold':
+        return self
 
-    def deepen(self, levels: int = 1):
-        """ Adds upto num_levels of depth to cluster-tree. """
-        max_depth = max(l.depth for l in self.root.leaves()) + levels
-        [l.make_tree(
-            max_depth=max_depth,
-            min_points=self.min_points,
-            min_radius=self.min_radius,
-            stopping_criteria=self.stopping_criteria)
-            for l in self.root.leaves()]
-        return
+    def select(self, name: str) -> Cluster:
+        pass
 
-    def search(self, query: np.ndarray, radius: defaults.RADII_DTYPE):
-        """ Searches the clusters for all points within radius of query.
-        """
-        return search(self.root, Query(point=query, radius=radius))
-
-    def select(self, cluster_name: str) -> Union[Cluster, None]:
-        """ Returns the cluster with the given name.
-
-        This function steps down the tree from the root node,
-        until it either finds the requested node or runs out
-        of nodes to check. At which point it returns either
-        the node in the former case or None in the latter.
-
-        :param cluster_name: the name of the requested cluster.
-        :returns either a Cluster if it is found or None.
-        """
-        cluster_name = list(reversed(cluster_name))
-        c = self.root
-        while c and cluster_name:
-            # Go either left or right.
-            if cluster_name[-1] == '0':
-                c = c.left
-            elif cluster_name[-1] == '1':
-                c = c.right
-            else:
-                raise ValueError(f'Invalid character in cluster name: {cluster_name[-1]}')
-
-            # Then, advance to the next direction.
-            cluster_name.pop()
-        return c
-
-    @lru_cache()
-    def graph(self, depth: int = None) -> Dict[Cluster, Set[Cluster]]:
-        """ Returns the graph representation of all leaf clusters at depth.
-
-        :param depth: max-depth of the leaf-clusters in the graph.
-        :return: dict of {cluster: neighbors} representing a graph.
-        """
-        return graph(list(self.root.leaves(depth)))
-
-    @lru_cache()
-    def subgraphs(self, depth: int = None) -> List[Dict[Cluster, Set[Cluster]]]:
-        """ Returns the connected subgraphs of the given graph. """
-        return subgraphs(self.graph(depth))
-
-    @lru_cache()
-    def subgraph(self, cluster: Cluster) -> Dict[Cluster, Set[Cluster]]:
-        """ Returns the sub-graph to which a given cluster belongs. """
-        depth: int = len(cluster.name)
-        cc: List[Dict[Cluster, Set[Cluster]]] = self.subgraphs(depth)
-        return next(filter(lambda c: cluster in set(c.keys()), cc))
-
-    def connected_clusters(self, depth: int = None):
-        """ Returns a list of sets of clusters, where each set contains all clusters from a component.
-        """
-        g = self.graph(depth)
-        return connected_clusters(g)
-
-    def compress(self, filename: str):
-        """ Compresses the clusters.
-        """
-        mm = np.memmap(
-            filename,
-            dtype=self.root.data.dtype,
-            mode='w+',
-            shape=self.root.data.shape,
-        )
-        i = 0
-        for cluster in self.root.leaves():
-            points = cluster.compress()
-            mm[i:i + len(points)] = points[:]
-            i += len(points)
-        mm.flush()
-        return
-
-    def write(self, filename: str):
-        """ Writes the CHESS object to the given filename. """
-        with open(filename, 'w') as f:
-            json.dump(
-                {
-                    'metric': self.metric,
-                    'max_depth': self.max_depth,
-                    'min_points': self.min_points,
-                    'min_radius': self.min_radius,
-                    'labels': self.labels,
-                    'root': self.root.json(),
-                },
-                f,
-                indent=4,
-            )
-        return
+    def dump(self, fp: TextIO) -> None:
+        pass
 
     @staticmethod
-    def load(filename: str, data: Union[np.memmap, np.ndarray]):
-        """ Loads the CHESS object from the given file. """
-        with open(filename, 'r') as f:
-            d = json.load(f)
-        co = Manifold(
-            data=data,
-            metric=d['metric'],
-            max_depth=d['max_depth'],
-            min_points=d['min_points'],
-            min_radius=d['min_radius'],
-            labels=d['labels'],
-            root=Cluster.from_json(d['root'], data),
-        )
-        co.root.points = co.root.reconstitute_points()
-        return co
-
-    def label_cluster_tree(self):
-        """ Classifies each cluster in the cluster tree. """
-        return {c: c.class_distribution(data_labels=self.labels, data_weights=self.weights) for c in self.root.inorder()}
-
-    def label_cluster(self, cluster: Cluster) -> Dict:
-        """ Returns the probability of the cluster having each label. """
-        return cluster.class_distribution(data_labels=self.labels, data_weights=self.weights)
+    def load(fp: TextIO, data: Data) -> 'Manifold':
+        return Manifold()
