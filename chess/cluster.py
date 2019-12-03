@@ -90,8 +90,7 @@ class Cluster:
 
     def __contains__(self, query: Query):
         """ Determines whether or not a query falls into the cluster. """
-        center = np.expand_dims(self.center(), 0)
-        distance = calculate_distances(center, [query.point], self.metric)[0, 0]
+        distance = calculate_distances([self.center()], [query.point], self.metric)[0, 0]
         return distance <= (self.radius() + query.radius)
 
     def __str__(self):

@@ -12,6 +12,29 @@ import numpy as np
 from chess import defaults
 from chess.cluster import Cluster
 from chess.distance import calculate_distances
+from chess.query import Query
+
+
+def chess_graph(chess_object, depth: int) -> Dict[Cluster, Set[Cluster]]:
+    """
+    Builds and returns a graph from the given list of clusters.
+    Uses the CHESS-tree to gain an algorithmic improvement over naive construction.
+    """
+    return {c: set(tree_search(chess_object.root, Query(point=c.center(), radius=c.radius()), depth)) - {c}
+            for c in chess_object.root.leaves(depth)}
+
+
+def tree_search(cluster: Cluster, query: Query, depth) -> List[Cluster]:
+    results = []
+    if cluster.depth < depth:
+        if cluster.left or cluster.right:
+            results.extend(tree_search(cluster.left, query, depth))
+            results.extend(tree_search(cluster.right, query, depth))
+        elif query in cluster:
+            results.append(cluster)
+    elif query in cluster:
+        results.append(cluster)
+    return results
 
 
 def graph(clusters: List[Cluster]) -> Dict[Cluster, Set[Cluster]]:
@@ -22,8 +45,9 @@ def graph(clusters: List[Cluster]) -> Dict[Cluster, Set[Cluster]]:
     radii = np.asarray([l.radius() for l in clusters], dtype=defaults.RADII_DTYPE)
     radii_matrix = (np.zeros_like(distances, dtype=defaults.RADII_DTYPE) + radii).T + radii
     np.fill_diagonal(radii_matrix, 0)
-    left, right = tuple(map(list, np.where((distances - radii_matrix) < 0)))
-    [g[clusters[l]].add(clusters[r]) for l, r in zip(left, right)]
+    left, right = tuple(map(list, np.where(distances - radii_matrix <= 0)))
+    [(g[clusters[l]].add(clusters[r]), )  # g[clusters[r]].add(clusters[l])
+     for l, r in zip(left, right) if clusters[l].name != clusters[r].name]
     return g
 
 
