@@ -78,7 +78,7 @@ class Cluster:
     def __iter__(self):
         """ Iterates over points within the cluster. """
         for i in range(0, len(self.points), defaults.BATCH_SIZE):
-            yield self.data[self.points[i:i + defaults.BATCH_SIZE]]
+            yield self.data[self.points[i:min(i + defaults.BATCH_SIZE, len(self.points))]]
 
     def __len__(self) -> int:
         """ Returns the number of points within the cluster. """
