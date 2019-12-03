@@ -72,7 +72,7 @@ class Cluster:
                 indices = np.unique(self.data[self.argpoints], return_index=True, axis=0)[1]
                 if len(indices) > n:
                     indices = np.random.choice(indices, n, replace=False)
-                indices = self.argpoints[indices]
+                indices = [self.argpoints[i] for i in indices]
 
             # Cache it.
             self.__dict__['_argsamples'] = indices
@@ -134,7 +134,7 @@ class Cluster:
 class Graph:
     def __init__(self, *clusters):
         self.clusters = set(clusters)
-        assert all()
+        # assert all()
         return
 
     def __eq__(self, other: 'Graph') -> bool:
