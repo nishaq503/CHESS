@@ -4,9 +4,11 @@ This is the underlying structure for CHESS.
 """
 import json
 from collections import Counter
+from functools import lru_cache
 from typing import List, Tuple, Dict, Union
 
 import numpy as np
+from scipy.spatial.distance import pdist, squareform, cdist
 
 from chess import defaults
 from chess.distance import calculate_distances
@@ -23,16 +25,9 @@ class Cluster:
     def __init__(
             self,
             manifold,
-            data: Union[np.memmap, np.ndarray],
-            metric: str,
             points: List[int],
-            name: str,
-            *,
-            argcenter: int = None,
-            radius: defaults.RADII_DTYPE = None,
-            left=None,
-            right=None,
-            reading=False,
+            name: str = '',
+            **kwargs,
     ):
         """
         Initializes cluster object.
@@ -45,33 +40,20 @@ class Cluster:
         :param radius: radius of cluster i.e. the maximum distance from any point in the cluster to the cluster center.
         """
         # Required from constructor, either from user or as defaults.
-        self.data: np.memmap = data
-        self.metric: str = metric
+        self.manifold = manifold
         self.points: List[int] = points
         self.name: str = name
-        self.depth: int = len(name)
-        self._radius: defaults.RADII_DTYPE = radius
+
+        self.neighbors: Dict['Cluster', float] = kwargs['neighbors'] if 'neighbors' in kwargs else self.find_neighbors()
 
         # Children.
-        self.left = left
-        self.right = right
+        self.children = set()
 
         # Classification
         self.classification: Dict = {}
 
-        if reading:
-            self.argcenter = argcenter
-        else:
-            # Provided or computed values. (cached)
-            self.subsample: bool = len(self.points) > defaults.SUBSAMPLING_LIMIT
-            self.samples, self.distances = self._samples()
-            self.argcenter = argcenter or self._argcenter()
-            self._all_same: bool = np.max(self.distances) == defaults.RADII_DTYPE(0.0)
-
-            # Invariants after construction.
-            assert len(self.points) > 0, f"Empty point indices in {self.name}"
-            assert len(self.points) == len(set(self.points)), f"Duplicate point indices in cluster {self.name}:\n{self.points}"
-            assert self.argcenter is not None
+        self.__dict__.update(**kwargs)
+        return
 
     def __hash__(self):
         return hash(self.name)
@@ -111,40 +93,57 @@ class Cluster:
                     self.points == other.points,
                     np.array_equal(self.data[self.points], other.data[self.points])))
 
+    @property
+    def metric(self):
+        return self.manifold.metric
+
+    @property
+    def data(self):
+        return self.manifold.data[self.points]
+
+    @property
+    def center(self):
+        """ Returns the center point from self.data. """
+        return self.manifold.data[self.argcenter]
+
+    @property
+    def argcenter(self):
+        """ Returns the index of the centroid of the cluster."""
+        return int(self.argsamples[int(np.argmin(squareform(pdist(self.samples)).sum(axis=1)))])
+
+    @property
+    def samples(self) -> Tuple[List[int], np.ndarray]:
+        return self.manifold.data[self.argsamples]
+
+    @property
+    def argsamples(self) -> List[int]:
+        if len(self.points) < defaults.SUBSAMPLING_LIMIT:
+            indices = self.points
+        else:
+            indices = np.random.choice(self.points, self.nsamples, replace=False)
+
+        # PyCharm thinks initial is required...
+        if pdist(self.manifold.data[indices], self.metric).max(initial=0.0) <= 0.0001:
+            indices = np.unique(self.data, return_index=True, axis=0)[1]
+            if len(indices) > self.nsamples:
+                indices = np.random.choice(indices, self.nsamples, replace=False)
+
+        return indices
+
+    @property
+    def nsamples(self):
+        return len(self) if len(self) < defaults.SUBSAMPLING_LIMIT else int(np.sqrt(len(self)))
+
+    @property
+    def depth(self):
+        return len(self.name)
+
     def dict(self) -> Dict:
         d: Dict[str: Cluster]
         d = {c.name: c for c in self.inorder()}
         return d
 
-    def _samples(self) -> Tuple[List[int], np.ndarray]:
-        """ Returns the possible centroids and their pairwise distances.
-
-        It ensures that the possible centroids selected cannot all be the same point.
-
-        # TODO: Compare the overhead of calling unique, should we just do that every time?
-        """
-        n = int(np.sqrt(len(self.points))) if self.subsample else len(self.points)
-        # First, just try to grab n points.
-        points = np.random.choice(list(self.points), n, replace=False)
-        distances = calculate_distances(self.data[points], self.data[points], self.metric)
-
-        if np.max(distances) == defaults.RADII_DTYPE(0.0):
-            # If all sampled points were duplicates, we grab non-duplicate centroids.
-            unique = np.unique(self.data[self.points], return_index=True, axis=0)[1]
-            points = np.random.choice(unique, n, replace=False) if len(unique) > n else unique
-            distances = calculate_distances(self.data[points], self.data[points], self.metric)
-            # TODO: Should there be any checks here, like max(distance)?
-
-        return points, distances
-
-    def _argcenter(self):
-        """ Returns the index of the centroid of the cluster."""
-        return self.samples[int(np.argmin(self.distances.sum(axis=1)))]
-
-    def center(self):
-        """ Returns the center point from self.data. """
-        return self.data[self.argcenter]
-
+    @lru_cache
     def radius(self) -> defaults.RADII_DTYPE:
         """ Calculates the radius of the cluster.
 
@@ -152,14 +151,7 @@ class Cluster:
 
         :return: radius of cluster.
         """
-        if not self._radius and not self._all_same:
-            assert self.argcenter is not None
-            center = np.expand_dims(self.center(), 0)
-            radii = [np.max(calculate_distances(center, b, self.metric)) for b in self]
-            self._radius = np.max(radii)
-            self._radius = defaults.RADII_DTYPE(self._radius)
-
-        return self._radius or defaults.RADII_DTYPE(0.0)
+        return np.max(cdist(np.expand_dims(self.center, 0), self.data, self.manifold.metric))
 
     def local_fractal_dimension(self) -> defaults.RADII_DTYPE:
         """ Calculates the local fractal dimension of the cluster.
@@ -169,7 +161,7 @@ class Cluster:
         """
         center = np.expand_dims(self.center(), 0)
 
-        if self._all_same:
+        if self.nsamples == 1:
             return defaults.RADII_DTYPE(0.0)  # TODO: cover
         count = [d <= (self.radius() / 2)
                  for batch in self
@@ -189,7 +181,7 @@ class Cluster:
         ))
         return flag
 
-    def partition(self):
+    def partition(self, *criterion):
         """ Partition this cluster into left and right children.
 
         Steps:
@@ -199,6 +191,12 @@ class Cluster:
             * Partition the points in this cluster by the pole that the points are closer to.
             * Assign the partitioned points to the left and right child clusters appropriately.
         """
+        if not all((
+                len(self.points) > 1,
+                len(self.samples) > 1,
+                *(c(self) for c in criterion),
+        )):
+            return
         max_pair_index = np.argmax(np.triu(self.distances, k=1))
         max_col = max_pair_index // len(self.distances)
         max_row = max_pair_index % len(self.distances)
@@ -227,19 +225,19 @@ class Cluster:
         assert len(left_indices) > 0, f'Empty left cluster after partitioning {self.name}'
         assert len(right_indices) > 0, f'Empty right cluster after partitioning {self.name}'
 
-        self.left = Cluster(
-            data=self.data,
-            metric=self.metric,
-            points=left_indices,
-            name=f'{self.name}0',
-        )
+        self.children = {
+            Cluster(
+                self.manifold,
+                points=left_indices,
+                name=f'{self.name}0',
+            ),
+            Cluster(
+                self.manifold,
+                points=right_indices,
+                name=f'{self.name}1',
+            )
+        }
 
-        self.right = Cluster(
-            data=self.data,
-            metric=self.metric,
-            points=right_indices,
-            name=f'{self.name}1',
-        )
         return
 
     def make_tree(self, *, max_depth, min_points, min_radius, stopping_criteria):
@@ -250,16 +248,14 @@ class Cluster:
             self.partition()
 
         kwargs = {k: v for k, v in locals().items() if k != 'self'}
-        if self.left:
-            self.left.make_tree(**kwargs)
-        if self.right:
-            self.right.make_tree(**kwargs)
+        for child in self.children:
+            child.make_tree(**kwargs)
         return
 
     def compress(self):
         """ Compresses a leaf cluster.
         """
-        assert not (self.left or self.right), f'Can only compress leaves! Tried to compress {self.name}.'
+        assert not self.children, f'Can only compress leaves! Tried to compress {self.name}.'
 
         step_size = 10 ** (defaults.H_MAGNITUDE / (-2.5))
         center = self.center()
@@ -290,21 +286,22 @@ class Cluster:
         return {
             'name': self.name,
             'metric': self.metric,
-            'points': [] if (self.left is not None or self.right is not None) else self.points,
+            'points': [] if self.children else self.points,
             'radius': self.radius(),
             'argcenter': int(self.argcenter),
-            'left': self.left._json() if self.left is not None else '',
-            'right': self.right._json() if self.right is not None else '',
+            'children': [c._json() for c in self.children]
         }
 
     def json(self, **kwargs):
         """ Returns the json dump of the cluster and it's children. """
+
         def convert(o):
             if isinstance(o, np.int64):
                 return int(o)
             if isinstance(o, defaults.RADII_DTYPE):
                 return float(o)
             return o
+
         return json.dumps(self._json(), default=convert, **kwargs)
 
     @staticmethod
