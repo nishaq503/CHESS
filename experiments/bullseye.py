@@ -6,24 +6,25 @@ from chess.manifold import *
 
 
 def plot_clusters(data, labels, manifold):
-    for g in manifold.graphs:
-        print(len(g.components))
+    for d, g in enumerate(manifold.graphs):
         circles = [plt.Circle(tuple(c.center), c.radius, fill=False) for c in g]
         ax = plt.gca()
         [ax.add_artist(circle) for circle in circles]
         ax.scatter(data[:, 0], data[:, 1], c=labels, s=0.1)
         plt.axis('off')
+        plt.title(f'depth {d}, num_components {len(g.components)}')
         plt.show()
     return
 
 
 def plot_components(data, manifold):
-    for g in manifold.graphs:
+    for d, g in enumerate(manifold.graphs):
         label_dict = {p: i for i, component in enumerate(g.components) for c in component for p in c.argpoints}
         labels = [label_dict[i] for i in range(data.shape[0])]
         ax = plt.gca()
         ax.scatter(data[:, 0], data[:, 1], c=labels, s=0.1)
         plt.axis('off')
+        plt.title(f'depth {d}, num_components {len(g.components)}')
         plt.show()
     return
 
