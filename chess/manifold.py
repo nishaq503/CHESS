@@ -16,7 +16,7 @@ class Cluster:
 
     def __init__(self, manifold: 'Manifold', argpoints: Vector, name: str, **kwargs):
         if len(argpoints) == 0:
-            raise ValueError("Clusters need argpoints.")
+            raise ValueError(f"Cluster {name} need argpoints.")
 
         self.manifold: 'Manifold' = manifold
         self.argpoints: Vector = argpoints
@@ -124,7 +124,7 @@ class Cluster:
             def argmax_max(b):
                 distances = self.distance(self.manifold.data[b])
                 argmax = np.argmax(distances)
-                return argmax, distances[argmax]
+                return b[argmax], distances[argmax]
 
             argradii_radii = [argmax_max(batch) for batch in self]
             self.__dict__['_argradius'], self.__dict__['_radius'] = max(argradii_radii, key=itemgetter(1))
@@ -163,7 +163,7 @@ class Cluster:
                     break
                 centers = np.asarray([c.center for c in children])
                 distances = cdist(np.expand_dims(point, 0), centers, self.metric)[0]
-                radii = [radius + c.radius for c in results]
+                radii = [radius + c.radius for c in children]
                 results = [c for c, d, r in zip(children, distances, radii) if d <= r]
                 if len(results) == 0:
                     break
@@ -183,14 +183,18 @@ class Cluster:
                 len(self.argsamples) > 1,
                 *(c(self) for c in criterion)
         )):
-            return {Cluster(self.manifold, self.argpoints, self.name + '0')}
+            self.children = {Cluster(self.manifold, self.argpoints, self.name + '0')}
+            return self.children
 
-        farthest = np.argmax(cdist(
+        farthest = self.argsamples[int(np.argmax(cdist(
             np.expand_dims(self.manifold.data[self.argradius], 0),
             self.samples,
             self.metric
-        )[0])
-        poles = np.concatenate([self.manifold.data[self.argradius], self.manifold.data[farthest]], axis=0)
+        )[0]))]
+        poles = np.stack([
+            self.manifold.data[self.argradius],
+            self.manifold.data[farthest]
+        ])
 
         p1_idx, p2_idx = list(), list()
         for batch in self:  # TODO: Comprehension? np.concatenate((batch, distances))
@@ -198,6 +202,7 @@ class Cluster:
             # noinspection PyTypeChecker
             [(p1_idx if p1 < p2 else p2_idx).append(i) for i, p1, p2 in zip(batch, distances[0], distances[1])]
 
+        assert True
         self.children = {
             Cluster(self.manifold, p1_idx, self.name + '1'),
             Cluster(self.manifold, p2_idx, self.name + '2'),
@@ -208,6 +213,8 @@ class Cluster:
     def update_neighbors(self) -> Dict['Cluster', Radius]:
         """ Find neighbors, update them, return the set. """
         neighbors = list(self.manifold.find_clusters(self.center, self.radius, self.depth))
+        if not neighbors:
+            return dict()
         distances = self.distance(np.asarray([n.center for n in neighbors]))
         self.neighbors = {n: d for n, d in zip(neighbors, distances)}
         [n.neighbors.update({n: d}) for n, d in self.neighbors.items()]
@@ -219,7 +226,7 @@ class Cluster:
 
     def overlaps(self, point: Data, radius: Radius) -> bool:
         """ Checks if point is within radius + self.radius of cluster. """
-        return self.distance(np.expand_dims(point, axis=0)) <= (self.radius + radius)
+        return self.distance(np.expand_dims(point, axis=0))[0] <= (self.radius + radius)
 
     def dump(self, fp) -> None:
         pass
@@ -359,7 +366,7 @@ class Manifold:
         return results
 
     def find_clusters(self, point: Data, radius: Radius, depth: int) -> Set['Cluster']:
-        return {r for g in self.graphs[0] for c in g for r in c.tree_search(point, radius, depth)}
+        return {r for c in self.graphs[0] for r in c.tree_search(point, radius, depth)}
 
     def build(self, *criterion) -> 'Manifold':
         self.graphs = [Graph(Cluster(self, self.argpoints, ''))]

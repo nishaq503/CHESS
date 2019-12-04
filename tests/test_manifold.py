@@ -3,6 +3,8 @@ import unittest
 from chess import criterion
 from chess.manifold import *
 
+np.random.seed(42)
+
 
 class TestManifoldFunctional(unittest.TestCase):
     def test_random(self):
@@ -11,11 +13,11 @@ class TestManifoldFunctional(unittest.TestCase):
         m = Manifold(data, 'euclidean')
         m.build()
         # With no constraints, clusters should be singletons.
-        self.assertEqual(len(m.find_clusters(data[0], 0.0, -1)), 1)
-        self.assertEqual(len(m.find_points(data[0], radius=0.0)), 1)
+        self.assertEqual(1, len(m.find_clusters(data[0], 0.0, -1)))
+        self.assertEqual(1, len(m.find_points(data[0], radius=0.0)))
 
         m.build(criterion.MinPoints(10))
-        c = m.find_clusters(data[0], 0.0, -1)[0]
+        c = next(iter(m.find_clusters(data[0], 0.0, -1)))
         self.assertEqual(len(m.find_points(c.center, c.radius)), 10)
         return
 
