@@ -146,7 +146,9 @@ class Cluster:
 
         Computed as distance from center to farthest point.
         """
-        if '_radius' not in self.__dict__:
+        if '_min_radius' in self.__dict__:
+            return self.__dict__['_min_radius']
+        elif '_radius' not in self.__dict__:
             _ = self.argradius
         return self.__dict__['_radius']
 

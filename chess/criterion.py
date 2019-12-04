@@ -45,7 +45,10 @@ class MinRadius:
         self.radius = radius
 
     def __call__(self, cluster: Cluster):
-        return cluster.radius > self.radius
+        if cluster.radius <= self.radius:
+            cluster.__dict__['_min_radius'] = self.radius
+            return False
+        return True
 
 
 class LeavesComponent:
