@@ -1,8 +1,7 @@
 import unittest
 
-import numpy as np
-
 from chess.criterion import *
+from chess.manifold import *
 
 
 class TestCriterion(unittest.TestCase):
