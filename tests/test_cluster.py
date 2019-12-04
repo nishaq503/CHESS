@@ -99,7 +99,7 @@ class TestCluster(unittest.TestCase):
         for depth, graph in enumerate(m.graphs):
             for cluster in graph:
                 linear = set([c for c in graph if c.overlaps(cluster.center, cluster.radius)])
-                tree = set(cluster.tree_search(cluster.center, cluster.radius, cluster.depth))
+                tree = set(next(iter(m.graphs[0])).tree_search(cluster.center, cluster.radius, cluster.depth))
                 print(depth, [c.name for c in (linear ^ tree)])
                 for d in range(depth, 0, -1):
                     parents = set([m.select(cluster.name[:-1]) for cluster in linear])

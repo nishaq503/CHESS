@@ -365,9 +365,9 @@ class Graph:
             c = queue.popleft()
             if c not in visited:
                 visited.add(c)
-                [queue.append(neighbor) for neighbor in c.neighbors.keys()]
-                # neighbors = c.manifold.find_clusters(c.center, c.radius, c.depth) - {c}
-                # [queue.append(neighbor) for neighbor in neighbors]
+                # [queue.append(neighbor) for neighbor in c.neighbors.keys()]
+                neighbors = c.manifold.find_clusters(c.center, c.radius, c.depth) - {c}
+                [queue.append(neighbor) for neighbor in neighbors]
         return visited
 
     @staticmethod
@@ -457,8 +457,8 @@ class Manifold:
             clusters = [child for cluster in self.graphs[-1] for child in cluster.partition(*criterion)]
             if len(self.graphs[-1]) < len(clusters):
                 g = Graph(*clusters)
-                [c.update_neighbors() for c in g]
                 self.graphs.append(g)
+                [c.update_neighbors() for c in g]
             else:
                 break
         return self
