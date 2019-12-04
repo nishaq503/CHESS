@@ -42,7 +42,6 @@ def main():
     data, labels = bullseye()
     manifold = Manifold(data, 'euclidean')
     manifold.build(criterion.MinRadius(MIN_RADIUS), criterion.MaxDepth(12), criterion.MinPoints(10))
-    print(len(manifold.graphs))
     # plot_clusters(data, labels, manifold)
     plot_components(data, manifold)
 

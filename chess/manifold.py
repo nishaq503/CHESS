@@ -335,7 +335,7 @@ class Graph:
             unvisited = set(self.clusters)
             self.__dict__['_components'] = list()
             while unvisited:
-                component = self.dft(unvisited.pop())
+                component = self.bft(unvisited.pop())
                 unvisited -= component
                 self.__dict__['_components'].append(component)
         return self.__dict__['_components']
@@ -361,7 +361,7 @@ class Graph:
             c = queue.popleft()
             if c not in visited:
                 visited.add(c)
-                queue.append(*c.neighbors.keys())
+                [queue.append(neighbor) for neighbor in c.neighbors.keys()]
         return visited
 
     @staticmethod
