@@ -82,9 +82,10 @@ class TestCluster(unittest.TestCase):
         for depth, graph in enumerate(manifold.graphs):
             for cluster in graph:
                 neighbors = manifold.find_clusters(cluster.center, cluster.radius, depth) - {cluster}
-                if (neighbors - set(cluster.neighbors.keys())) or (set(cluster.neighbors.keys()) - neighbors):
-                    print(depth, cluster.name, ':', [n.name for n in neighbors])
-                    print(depth, cluster.name, ':', [n.name for n in (neighbors - set(cluster.neighbors.keys()))])
-                    print(depth, cluster.name, ':', [n.name for n in (set(cluster.neighbors.keys()) - neighbors)])
+                if neighbors - set(cluster.neighbors.keys()):
+                    print(depth, cluster.name, 'truth:', [n.name for n in neighbors])
+                    print(depth, cluster.name, 'missing:', [n.name for n in (neighbors - set(cluster.neighbors.keys()))])
+                self.assertEqual(0, len(set(cluster.neighbors.keys()) - neighbors))
+                # self.assertEqual(0, len(set(neighbors - set(cluster.neighbors.keys()))))
                 # self.assertTrue(len(neighbors) >= len(set(cluster.neighbors.keys())))
                 self.assertSetEqual(neighbors, set(cluster.neighbors.keys()))
