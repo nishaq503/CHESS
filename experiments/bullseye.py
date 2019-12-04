@@ -1,7 +1,8 @@
+from matplotlib import pyplot as plt
+
 from chess import criterion
 from chess.datasets import *
 from chess.manifold import *
-from matplotlib import pyplot as plt
 
 
 def plot(data, labels, manifold):
@@ -20,9 +21,7 @@ def main():
     data, labels = bullseye()
     manifold = Manifold(data, 'euclidean')
     manifold.build(criterion.MinRadius(0.15), criterion.MaxDepth(20), criterion.MinPoints(10))
-    print(len(manifold.graphs))
     plot(data, labels, manifold)
-
     return
 
 
