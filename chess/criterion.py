@@ -1,4 +1,4 @@
-from chess.manifold import Cluster, Manifold
+from chess.manifold import Cluster as _Cluster, Manifold as _Manifold
 
 
 class MaxDepth:
@@ -8,7 +8,7 @@ class MaxDepth:
     def __init__(self, depth):
         self.depth = depth
 
-    def __call__(self, cluster: Cluster):
+    def __call__(self, cluster: _Cluster):
         return cluster.depth < self.depth
 
 
@@ -20,7 +20,7 @@ class AddLevels:
         self.depth = depth
         self.start = None
 
-    def __call__(self, cluster: Cluster):
+    def __call__(self, cluster: _Cluster):
         if self.start is None:
             self.start = cluster.depth
         return cluster.depth < (self.start + self.depth)
@@ -33,7 +33,7 @@ class MinPoints:
     def __init__(self, points):
         self.points = points
 
-    def __call__(self, cluster: Cluster):
+    def __call__(self, cluster: _Cluster):
         return len(cluster) > self.points
 
 
@@ -44,7 +44,7 @@ class MinRadius:
     def __init__(self, radius):
         self.radius = radius
 
-    def __call__(self, cluster: Cluster):
+    def __call__(self, cluster: _Cluster):
         if cluster.radius <= self.radius:
             cluster.__dict__['_min_radius'] = self.radius
             return False
@@ -55,11 +55,11 @@ class LeavesComponent:
     """ Allows clustering until the cluster has left the component of the parent.
     """
 
-    def __init__(self, manifold: Manifold):
+    def __init__(self, manifold: _Manifold):
         self.manifold = manifold
         return
 
-    def __call__(self, cluster: Cluster):
+    def __call__(self, cluster: _Cluster):
         parent_component = self.manifold.graphs[cluster.depth].component(cluster)
         return any((c.overlaps(cluster.center, cluster.radius) for c in parent_component))
 
@@ -71,7 +71,7 @@ class MinCardinality:
     def __init__(self, cardinality):
         self.cardinality = cardinality
 
-    def __call__(self, cluster: Cluster):
+    def __call__(self, cluster: _Cluster):
         return len(cluster.manifold.graphs[cluster.depth].component(cluster)) > self.cardinality
 
 
@@ -84,5 +84,17 @@ class MinNeighborhood:
         self.threshold = threshold
         return
 
-    def __call__(self, cluster: Cluster) -> bool:
+    def __call__(self, cluster: _Cluster) -> bool:
         return cluster.depth < self.starting_depth or len(cluster.neighbors) >= self.threshold
+
+
+class NewComponent:
+    """ Cluster until a new component is created. """
+
+    def __init__(self, manifold: _Manifold):
+        self.manifold = manifold
+        self.starting = len(manifold.graphs[-1].components)
+        return
+
+    def __call__(self, _):
+        return len(self.manifold.graphs[-1].components) == self.starting
