@@ -18,4 +18,4 @@ class TestCriterion(unittest.TestCase):
     def test_min_radius(self):
         min_radius = 1.
         self.manifold.build(MinRadius(min_radius))
-        self.assertTrue(all([c.radius >= min_radius for g in self.manifold for c in g]))
+        self.assertTrue(all((c.radius >= min_radius for g in self.manifold for c in g)))
