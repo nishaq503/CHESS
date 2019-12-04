@@ -80,6 +80,7 @@ class TestManifold(unittest.TestCase):
         self.assertEqual(20, len(m.argpoints))
 
         with self.assertRaises(ValueError):
+            # noinspection PyTypeChecker
             Manifold(self.data, 'euclidean', ['a', 'b', 'c'])
         return
 
