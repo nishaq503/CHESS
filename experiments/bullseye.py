@@ -5,7 +5,7 @@ from chess.datasets import *
 from chess.manifold import *
 
 
-MIN_RADIUS = 0.2
+MIN_RADIUS = 0.5
 
 
 def plot_clusters(data, labels, manifold):
@@ -23,12 +23,13 @@ def plot_clusters(data, labels, manifold):
 def plot_components(data, manifold):
     for d, g in enumerate(manifold.graphs):
         sorted_components = sorted(g.components, key=len)
-        # print(d, [len(c) for c in sorted_components])
+        print(d, [len(c) for c in sorted_components])
 
         label_dict = {p: (i if len(component) > 5 else 0) for i, component in enumerate(sorted_components) for c in component for p in c.argpoints}
-        # print(d, len(set(label_dict.values())))
+        print(d, len(set(label_dict.values())))
         labels = [len(sorted_components) - label_dict[i] for i in range(data.shape[0])]
-        circles = [plt.Circle(tuple(c.center), (c.radius if c.radius > MIN_RADIUS else 2 * MIN_RADIUS), fill=(c.radius <= MIN_RADIUS)) for c in g]
+        # circles = [plt.Circle(tuple(c.center), (c.radius if c.radius > MIN_RADIUS else 2 * MIN_RADIUS), fill=(c.radius <= MIN_RADIUS)) for c in g]
+        circles = [plt.Circle(tuple(c.center), c.radius, fill=False) for c in g]
         ax = plt.gca()
         [ax.add_artist(circle) for circle in circles]
         ax.scatter(data[:, 0], data[:, 1], c=labels, s=0.1, cmap='Dark2')
@@ -41,7 +42,7 @@ def plot_components(data, manifold):
 def main():
     data, labels = bullseye()
     manifold = Manifold(data, 'euclidean')
-    manifold.build(criterion.MinRadius(MIN_RADIUS), criterion.MaxDepth(12), criterion.MinPoints(10))
+    manifold.build(criterion.MinRadius(MIN_RADIUS), criterion.MaxDepth(12), criterion.MinPoints(1))
     # plot_clusters(data, labels, manifold)
     plot_components(data, manifold)
 

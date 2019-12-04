@@ -1,6 +1,11 @@
 import unittest
 
 from chess.manifold import *
+from chess.datasets import *
+from chess.criterion import *
+
+
+MIN_RADIUS = 0.5
 
 
 class TestCluster(unittest.TestCase):
@@ -63,7 +68,17 @@ class TestCluster(unittest.TestCase):
         [self.assertEqual(parent.depth + 1, c.depth) for c in children]
 
         for i in range(2, 10):
+            # noinspection PyUnresolvedReferences
             children = [c for C in children for c in C.partition()]
             [self.assertNotIn(c, c.neighbors.keys()) for c in children]
             [self.assertEqual(parent.depth + i, c.depth) for c in children]
         return
+
+    def test_neighbors_more(self):
+        data, labels = bullseye()
+        manifold = Manifold(data, 'euclidean')
+        manifold.build(MinRadius(MIN_RADIUS), MaxDepth(12))
+        for depth, graph in enumerate(manifold.graphs):
+            for cluster in graph:
+                neighbors = manifold.find_clusters(cluster.center, cluster.radius, depth)
+                self.assertSetEqual(neighbors, set(cluster.neighbors.keys()))
