@@ -11,6 +11,16 @@ BATCH_SIZE = 10
 
 
 class Cluster:
+    """ A cluster of points.
+
+    Clusters maintain references to their neighbors (clusters that overlap),
+    their children, the manifold to which they belong, and the indices of the
+    points they are responsible for.
+
+    You can compare clusters, hash them, partition them, perform tree search,
+    prune them, and more. In general, they implement methods that utilize the
+    underlying tree structure found across Manifold.graphs.
+    """
     # TODO: argpoints -> indices?
     # TODO: Siblings? Maybe a boolean like sibling(other) -> bool?
 
@@ -38,13 +48,13 @@ class Cluster:
         # TODO: Investigate int base k conversions.
         return hash(self.name)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return ','.join([self.name, ';'.join(map(str, self.argpoints))])
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.argpoints)
 
     def __iter__(self) -> Vector:
@@ -52,33 +62,48 @@ class Cluster:
             yield self.argpoints[i:i + BATCH_SIZE]
 
     def __getitem__(self, item: int) -> Data:
-        return self.data[self.argpoints[item]]
+        return self.manifold.data[self.argpoints[item]]
 
     def __contains__(self, point: Data) -> bool:
         return self.overlaps(point=point, radius=0.)
 
     @property
     def metric(self) -> str:
+        """ The metric used in the manifold. """
         return self.manifold.metric
 
     @property
     def depth(self) -> int:
+        """ The depth at which the cluster exists. """
         return len(self.name)
 
     @property
     def data(self) -> Data:
-        return self.manifold.data
+        """ Iterates over the data that the cluster owns by BATCH_SIZE. """
+        for i in range(0, len(self), BATCH_SIZE):
+            yield self.manifold.data[self.argpoints[i:i + BATCH_SIZE]]
 
     @property
     def points(self) -> Data:
-        return self.data[self.argpoints]
+        """ Same as self.data."""
+        yield from self.data
 
     @property
     def samples(self) -> Data:
-        return self.data[self.argsamples]
+        """ Returns the samples from the cluster.
+
+        Samples are used in computing approximate centers and poles.
+        """
+        return self.manifold.data[self.argsamples]
 
     @property
     def argsamples(self) -> Vector:
+        """ Indices used to retrieve samples.
+
+        Ensures that there are at least 2 different points in samples,
+        otherwise returns a single sample that represents the entire cluster.
+        AKA, if len(argsamples) == 1, the cluster contains only duplicates.
+        """
         if '_argsamples' not in self.__dict__:
             if len(self) <= SUBSAMPLE_LIMIT:
                 n = len(self.argpoints)
@@ -88,8 +113,8 @@ class Cluster:
                 indices = np.random.choice(self.argpoints, n, replace=False)
 
             # Handle Duplicates.
-            if pdist(self.data[indices], self.metric).max(initial=0.) == 0.:
-                indices = np.unique(self.data[self.argpoints], return_index=True, axis=0)[1]
+            if pdist(self.manifold.data[indices], self.metric).max(initial=0.) == 0.:
+                indices = np.unique(self.manifold.data[self.argpoints], return_index=True, axis=0)[1]
                 if len(indices) > n:
                     indices = np.random.choice(indices, n, replace=False)
                 indices = [self.argpoints[i] for i in indices]
@@ -100,26 +125,35 @@ class Cluster:
 
     @property
     def nsamples(self) -> int:
+        """ The number of samples for the cluster. """
         return len(self.argsamples)
 
     @property
     def center(self) -> Data:
-        return self.data[self.argcenter]
+        """ The centroid of the cluster. """
+        return self.manifold.data[self.argcenter]
 
     @property
     def argcenter(self) -> int:
+        """ The index used to retrieve the center. """
         if '_argcenter' not in self.__dict__:
             self.__dict__['_argcenter'] = self.argsamples[int(np.argmin(squareform(pdist(self.samples)).sum(axis=1)))]
         return self.__dict__['_argcenter']
 
     @property
     def radius(self) -> Radius:
+        """ The radius of the cluster.
+
+        Computed as distance from center to farthest point.
+        """
         if '_radius' not in self.__dict__:
             _ = self.argradius
         return self.__dict__['_radius']
 
     @property
     def argradius(self) -> int:
+        """ The index used to retrieve the point which is farthest from the center.
+        """
         if ('_argradius' not in self.__dict__) or ('_radius' not in self.__dict__):
             def argmax_max(b):
                 distances = self.distance(self.manifold.data[b])
@@ -133,15 +167,17 @@ class Cluster:
 
     @property
     def local_fractal_dimension(self) -> float:
+        """ The local fractal dimension of the cluster. """
         if self.nsamples == 1:
             return Radius(0.)
         count = [d <= (self.radius / 2)
                  for batch in self
                  for d in self.distance(self.manifold.data[batch])]
         count = np.sum(count)
-        return count if count == 0. else np.log2(len(self.points) / count)
+        return count if count == 0. else np.log2(len(self.argpoints) / count)
 
     def clear_cache(self) -> None:
+        """ Clears the cache for the cluster. """
         for prop in ['_argsamples', '_argcenter', '_argradius', '_radius']:
             try:
                 del self.__dict__[prop]
@@ -149,7 +185,8 @@ class Cluster:
                 pass
 
     def tree_search(self, point: Data, radius: Radius, depth: int) -> List['Cluster']:
-        """ Searches down the tree. """
+        """ Searches down the tree for clusters that overlap point with radius at depth.
+        """
         if depth == -1:
             depth = len(self.manifold.graphs)
         if depth < self.depth:
@@ -179,6 +216,11 @@ class Cluster:
         return
 
     def partition(self, *criterion) -> Iterable['Cluster']:
+        """ Partitions the cluster into 1-2 children.
+
+        2 children are produced if the cluster can be split,
+        otherwise 1 child is produced.
+        """
         if not all((
                 len(self.argpoints) > 1,
                 len(self.argsamples) > 1,
@@ -203,7 +245,6 @@ class Cluster:
             # noinspection PyTypeChecker
             [(p1_idx if p1 < p2 else p2_idx).append(i) for i, p1, p2 in zip(batch, distances[0], distances[1])]
 
-        assert True
         self.children = {
             Cluster(self.manifold, p1_idx, self.name + '1'),
             Cluster(self.manifold, p2_idx, self.name + '2'),
@@ -238,6 +279,12 @@ class Cluster:
 
 
 class Graph:
+    """ Graph comprised of clusters.
+
+    Graphs hold sets of clusters, which are the vertices.
+    The graph class is responsible for handling operations that occur
+    solely within a layer of Manifold.graphs.
+    """
     def __init__(self, *clusters):
         assert all([c.depth == clusters[0].depth for c in clusters[1:]])
         self.clusters = set(clusters)
@@ -246,16 +293,16 @@ class Graph:
     def __eq__(self, other: 'Graph') -> bool:
         return self.clusters == other.clusters
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable[Cluster]:
         yield from self.clusters
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.clusters)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ', '.join(sorted([str(c) for c in self.clusters]))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '\t'.join(sorted([repr(c) for c in self.clusters]))
 
     def __contains__(self, cluster: 'Cluster') -> bool:
@@ -263,18 +310,25 @@ class Graph:
 
     @property
     def edges(self) -> Set[Set['Cluster']]:
+        """ Returns all edges within the graph.
+        """
         if '_edges' not in self.__dict__:
             self.__dict__['_edges'] = set({c, n} for c in self.clusters for n in c.neighbors.keys())
         return self.__dict__['_edges']
 
     @property
     def subgraphs(self) -> List['Graph']:
+        """ Returns all subgraphs within the graph.
+        """
         if '_subgraphs' not in self.__dict__:
             self.__dict__['_subgraphs'] = [Graph(*component) for component in self.components]
         return self.__dict__['_subgraphs']
 
     @property
     def components(self) -> List[Set['Cluster']]:
+        """ Returns all components within the graph.
+        """
+        # TODO: Isn't this the same thing as subgraphs?
         if '_components' not in self.__dict__:
             unvisited = set(self.clusters)
             self.__dict__['_components'] = list()
@@ -285,6 +339,7 @@ class Graph:
         return self.__dict__['_components']
 
     def clear_cache(self) -> None:
+        """ Clears the cache of the graph. """
         for prop in ['_components', '_subgraphs', '_edges']:
             try:
                 del self.__dict__[prop]
@@ -292,10 +347,12 @@ class Graph:
                 pass
 
     def component(self, cluster: 'Cluster') -> Set['Cluster']:
+        """ Returns the component to which cluster belongs. """
         return next(filter(lambda component: cluster in component, self.components))
 
     @staticmethod
     def bft(start: 'Cluster'):
+        """ Breadth-First Search starting at start. """
         visited = set()
         queue = deque([start])
         while queue:
@@ -307,6 +364,7 @@ class Graph:
 
     @staticmethod
     def dft(start: 'Cluster'):
+        """ Depth-First Search starting at start. """
         visited = set()
         stack = [start]
         while stack:
@@ -318,6 +376,14 @@ class Graph:
 
 
 class Manifold:
+    """ Manifold of varying detail.
+
+    The manifold class' main job is to organize the underlying graphs of
+    various depths. With this stack of graphs, manifold provides utilities
+    for finding clusters and points that overlap with a given query point
+    with a radius, along with providing the ability to reset the build
+    of the list of graphs, and iteratively deepening it.
+    """
     # TODO: len(manifold)?
 
     def __init__(self, data: Data, metric: str, argpoints: Union[Vector, float] = None, **kwargs):
@@ -347,16 +413,17 @@ class Manifold:
     def __getitem__(self, depth: int) -> 'Graph':
         return self.graphs[depth]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable[Graph]:
         yield from self.graphs
 
-    def __str__(self):
+    def __str__(self) -> str:
         return '\t'.join([self.metric, str(self.graphs[-1])])
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '\n'.join([self.metric, repr(self.graphs[-1])])
 
     def find_points(self, point: Data, radius: Radius) -> Vector:
+        """ Returns all indices of points that are within radius of point. """
         candidates = [p for c in self.find_clusters(point, radius, len(self.graphs)) for p in c.argpoints]
         results: Vector = list()
         point = np.expand_dims(point, axis=0)
@@ -367,14 +434,17 @@ class Manifold:
         return results
 
     def find_clusters(self, point: Data, radius: Radius, depth: int) -> Set['Cluster']:
+        """ Returns all clusters within radius of point at depth. """
         return {r for c in self.graphs[0] for r in c.tree_search(point, radius, depth)}
 
     def build(self, *criterion) -> 'Manifold':
+        """ Rebuilds the stack of graphs. """
         self.graphs = [Graph(Cluster(self, self.argpoints, ''))]
         self.deepen(*criterion)
         return self
 
     def deepen(self, *criterion) -> 'Manifold':
+        """ Iteratively deepens the stack of graphs whilst checking criterion. """
         while True:
             g = Graph(*[c for C in self.graphs[-1] for c in C.partition(*criterion)])
             if len(g) != len(self.graphs[-1]):
@@ -384,6 +454,7 @@ class Manifold:
         return self
 
     def select(self, name: str) -> Cluster:
+        """ Returns the cluster with the given name. """
         # TODO: Support clipping of layers from self.graphs
         return next(filter(lambda c: c.name == name, self.graphs[len(name)]))
 
