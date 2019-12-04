@@ -61,27 +61,27 @@ class Cluster:
             self.metric)[0][0] <= self.radius
 
     @property
-    def metric(self):
+    def metric(self) -> str:
         return self.manifold.metric
 
     @property
-    def depth(self):
+    def depth(self) -> int:
         return len(self.name)
 
     @property
-    def data(self):
+    def data(self) -> Data:
         return self.manifold.data
 
     @property
-    def points(self):
+    def points(self) -> Data:
         return self.data[self.argpoints]
 
     @property
-    def samples(self):
+    def samples(self) -> Data:
         return self.data[self.argsamples]
 
     @property
-    def argsamples(self):
+    def argsamples(self) -> Vector:
         if '_argsamples' not in self.__dict__:
             if len(self) <= SUBSAMPLE_LIMIT:
                 n = len(self.argpoints)
@@ -102,27 +102,31 @@ class Cluster:
         return self.__dict__['_argsamples']
 
     @property
-    def nsamples(self):
+    def nsamples(self) -> int:
         return len(self.argsamples)
 
     @property
-    def center(self):
+    def center(self) -> Data:
         return self.data[self.argcenter]
 
     @property
-    def argcenter(self):
+    def argcenter(self) -> int:
         if '_argcenter' not in self.__dict__:
             self.__dict__['_argcenter'] = self.argsamples[int(np.argmin(squareform(pdist(self.samples)).sum(axis=1)))]
         return self.__dict__['_argcenter']
 
     @property
-    def radius(self):
-        if '_radius' not in self.__dict__:
-            self.__dict__['_radius'] = np.max(cdist(np.expand_dims(self.center, 0), self.points, self.metric))
-        return self.__dict__['_radius']
+    def radius(self) -> Radius:
+        return cdist(np.expand_dims(self.center, 0), self.points[self.argradius], self.metric)[0]
 
     @property
-    def local_fractal_dimension(self):
+    def argradius(self) -> int:
+        if '_argradius' not in self.__dict__:
+            self.__dict__['_argradius'] = np.argmax(cdist(np.expand_dims(self.center, 0), self.points, self.metric))
+        return self.__dict__['_argradius']
+
+    @property
+    def local_fractal_dimension(self) -> float:
         if self.nsamples == 1:
             return Radius(0.0)
         count = [d <= (self.radius() / 2)
@@ -131,7 +135,7 @@ class Cluster:
         count = np.sum(count)
         return count if count == 0.0 else np.log2(len(self.points) / count)
 
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         for prop in ['_argsamples', '_argcenter', '_radius']:
             try:
                 del self.__dict__[prop]
@@ -157,26 +161,20 @@ class Cluster:
         )):
             return {Cluster(self.manifold, self.argpoints, self.name + '0')}
 
-        distances = squareform(pdist(self.samples, self.metric))
+        distances = cdist(self.points[self.argradius], self.samples, self.metric)
+        farthest = np.argmax(distances)
 
-        max_pair = np.argmax(np.triu(distances, k=1))
-        max_col, max_row = max_pair // len(distances), max_pair % distances
-        pole1 = np.expand_dims(self.samples[max_col], 0)
-        pole2 = np.expand_dims(self.samples[max_row], 0)
+        poles = np.concatenate([self.samples[self.argradius], self.samples[farthest]])
 
-        if np.array_equal(pole1, pole2):
-            raise RuntimeError(f'Poles are equal when trying to partition {self.name}')
-
-        pole1_indices, pole2_indices = [], []
+        p1_idx, p2_idx = [], []
         for indices in self:
-            pole1_dist = cdist(pole1, self.manifold.data[indices], self.metric)[0]
-            pole2_dist = cdist(pole2, self.manifold.data[indices], self.metric)[0]
-            [(pole1_indices if p1 < p2 else pole2_indices).append(i) for i, p1, p2 in zip(indices, pole1_dist, pole2_dist)]
+            distances = cdist(poles, self.manifold.data[indices], self.metric)
+            [(p1_idx if p1 < p2 else p2_idx).append(i) for i, p1, p2 in zip(indices, distances[0], distances[1])]
 
         self.children = {
             # TODO: Should this be 1 and 2?
-            Cluster(self.manifold, pole1_indices, self.name + '0'),
-            Cluster(self.manifold, pole2_indices, self.name + '1'),
+            Cluster(self.manifold, p1_idx, self.name + '0'),
+            Cluster(self.manifold, p2_idx, self.name + '1'),
         }
         [c.update_neighbors() for c in self.children]
         return self.children
