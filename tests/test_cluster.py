@@ -79,6 +79,11 @@ class TestCluster(unittest.TestCase):
         manifold = Manifold(data, 'euclidean')
         manifold.build(MinRadius(MIN_RADIUS), MaxDepth(12))
         for depth, graph in enumerate(manifold.graphs):
+            if depth == 0:
+                continue
             for cluster in graph:
-                neighbors = manifold.find_clusters(cluster.center, cluster.radius, depth)
+                neighbors = manifold.find_clusters(cluster.center, cluster.radius, depth) - {cluster}
+                if (neighbors - set(cluster.neighbors.keys())) or (set(cluster.neighbors.keys()) - neighbors):
+                    print(depth, cluster.name, ':', [n.name for n in (neighbors - set(cluster.neighbors.keys()))])
+                    print(depth, cluster.name, ':', [n.name for n in (set(cluster.neighbors.keys()) - neighbors)])
                 self.assertSetEqual(neighbors, set(cluster.neighbors.keys()))
