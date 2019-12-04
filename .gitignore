@@ -109,6 +109,7 @@ celerybeat.pid
 .env
 .venv
 .chess
+.bench
 env/
 venv/
 ENV/
@@ -140,4 +141,4 @@ old_notebooks
 plots
 timing.py
 benchmarks/logs
-gg2_vis.ipynb
+*.ipynb

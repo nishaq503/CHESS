@@ -126,6 +126,7 @@ class Cluster:
                 argmax = np.argmax(distances)
                 return b[argmax], distances[argmax]
 
+            # noinspection PyTypeChecker
             argradii_radii = [argmax_max(batch) for batch in self]
             self.__dict__['_argradius'], self.__dict__['_radius'] = max(argradii_radii, key=itemgetter(1))
         return self.__dict__['_argradius']
