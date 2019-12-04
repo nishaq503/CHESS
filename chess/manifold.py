@@ -257,9 +257,10 @@ class Cluster:
         """ Find neighbors, update them, return the set. """
         neighbors = list(self.manifold.find_clusters(self.center, self.radius, self.depth) - {self})
         if len(neighbors) == 0:
-            return dict()
-        distances = self.distance(np.asarray([n.center for n in neighbors]))
-        self.neighbors = {n: d for n, d in zip(neighbors, distances)}
+            self.neighbors = dict()
+        else:
+            distances = self.distance(np.asarray([n.center for n in neighbors]))
+            self.neighbors = {n: d for n, d in zip(neighbors, distances)}
         return self.neighbors
 
     def distance(self, points: Data) -> np.ndarray:
@@ -448,7 +449,12 @@ class Manifold:
     def deepen(self, *criterion) -> 'Manifold':
         """ Iteratively deepens the stack of graphs whilst checking criterion. """
         while True:
-            g = Graph(*[c for C in self.graphs[-1] for c in C.partition(*criterion)])
+            clusters = []
+            for cluster in self.graphs[-1]:
+                children = cluster.partition()
+                clusters.extend(children)
+            g = Graph(*[child for cluster in self.graphs[-1] for child in cluster.partition(*criterion)])
+            assert len(clusters) == len(g.clusters), (len(clusters), len(g.clusters))
             [c.update_neighbors() for c in g]
             if len(g) != len(self.graphs[-1]):
                 self.graphs.append(g)
