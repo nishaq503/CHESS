@@ -361,7 +361,9 @@ class Graph:
             c = queue.popleft()
             if c not in visited:
                 visited.add(c)
-                [queue.append(neighbor) for neighbor in c.neighbors.keys()]
+                # [queue.append(neighbor) for neighbor in c.neighbors.keys()]
+                neighbors = c.manifold.find_clusters(c.center, c.radius, c.depth) - {c}
+                [queue.append(neighbor) for neighbor in neighbors]
         return visited
 
     @staticmethod
