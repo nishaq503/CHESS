@@ -32,7 +32,7 @@ class Cluster:
         self.argpoints: Vector = argpoints
         self.name: str = name
 
-        self.neighbors: Dict['Cluster', float] = dict()
+        self.neighbors: Dict['Cluster', float] = dict()  # key is neighbor, value is distance to neighbor
         self.children: Set['Cluster'] = set()
 
         self.__dict__.update(**kwargs)
@@ -257,7 +257,7 @@ class Cluster:
     def update_neighbors(self) -> Dict['Cluster', Radius]:
         """ Find neighbors, update them, return the set. """
         neighbors = list(self.manifold.find_clusters(self.center, self.radius, self.depth) - {self})
-        if not neighbors:
+        if len(neighbors) == 0:
             return dict()
         distances = self.distance(np.asarray([n.center for n in neighbors]))
         self.neighbors = {n: d for n, d in zip(neighbors, distances)}
