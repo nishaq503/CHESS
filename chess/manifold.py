@@ -9,6 +9,8 @@ from chess.types import *
 SUBSAMPLE_LIMIT = 10
 BATCH_SIZE = 10
 
+np.random.seed(42)
+
 
 class Cluster:
     """ A cluster of points.
@@ -207,6 +209,7 @@ class Cluster:
                 results = [c for c, d, r in zip(children, distances, radii) if d <= r]
                 if len(results) == 0:
                     break
+        assert all((depth == n.depth) for n in results)
         return results
 
     def prune(self) -> None:
@@ -259,8 +262,10 @@ class Cluster:
         if len(neighbors) == 0:
             self.neighbors = dict()
         else:
+            assert all((self.depth == n.depth) for n in neighbors)
             distances = self.distance(np.asarray([n.center for n in neighbors]))
             self.neighbors = {n: d for n, d in zip(neighbors, distances)}
+            [n.neighbors.update({self: d}) for n, d in self.neighbors.items()]
         return self.neighbors
 
     def distance(self, points: Data) -> np.ndarray:
@@ -449,20 +454,13 @@ class Manifold:
     def deepen(self, *criterion) -> 'Manifold':
         """ Iteratively deepens the stack of graphs whilst checking criterion. """
         while True:
-            clusters = []
-            for cluster in self.graphs[-1]:
-                children = cluster.partition(*criterion)
-                clusters.extend(children)
-            [c.update_neighbors() for c in clusters]
-            comprehended_clusters = [child for cluster in self.graphs[-1] for child in cluster.partition(*criterion)]
-            assert len(clusters) == len(comprehended_clusters), (len(clusters), len(comprehended_clusters))
-
+            clusters = [child for cluster in self.graphs[-1] for child in cluster.partition(*criterion)]
             if len(self.graphs[-1]) < len(clusters):
                 g = Graph(*clusters)
+                [c.update_neighbors() for c in g]
                 self.graphs.append(g)
             else:
                 break
-
         return self
 
     def select(self, name: str) -> Cluster:

@@ -1,9 +1,8 @@
 import unittest
 
-from chess.manifold import *
-from chess.datasets import *
 from chess.criterion import *
-
+from chess.datasets import *
+from chess.manifold import *
 
 MIN_RADIUS = 0.5
 
@@ -61,7 +60,7 @@ class TestCluster(unittest.TestCase):
 
     def test_neighbors(self):
         data = np.concatenate([np.random.randn(1000, 2) * -1, np.random.randn(1000, 2) * 1])
-        m = Manifold(data, 'euclidean')
+        m = Manifold(data, 'euclidean').build()
         parent = Cluster(m, m.argpoints, '')
         children = parent.partition()
         [self.assertNotIn(c, c.neighbors) for c in children]
@@ -81,13 +80,29 @@ class TestCluster(unittest.TestCase):
         manifold.build(MinRadius(MIN_RADIUS), MaxDepth(12))
         for depth, graph in enumerate(manifold.graphs):
             for cluster in graph:
+                # TODO: Remove.
+                # cluster.update_neighbors()
+                neighbors = manifold.find_clusters(cluster.center, cluster.radius, cluster.depth) - {cluster}
+                if neighbors ^ cluster.neighbors.keys():
+                    print("fuck")
                 self.assertEqual(depth, cluster.depth)
                 [self.assertEqual(cluster.depth, n.depth) for n in set(cluster.neighbors.keys())]
-                neighbors = manifold.find_clusters(cluster.center, cluster.radius, depth) - {cluster}
-                if neighbors - set(cluster.neighbors.keys()):
-                    print(depth, cluster.name, 'truth:', [n.name for n in neighbors])
-                    print(depth, cluster.name, 'missing:', [n.name for n in (neighbors - set(cluster.neighbors.keys()))])
                 self.assertEqual(0, len(set(cluster.neighbors.keys()) - neighbors))
-                # self.assertEqual(0, len(set(neighbors - set(cluster.neighbors.keys()))))
-                # self.assertTrue(len(neighbors) >= len(set(cluster.neighbors.keys())))
-                # self.assertSetEqual(neighbors, set(cluster.neighbors.keys()))
+                if len(set(neighbors - set(cluster.neighbors.keys()))) != 0:
+                    self.assertEqual(0, len(set(neighbors - set(cluster.neighbors.keys()))))
+                self.assertSetEqual(neighbors, set(cluster.neighbors.keys()))
+
+    def test_tree_search(self):
+        data, labels = bullseye()
+        m = Manifold(data, 'euclidean')
+        m.build(MinRadius(MIN_RADIUS), MaxDepth(12))
+        for depth, graph in enumerate(m.graphs):
+            for cluster in graph:
+                linear = set([c for c in graph if c.overlaps(cluster.center, cluster.radius)])
+                tree = set(cluster.tree_search(cluster.center, cluster.radius, cluster.depth))
+                print(depth, [c.name for c in (linear ^ tree)])
+                for d in range(depth, 0, -1):
+                    parents = set([m.select(cluster.name[:-1]) for cluster in linear])
+                    for parent in parents:
+                        self.assertIn(parent, parent.tree_search(cluster.center, cluster.radius, parent.depth))
+                # self.assertSetEqual(linear, tree, f"Sets unequal for cluster: {cluster.name}")
