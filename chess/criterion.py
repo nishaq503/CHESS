@@ -73,12 +73,13 @@ class MinCardinality:
 
 
 class MinNeighborhood:
-    """ Allows clustering until the size of the nieghborhood drops below threshold.
+    """ Allows clustering until the size of the neighborhood drops below threshold.
     """
 
-    def __init__(self, threshold: int):
+    def __init__(self, starting_depth: int, threshold: int):
+        self.starting_depth = starting_depth
         self.threshold = threshold
         return
 
     def __call__(self, cluster: Cluster) -> bool:
-        return len(cluster.neighbors) > self.threshold
+        return cluster.depth < self.starting_depth or len(cluster.neighbors) >= self.threshold

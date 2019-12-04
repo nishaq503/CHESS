@@ -53,3 +53,17 @@ class TestCluster(unittest.TestCase):
     def test_overlaps(self):
         point = np.ones((100, ))
         self.assertTrue(self.cluster.overlaps(point, 1.))
+
+    def test_neighbors(self):
+        data = np.concatenate([np.random.randn(1000, 2) * -1, np.random.randn(1000, 2) * 1])
+        m = Manifold(data, 'euclidean')
+        parent = Cluster(m, m.argpoints, '')
+        children = parent.partition()
+        [self.assertNotIn(c, c.neighbors) for c in children]
+        [self.assertEqual(parent.depth + 1, c.depth) for c in children]
+
+        for i in range(2, 10):
+            children = [c for C in children for c in C.partition()]
+            [self.assertNotIn(c, c.neighbors.keys()) for c in children]
+            [self.assertEqual(parent.depth + i, c.depth) for c in children]
+        return

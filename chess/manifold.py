@@ -254,12 +254,12 @@ class Cluster:
 
     def update_neighbors(self) -> Dict['Cluster', Radius]:
         """ Find neighbors, update them, return the set. """
-        neighbors = list(self.manifold.find_clusters(self.center, self.radius, self.depth))
+        neighbors = list(self.manifold.find_clusters(self.center, self.radius, self.depth) - {self})
         if not neighbors:
             return dict()
         distances = self.distance(np.asarray([n.center for n in neighbors]))
         self.neighbors = {n: d for n, d in zip(neighbors, distances)}
-        [n.neighbors.update({n: d}) for n, d in self.neighbors.items()]
+        [n.neighbors.update({self: d}) for n, d in self.neighbors.items()]
         return self.neighbors
 
     def distance(self, points: Data) -> np.ndarray:
