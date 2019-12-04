@@ -6,6 +6,16 @@ from chess.manifold import *
 np.random.seed(42)
 
 
+def linear_search(point: Data, radius: Radius, data: Data, metric: str):
+    point = np.expand_dims(point, 0)
+    results = []
+    for i in range(0, len(data), BATCH_SIZE):
+        batch = data[i: i + BATCH_SIZE]
+        distances = cdist(point, batch, metric)[0]
+        results.extend([p for p, d in zip(batch, distances) if d <= radius])
+    return results
+
+
 class TestManifoldFunctional(unittest.TestCase):
     def test_random(self):
         # We begin by getting some data and building with no constraints.
@@ -18,8 +28,10 @@ class TestManifoldFunctional(unittest.TestCase):
 
         m.build(criterion.MinPoints(10))
         c = next(iter(m.find_clusters(data[0], 0.0, -1)))
-        self.assertEqual(len(m.find_points(c.center, c.radius)), 10)
+        self.assertEqual(len(linear_search(c.center, c.radius, data, m.metric)), len(m.find_points(c.center, c.radius)))
         return
+
+
 
     def test_all_same(self):
         # A bit simpler, every point is the same.
