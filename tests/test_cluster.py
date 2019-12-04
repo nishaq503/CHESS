@@ -49,3 +49,7 @@ class TestCluster(unittest.TestCase):
             np.sqrt(len(self.data)),
             self.cluster.nsamples
         )
+
+    def test_overlaps(self):
+        point = np.ones((100, ))
+        self.assertTrue(self.cluster.overlaps(point, 1.))
