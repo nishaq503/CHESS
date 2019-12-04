@@ -31,8 +31,6 @@ class TestManifoldFunctional(unittest.TestCase):
         self.assertEqual(len(linear_search(c.center, c.radius, data, m.metric)), len(m.find_points(c.center, c.radius)))
         return
 
-
-
     def test_all_same(self):
         # A bit simpler, every point is the same.
         data = np.ones((1000, 3))
