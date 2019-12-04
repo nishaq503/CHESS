@@ -197,7 +197,7 @@ class Cluster:
         if self.overlaps(point, radius):
             # results ONLY contains clusters that have overlap with point
             results.append(self)
-            for d in range(self.depth, depth + 1):
+            for d in range(self.depth, depth):
                 children: List[Cluster] = [c for candidate in results for c in candidate.children]
                 if len(children) == 0:
                     break
