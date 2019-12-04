@@ -70,3 +70,15 @@ class MinCardinality:
 
     def __call__(self, cluster: Cluster):
         return len(cluster.manifold.graphs[cluster.depth].component(cluster)) > self.cardinality
+
+
+class MinNeighborhood:
+    """ Allows clustering until the size of the nieghborhood drops below threshold.
+    """
+
+    def __init__(self, threshold: int):
+        self.threshold = threshold
+        return
+
+    def __call__(self, cluster: Cluster) -> bool:
+        return len(cluster.neighbors) > self.threshold
