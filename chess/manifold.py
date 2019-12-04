@@ -185,7 +185,11 @@ class Cluster:
         )):
             return {Cluster(self.manifold, self.argpoints, self.name + '0')}
 
-        farthest = np.argmax(cdist(self.manifold.data[self.argradius], self.samples, self.metric)[0])
+        farthest = np.argmax(cdist(
+            np.expand_dims(self.manifold.data[self.argradius], 0),
+            self.samples,
+            self.metric
+        )[0])
         poles = np.concatenate([self.manifold.data[self.argradius], self.manifold.data[farthest]], axis=0)
 
         p1_idx, p2_idx = list(), list()

@@ -21,7 +21,7 @@ class TestManifoldFunctional(unittest.TestCase):
 
     def test_all_same(self):
         # A bit simpler, every point is the same.
-        data = np.ones(1000, 3)
+        data = np.ones((1000, 3))
         m = Manifold(data, 'euclidean')
         m.build()
         # There should only ever be one cluster here.
@@ -36,7 +36,7 @@ class TestManifoldFunctional(unittest.TestCase):
 
     def test_two_clumps(self):
         # Here we have two distinct clusters.
-        data = np.concatenate([np.ones(500, 2) * -2, np.ones(500, 2) * 2])
+        data = np.concatenate([np.ones((500, 2)) * -2, np.ones((500, 2)) * 2])
         m = Manifold(data, 'euclidean')
         # We expect building to stop with two clusters.
         m.build()
