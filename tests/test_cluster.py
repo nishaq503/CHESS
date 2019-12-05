@@ -88,6 +88,12 @@ class TestCluster(unittest.TestCase):
                 right_ancestor = right.manifold.select(r_)
                 if not left_ancestor.overlaps(right_ancestor.center, right_ancestor.radius):
                     print(f'{l_} and {r_} do not have overlap but their descendents {left.name} and {right.name} do.')
+                    # noinspection PyTypeChecker
+                    d_ancestors, r_ancestors = left_ancestor.distance([right_ancestor.center]), left_ancestor.radius + right_ancestor.radius
+                    # noinspection PyTypeChecker
+                    d, r = left.distance([right.center]), left.radius + right.radius
+                    print(f'ancestors\' distance: {d_ancestors}, radii_sum: {r_ancestors}')
+                    print(f'children\'s distance: {d}, radii_sum: {r}')
                     return
         return
 
