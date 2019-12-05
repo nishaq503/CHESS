@@ -142,3 +142,4 @@ plots
 timing.py
 benchmarks/logs
 *.ipynb
+presentation

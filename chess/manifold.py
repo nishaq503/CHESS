@@ -207,6 +207,8 @@ class Cluster:
                 results = [c for c, d, r in zip(children, distances, radii) if d <= r]
                 if len(results) == 0:
                     break
+            assert depth == results[0].depth, (depth, results[0].depth)
+            assert all((depth == r.depth for r in results))
         return results
 
     def prune(self) -> None:
@@ -251,17 +253,16 @@ class Cluster:
             Cluster(self.manifold, p1_idx, self.name + '1'),
             Cluster(self.manifold, p2_idx, self.name + '2'),
         }
-        [c.update_neighbors() for c in self.children]
         return self.children
 
     def update_neighbors(self) -> Dict['Cluster', Radius]:
         """ Find neighbors, update them, return the set. """
         neighbors = list(self.manifold.find_clusters(self.center, self.radius, self.depth) - {self})
         if len(neighbors) == 0:
-            return dict()
-        distances = self.distance(np.asarray([n.center for n in neighbors]))
-        self.neighbors = {n: d for n, d in zip(neighbors, distances)}
-        [n.neighbors.update({self: d}) for n, d in self.neighbors.items()]
+            self.neighbors = dict()
+        else:
+            distances = self.distance(np.asarray([n.center for n in neighbors]))
+            self.neighbors = {n: d for n, d in zip(neighbors, distances)}
         return self.neighbors
 
     def distance(self, points: Data) -> np.ndarray:
@@ -448,8 +449,10 @@ class Manifold:
     def deepen(self, *criterion) -> 'Manifold':
         """ Iteratively deepens the stack of graphs whilst checking criterion. """
         while True:
-            g = Graph(*[c for C in self.graphs[-1] for c in C.partition(*criterion)])
-            if len(g) != len(self.graphs[-1]):
+            clusters = [c for C in self.graphs[-1] for c in C.partition(*criterion)]
+            if len(clusters) != len(self.graphs[-1]):
+                [c.update_neighbors() for c in clusters]
+                g = Graph(*clusters)
                 self.graphs.append(g)
             else:
                 break

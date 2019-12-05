@@ -74,6 +74,23 @@ class TestCluster(unittest.TestCase):
             [self.assertEqual(parent.depth + i, c.depth) for c in children]
         return
 
+    @staticmethod
+    def trace_lineage(left: Cluster, right: Cluster):
+        assert left.depth == right.depth
+        assert left.overlaps(right.center, right.radius)
+        left_lineage = [left.name[:i] for i in range(left.depth)]
+        right_lineage = [right.name[:i] for i in range(right.depth)]
+        for l_, r_ in zip(left_lineage, right_lineage):
+            if l_ == r_:
+                continue
+            else:
+                left_ancestor = left.manifold.select(l_)
+                right_ancestor = right.manifold.select(r_)
+                if not left_ancestor.overlaps(right_ancestor.center, right_ancestor.radius):
+                    print(f'{l_} and {r_} do not have overlap but their descendents {left.name} and {right.name} do.')
+                    return
+        return
+
     def test_neighbors_more(self):
         data, labels = bullseye()
         np.random.seed(42)
@@ -81,10 +98,16 @@ class TestCluster(unittest.TestCase):
         manifold.build(MinRadius(MIN_RADIUS), MaxDepth(12))
         for depth, graph in enumerate(manifold.graphs):
             for cluster in graph:
-                neighbors = manifold.find_clusters(cluster.center, cluster.radius, depth) - {cluster}
-                if (neighbors - set(cluster.neighbors.keys())) or (set(cluster.neighbors.keys()) - neighbors):
-                    print(depth, cluster.name, ':', [n.name for n in neighbors])
-                    print(depth, cluster.name, ':', [n.name for n in (neighbors - set(cluster.neighbors.keys()))])
-                    print(depth, cluster.name, ':', [n.name for n in (set(cluster.neighbors.keys()) - neighbors)])
+                naive_neighbors = {c for c in graph if c.overlaps(cluster.center, cluster.radius)} - {cluster}
+                if naive_neighbors - set(cluster.neighbors.keys()):
+                    print(depth, cluster.name, ':', [n.name for n in naive_neighbors])
+                    print(depth, cluster.name, 'missed:', [n.name for n in naive_neighbors - set(cluster.neighbors.keys())])
+                    offenders = list(naive_neighbors - set(cluster.neighbors.keys()))
+                    self.trace_lineage(cluster, offenders[0])
+                elif set(cluster.neighbors.keys()) - naive_neighbors:
+                    print(depth, cluster.name, ':', [n.name for n in naive_neighbors])
+                    print(depth, cluster.name, 'extra:', [n.name for n in set(cluster.neighbors.keys()) - naive_neighbors])
+                    offenders = list(naive_neighbors - set(cluster.neighbors.keys()))
+                    self.trace_lineage(cluster, offenders[0])
                 # self.assertTrue(len(neighbors) >= len(set(cluster.neighbors.keys())))
-                self.assertSetEqual(neighbors, set(cluster.neighbors.keys()))
+                self.assertSetEqual(naive_neighbors, set(cluster.neighbors.keys()))
