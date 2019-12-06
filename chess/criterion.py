@@ -1,4 +1,5 @@
 from chess.manifold import Cluster as _Cluster, Manifold as _Manifold
+import chess
 
 
 class MaxDepth:
@@ -43,6 +44,7 @@ class MinRadius:
 
     def __init__(self, radius):
         self.radius = radius
+        chess.manifold.MIN_RADIUS = radius
 
     def __call__(self, cluster: _Cluster):
         if cluster.radius <= self.radius:

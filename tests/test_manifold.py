@@ -1,6 +1,6 @@
 import unittest
 
-from chess import criterion
+from chess.criterion import *
 from chess.manifold import *
 
 np.random.seed(42)
@@ -8,27 +8,38 @@ np.random.seed(42)
 
 def linear_search(point: Data, radius: Radius, data: Data, metric: str):
     point = np.expand_dims(point, 0)
-    results = []
+    results, argresults = list(), list()
     for i in range(0, len(data), BATCH_SIZE):
         batch = data[i: i + BATCH_SIZE]
         distances = cdist(point, batch, metric)[0]
         results.extend([p for p, d in zip(batch, distances) if d <= radius])
-    return results
+        argresults.extend([j for j, d in zip(range(i, min(i + BATCH_SIZE, data.shape[0])), distances) if d <= radius])
+    return results, argresults
 
 
 class TestManifoldFunctional(unittest.TestCase):
     def test_random(self):
         # We begin by getting some data and building with no constraints.
-        data = np.random.randn(1000, 3)
+        data = np.random.randn(100, 2)
         m = Manifold(data, 'euclidean')
         m.build()
         # With no constraints, clusters should be singletons.
-        self.assertEqual(1, len(m.find_clusters(data[0], 0.0, -1)))
-        self.assertEqual(1, len(m.find_points(data[0], radius=0.0)))
+        self.assertEqual(1, len(m.find_clusters(data[0], 0., -1)))
+        self.assertEqual(1, len(m.find_points(data[0], 0.)))
 
-        m.build(criterion.MinPoints(10))
-        c = next(iter(m.find_clusters(data[0], 0.0, -1)))
-        self.assertEqual(len(linear_search(c.center, c.radius, data, m.metric)), len(m.find_points(c.center, c.radius)))
+        data = np.random.randn(1000, 2)
+        m = Manifold(data, 'euclidean')
+        m.build(MinPoints(10))
+        for _ in range(100):
+            point = int(np.random.choice(1000))
+            linear_results, linear_argresults = linear_search(data[point], 0.5, data, m.metric)
+            self.assertTrue(1 <= len(linear_argresults))
+            self.assertIn(point, linear_argresults)
+            self.assertEqual(len(linear_results), len(m.find_points(data[point], 0.5, mode='iterative')))
+            self.assertEqual(len(linear_results), len(m.find_points(data[point], 0.5, mode='recursive')))
+            self.assertEqual(len(linear_results), len(m.find_points(data[point], 0.5, mode='dfs')))
+            self.assertEqual(len(linear_results), len(m.find_points(data[point], 0.5, mode='bfs')))
+            # self.assertEqual(len(linear_search(data[point], 0.5, data, m.metric)), len(m.find_points(data[point], 0.5, mode='recursive')))
         return
 
     def test_all_same(self):
@@ -55,12 +66,12 @@ class TestManifoldFunctional(unittest.TestCase):
         self.assertEqual(2, len(m.graphs[-1]))
         return
 
-    def test_two_clumps(self):
-        data = np.concatenate([np.random.randn(500, 2) * -5, np.random.randn(500, 2) * 5])
+    def test_two_clumps(self):  # TODO: Tom
+        data = np.concatenate([np.random.randn(50, 2) * -5, np.random.randn(50, 2) * 5])
         m = Manifold(data, 'euclidean')
-        m.build(criterion.MinNeighborhood(starting_depth=1, threshold=1))
-        self.assertEqual(1, len(next(iter(m.graphs[-1])).neighbors))
+        m.build(MinNeighborhood(starting_depth=1, threshold=1))
         self.assertEqual(2, len(m.graphs))
+        # self.assertEqual(1, len(next(iter(m.graphs[-1])).neighbors))
         return
 
 
