@@ -1,5 +1,3 @@
-from collections import Counter
-
 import numpy as np
 from Bio import SeqIO
 
@@ -102,5 +100,80 @@ def parse_fasta():
     return
 
 
+# noinspection DuplicatedCode
+def subsample_apogee2():
+    base_path = '/scratch/nishaq/APOGEE2/'
+    data_file = base_path + 'apo25m_data.memmap'
+    subsamples_file = base_path + 'apo100k_data.memmap'
+    num_data = 264_160 - 10_000
+    num_subsamples = 100_000
+    num_dims = 8_575
+
+    data_memmap: np.memmap = np.memmap(
+        data_file,
+        dtype=np.float32,
+        mode='r',
+        shape=(num_data, num_dims)
+    )
+    subsamples_memmap: np.memmap = np.memmap(
+        subsamples_file,
+        dtype=np.float32,
+        mode='w+',
+        shape=(num_subsamples, num_dims)
+    )
+
+    subsamples = sorted(list(np.random.choice(num_data, num_subsamples, replace=False)))
+    with open(f'{base_path}apo100k_indexes.txt', 'w') as outfile:
+        outfile.write(','.join([str(int(s)) for s in subsamples]))
+
+    for i, sample in enumerate(subsamples):
+        subsamples_memmap[i] = data_memmap[sample]
+        if i % 10_000 == 0:
+            print(i)
+            subsamples_memmap.flush()
+
+    subsamples_memmap.flush()
+    return
+
+
+# noinspection DuplicatedCode
+def subsample_greengenes():
+    base_path = '/scratch/nishaq/GreenGenes/'
+    data_file = base_path + 'gg_data.memmap'
+    subsamples_file = base_path + 'gg100k_data.memmap'
+    num_data = 1_075_170 - 10_000
+    num_subsamples = 100_000
+    num_dims = 7_682
+
+    data_memmap: np.memmap = np.memmap(
+        data_file,
+        dtype=np.int8,
+        mode='r',
+        shape=(num_data, num_dims)
+    )
+    subsamples_memmap: np.memmap = np.memmap(
+        subsamples_file,
+        dtype=np.int8,
+        mode='w+',
+        shape=(num_subsamples, num_dims)
+    )
+
+    subsamples = sorted(list(np.random.choice(num_data, num_subsamples, replace=False)))
+    with open(f'{base_path}gg100k_indexes.txt', 'w') as outfile:
+        outfile.write(','.join([str(int(s)) for s in subsamples]))
+
+    for i, sample in enumerate(subsamples):
+        subsamples_memmap[i] = data_memmap[sample]
+        if i % 10_000 == 0:
+            print(i)
+            subsamples_memmap.flush()
+
+    subsamples_memmap.flush()
+    return
+
+
 if __name__ == "__main__":
-    parse_fasta()
+    # parse_fasta()
+    # subsample_apogee2()
+    # subsample_greengenes()
+    print('not preparsing!!')

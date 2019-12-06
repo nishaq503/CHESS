@@ -51,6 +51,7 @@ class Cluster:
         self.depth: int = len(name)
         self._radius: defaults.RADII_DTYPE = radius
         self._partitionable: bool = True
+        self._all_same: bool = False
 
         # Children.
         self.left = left
@@ -74,7 +75,7 @@ class Cluster:
     def _set_internals(self):
         self.subsample: bool = len(self.points) > defaults.SUBSAMPLING_LIMIT
         self.samples, self.distances = self._samples()
-        self._all_same: bool = np.max(self.distances) == defaults.RADII_DTYPE(0.0)
+        self._all_same = np.max(self.distances) == defaults.RADII_DTYPE(0.0)
         return
 
     def __hash__(self):
@@ -132,7 +133,7 @@ class Cluster:
         points = np.random.choice(list(self.points), n, replace=False)
         distances = calculate_distances(self.data[points], self.data[points], self.metric)
 
-        if np.max(distances) == defaults.RADII_DTYPE(0.0):
+        if np.max(distances) <= defaults.RADII_DTYPE(0.0):
             # If all sampled points were duplicates, we grab non-duplicate centroids.
             unique = np.unique(self.data[self.points], return_index=True, axis=0)[1]
             points = np.random.choice(unique, n, replace=False) if len(unique) > n else unique
@@ -204,8 +205,9 @@ class Cluster:
             * Partition the points in this cluster by the pole that the points are closer to.
             * Assign the partitioned points to the left and right child clusters appropriately.
         """
-        assert np.max(self.distances) > 0., f'max of self.distances was <= 0. in cluster {self.name}.'
-        assert np.max(np.triu(self.distances, k=1)) > 0., f'max of triu self.distances was <= 0. in cluster {self.name}.'
+        if np.max(self.distances) <= 0.:
+            self._all_same = True
+            return
 
         max_pair_index = np.argmax(np.triu(self.distances, k=1))
         max_col = max_pair_index // len(self.distances)

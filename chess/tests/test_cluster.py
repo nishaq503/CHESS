@@ -51,8 +51,7 @@ class TestCluster(unittest.TestCase):
     def test_all_same(self):
         data = np.ones((100, 100))
         c = Cluster(data, 'euclidean', points=list(range(data.shape[0])), name='')
-        with self.assertRaises(RuntimeError):
-            c.partition()
+        c.partition()
         self.assertIsNone(c.left)
         self.assertIsNone(c.right)
         return

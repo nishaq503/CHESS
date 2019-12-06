@@ -14,7 +14,7 @@ class TestCHESS(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.tempfile = tempfile.NamedTemporaryFile()
         data = np.random.randn(1000, 100)
-        cls.data = np.memmap(cls.tempfile, dtype='float32', mode='w+', shape=data.shape)
+        cls.data: np.memmap = np.memmap(cls.tempfile, dtype='float32', mode='w+', shape=data.shape)
         cls.data[:] = data[:]
         return
 
@@ -22,16 +22,17 @@ class TestCHESS(unittest.TestCase):
     def tearDownClass(cls) -> None:
         return
 
+    # noinspection PyTypeChecker
     def test_functional(self):
         chess = CHESS(self.data, 'euclidean')
         chess.build()
-        result = chess.search(self.data[0], 0.0)
+        result = chess.search(self.data[0], 0.)
         self.assertEqual(len(result), 1)
 
-        result = chess.search(self.data[0] + 50, 0.0)
+        result = chess.search(self.data[0] + 50, 0.)
         self.assertEqual(len(result), 0)
 
-        result = chess.search(self.data[0], 20.0)
+        result = chess.search(self.data[0], 20.)
         self.assertEqual(len(result), 1000)
         return
 
@@ -135,13 +136,14 @@ class TestCHESS(unittest.TestCase):
         chess.deepen(levels=5)
         self.assertEqual(10, max(map(len, chess.root.dict().keys())))
 
+    # noinspection PyTypeChecker
     def test_search(self):
         chess = CHESS(self.data, 'euclidean')
         chess.build()
-        self.assertEqual(len(chess.search(self.data[0], 0.0)), 1)
-        self.assertEqual(len(chess.search(self.data[0] + 100, 0.0)), 0)
-        self.assertGreaterEqual(len(chess.search(self.data[0] + 0.1, 10.0)), 1)
-        self.assertEqual(len(chess.search(self.data[0], 100)), 1000)
+        self.assertEqual(len(chess.search(self.data[0], 0.)), 1)
+        self.assertEqual(len(chess.search(self.data[0] + 100, 0.)), 0)
+        self.assertGreaterEqual(len(chess.search(self.data[0] + 0.1, 10.)), 1)
+        self.assertEqual(len(chess.search(self.data[0], 100.)), 1000)
         return
 
     def test_compress(self):
