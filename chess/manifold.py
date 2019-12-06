@@ -2,7 +2,7 @@ from collections import deque
 from operator import itemgetter
 from typing import Set, Dict, TextIO, Iterable, Deque
 
-from scipy.spatial.distance import pdist, cdist, squareform
+from scipy.spatial.distance import pdist, cdist
 
 from chess.types import *
 

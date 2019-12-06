@@ -20,17 +20,17 @@ def linear_search(point: Data, radius: Radius, data: Data, metric: str):
 class TestManifoldFunctional(unittest.TestCase):
     def test_random(self):
         # We begin by getting some data and building with no constraints.
-        data = np.random.randn(100, 2)
+        data = np.random.randn(100, 100)
         m = Manifold(data, 'euclidean')
         m.build()
         # With no constraints, clusters should be singletons.
         self.assertEqual(1, len(m.find_clusters(data[0], 0., -1)))
         self.assertEqual(1, len(m.find_points(data[0], 0.)))
 
-        data = np.random.randn(1000, 2)
+        data = np.random.randn(1000, 100)
         m = Manifold(data, 'euclidean')
         m.build(MinPoints(10))
-        for _ in range(100):
+        for _ in range(10):
             point = int(np.random.choice(1000))
             linear_results, linear_argresults = linear_search(data[point], 0.5, data, m.metric)
             self.assertTrue(1 <= len(linear_argresults))
