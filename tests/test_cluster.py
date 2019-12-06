@@ -97,16 +97,22 @@ class TestCluster(unittest.TestCase):
         data, labels = spiral_2d()
         np.random.seed(42)
         manifold = Manifold(data, 'euclidean')
-        manifold.build(MinRadius(MIN_RADIUS), MaxDepth(8))
+        manifold.build(MinRadius(MIN_RADIUS), MaxDepth(10))
         for depth, graph in enumerate(manifold.graphs):
             for cluster in graph:
-                naive_neighbors = {c for c in graph if c.overlaps(cluster.center, cluster.radius)} - {cluster}
+                potential_neighbors = [c for c in graph if c.name != cluster.name]
+                if len(potential_neighbors) == 0:
+                    continue
+                elif len(potential_neighbors) == 1:
+                    centers = np.expand_dims(potential_neighbors[0].center, axis=0)
+                else:
+                    centers = np.stack([c.center for c in potential_neighbors])
+                distances = list(cluster.distance(centers))
+                radii = [cluster.radius + c.radius for c in potential_neighbors]  # TODO: Slow
+                naive_neighbors = {c for c, d, r in zip(potential_neighbors, distances, radii) if d <= r}
                 if naive_neighbors - set(cluster.neighbors.keys()):
-                    print(depth, cluster.name, ':', [n.name for n in naive_neighbors])
-                    print(depth, cluster.name, 'missed:', [n.name for n in naive_neighbors - set(cluster.neighbors.keys())])
                     offenders = list(naive_neighbors - set(cluster.neighbors.keys()))
-                    self.trace_lineage(cluster, offenders[0])
-                # self.assertTrue(len(neighbors) >= len(set(cluster.neighbors.keys())))
+                    [self.trace_lineage(cluster, o) for o in offenders]
                 self.assertSetEqual(set(), (naive_neighbors - set(cluster.neighbors.keys())),
                                     msg=f'\nmissed: {sorted([n.name for n in naive_neighbors - set(cluster.neighbors.keys())])}'
                                         f'\nextras: {sorted([n.name for n in set(cluster.neighbors.keys()) - naive_neighbors])}')

@@ -2,7 +2,7 @@ from collections import deque
 from operator import itemgetter
 from typing import Set, Dict, TextIO, Iterable, Deque
 
-from scipy.spatial.distance import pdist, squareform, cdist
+from scipy.spatial.distance import pdist, cdist, squareform
 
 from chess.types import *
 
@@ -130,19 +130,19 @@ class Cluster:
         return len(self.argsamples)
 
     @property
-    def center(self) -> Data:
+    def center(self) -> Data:  # TODO: slow
         """ The centroid of the cluster. """
         return self.manifold.data[self.argcenter]
 
     @property
-    def argcenter(self) -> int:
+    def argcenter(self) -> int:  # TODO: slow
         """ The index used to retrieve the center. """
         if '_argcenter' not in self.__dict__:
-            self.__dict__['_argcenter'] = self.argsamples[int(np.argmin(squareform(pdist(self.samples, self.metric)).sum(axis=1)))]
+            self.__dict__['_argcenter'] = self.argsamples[int(np.argmin(cdist(self.samples, self.samples, self.metric).sum(axis=1)))]
         return self.__dict__['_argcenter']
 
     @property
-    def radius(self) -> Radius:
+    def radius(self) -> Radius:  # TODO: Slow
         """ The radius of the cluster.
 
         Computed as distance from center to farthest point.
@@ -332,12 +332,11 @@ class Cluster:
                 if len(centers.shape) == 0:
                     centers = np.expand_dims(centers, axis=0)
                 distances = list(self.distance(centers))
-                radii = [self.radius + c.radius for c in neighbors]
+                radii = [self.radius + c.radius for c in neighbors]  # TODO: low
                 [self.add_edge(c, propagate) for c, d, r in zip(neighbors, distances, radii) if d <= r]
+
             neighbors = [c for c in self.manifold.graphs[self.depth]
-                         if all((self.name != c.name,
-                                 self not in set(c.neighbors.keys()),
-                                 c not in set(self.neighbors.keys())))]
+                         if (self.name != c.name) and (self not in c.neighbors) and (c not in self.neighbors)]  # TODO: slow
         return self.neighbors
 
     def distance(self, points: Data) -> np.ndarray:
@@ -535,8 +534,17 @@ class Manifold:
 
     def select(self, name: str) -> Cluster:
         """ Returns the cluster with the given name. """
+        # TODO: Support multiple roots
         # TODO: Support clipping of layers from self.graphs
-        return next(filter(lambda c: c.name == name, self.graphs[len(name)]))
+        cluster: Cluster = next(iter(self.graphs[0]))
+        for depth in range(len(name) + 1):
+            partial_name = name[:depth]
+            for child in cluster.children:
+                if child.name == partial_name:
+                    cluster = child
+                    break
+        assert name == cluster.name, f'wanted {name} but got {cluster.name}.'
+        return cluster
 
     def dump(self, fp: TextIO) -> None:
         pass
