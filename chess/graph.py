@@ -10,9 +10,9 @@ from typing import List, Dict, Set
 import numpy as np
 
 from chess import defaults
-from chess.cluster import Cluster
-from chess.distance import calculate_distances
-from chess.query import Query
+from cluster import Cluster
+from distance import calculate_distances
+from query import Query
 
 
 def chess_graph(chess_object, depth: int) -> Dict[Cluster, Set[Cluster]]:

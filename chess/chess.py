@@ -9,11 +9,11 @@ from typing import Callable, List, Dict, Union, Set
 
 import numpy as np
 
-from chess import defaults
-from .cluster import Cluster
-from .graph import graph, subgraphs, connected_clusters
-from .query import Query
-from .search import search
+import defaults
+from cluster import Cluster
+from graph import graph, subgraphs, connected_clusters
+from query import Query
+from search import search
 
 
 class CHESS:

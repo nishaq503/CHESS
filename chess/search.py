@@ -4,9 +4,9 @@ from functools import partial
 from multiprocessing.pool import Pool
 from typing import List
 
-from chess.cluster import Cluster
-from chess.distance import calculate_distances
-from chess.query import Query
+from cluster import Cluster
+from distance import calculate_distances
+from query import Query
 
 
 def search(cluster: Cluster, query: Query) -> List[int]:

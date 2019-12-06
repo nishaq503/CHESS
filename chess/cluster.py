@@ -9,8 +9,8 @@ from typing import List, Tuple, Dict, Union
 import numpy as np
 
 from chess import defaults
-from chess.distance import calculate_distances
-from chess.query import Query
+from distance import calculate_distances
+from query import Query
 
 
 class Cluster:
