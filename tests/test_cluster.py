@@ -74,7 +74,7 @@ class TestCluster(unittest.TestCase):
         return
 
     @staticmethod
-    def trace_lineage(left: Cluster, right: Cluster):
+    def trace_lineage(left: Cluster, right: Cluster):  # TODO: Cover
         assert left.depth == right.depth
         assert left.overlaps(right.center, right.radius)
         lineages = [(left.name[:i], right.name[:i]) for i in range(left.depth) if left.name[:i] != right.name[:i]]
@@ -110,7 +110,7 @@ class TestCluster(unittest.TestCase):
                 distances = list(cluster.distance(centers))
                 radii = [cluster.radius + c.radius for c in potential_neighbors]  # TODO: Slow
                 naive_neighbors = {c for c, d, r in zip(potential_neighbors, distances, radii) if d <= r}
-                if naive_neighbors - set(cluster.neighbors.keys()):
+                if naive_neighbors - set(cluster.neighbors.keys()):  # TODO: Cover
                     offenders = list(naive_neighbors - set(cluster.neighbors.keys()))
                     [self.trace_lineage(cluster, o) for o in offenders]
                 self.assertSetEqual(set(), (naive_neighbors - set(cluster.neighbors.keys())),

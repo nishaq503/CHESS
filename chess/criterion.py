@@ -13,7 +13,7 @@ class MaxDepth:
         return cluster.depth < self.depth
 
 
-class AddLevels:
+class AddLevels:  # TODO: Cover
     """ Allows clustering up until current.depth + depth.
     """
 
@@ -53,7 +53,7 @@ class MinRadius:
         return True
 
 
-class LeavesComponent:
+class LeavesComponent:  # TODO: Cover
     """ Allows clustering until the cluster has left the component of the parent.
     """
 
@@ -66,7 +66,7 @@ class LeavesComponent:
         return any((c.overlaps(cluster.center, cluster.radius) for c in parent_component))
 
 
-class MinCardinality:
+class MinCardinality:  # TODO: Cover
     """ Allows clustering until cardinality of cluster's component is less than given.
     """
 
