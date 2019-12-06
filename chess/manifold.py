@@ -324,23 +324,20 @@ class Cluster:
 
     def update_neighbors(self, propagate: bool = True) -> Dict['Cluster', Radius]:
         """ Find neighbors, update them, return the set. """
-        # neighbors = list(self.manifold.find_clusters(self.center, self.radius, self.depth) - {self})
-        # if len(neighbors) == 0:
-        #     self.neighbors = dict()
-        # else:
-        #     distances = self.distance(np.asarray([n.center for n in neighbors]))
-        #     self.neighbors = {n: d for n, d in zip(neighbors, distances)}
-        others = [c for c in self.manifold.graphs[self.depth]
-                  if all((self.name != c.name,
-                          self not in set(c.neighbors.keys()),
-                          c not in set(self.neighbors.keys())))]
-        if len(others) != 0:
-            centers = np.stack([c.center for c in others], axis=0)
-            if len(centers.shape) == 0:
-                centers = np.expand_dims(centers, axis=0)
-            distances = list(self.distance(centers))
-            radii = [self.radius + c.radius for c in others]
-            [self.add_edge(c, propagate) for c, d, r in zip(others, distances, radii) if d <= r]
+        neighbors = [n for n in list(self.manifold.find_clusters(self.center, self.radius, self.depth) - {self})
+                     if self not in set(n.neighbors.keys()) and n not in set(self.neighbors.keys())]
+        for _ in range(2):
+            if len(neighbors) != 0:
+                centers = np.stack([c.center for c in neighbors], axis=0)
+                if len(centers.shape) == 0:
+                    centers = np.expand_dims(centers, axis=0)
+                distances = list(self.distance(centers))
+                radii = [self.radius + c.radius for c in neighbors]
+                [self.add_edge(c, propagate) for c, d, r in zip(neighbors, distances, radii) if d <= r]
+            neighbors = [c for c in self.manifold.graphs[self.depth]
+                         if all((self.name != c.name,
+                                 self not in set(c.neighbors.keys()),
+                                 c not in set(self.neighbors.keys())))]
         return self.neighbors
 
     def distance(self, points: Data) -> np.ndarray:
