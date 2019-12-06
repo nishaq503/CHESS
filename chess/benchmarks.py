@@ -6,6 +6,7 @@ import numpy as np
 from chess import CHESS
 
 
+# noinspection DuplicatedCode
 def benchmark_clustering(chess_object: CHESS, timing_file: str, staring_depth: int, ending_depth: int) -> CHESS:
     for depth in range(staring_depth, ending_depth + 1):
         start = time()
