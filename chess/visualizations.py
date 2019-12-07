@@ -46,13 +46,11 @@ def plot(angles, data, labels, folder, figsize, dpi, s):
     plt.gca().set_axis_off()
     plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
     plt.margins(0, 0, 0)
-    # for azimuth in range(angles[0], angles[1]):
-    #     ax.view_init(elev=10, azim=azimuth)
-    #     plt.savefig(folder + f'{azimuth}.png', bbox_inches='tight', pad_inches=0)
-    #     return
-    for azimuth in range(100 * angles[0], 100 * angles[1], 25):
-        ax.view_init(elev=10, azim=azimuth / 100)
-        plt.savefig(folder + f'{azimuth}.png', bbox_inches='tight', pad_inches=0)
+    for azimuth in range(angles[0], angles[1]):
+        for fraction in [0., 0.5]:
+            ax.view_init(elev=10, azim=azimuth + fraction)
+            plt.savefig(folder + f'{int(2 * (azimuth + fraction)):06d}.png',
+                        bbox_inches='tight', pad_inches=0)
         # return
     return
 
@@ -60,7 +58,7 @@ def plot(angles, data, labels, folder, figsize, dpi, s):
 def full_rotation(data, labels, step, folder):
     for i in range(0, 360, step):
         if labels is None:
-            labels = make_labels(360 // step)
+            labels = make_labels(i // step)
         plot(
             angles=(i, i + step),
             data=data,
