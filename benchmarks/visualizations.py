@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 from chess.manifold import Cluster, Manifold
-from benchmarks import benchmarks
+import benchmarks
 
 
 def get_embedding(dataset: str) -> np.ndarray:
@@ -66,8 +66,8 @@ def plot(angles, data_, labels, folder, figsize, dpi, s, title):
         ax.view_init(elev=10, azim=azimuth)
         plt.savefig(folder + f'{benchmarks.PLOT_NUMBER:05d}.png', bbox_inches='tight', pad_inches=0)
         benchmarks.PLOT_NUMBER += 1
-        plt.close('all')
-        return
+        break
+    plt.close('all')
     return
 
 
@@ -93,7 +93,7 @@ def query_plots(
         base_path: str,
 ):
     angle, step = 0, 30
-    for d_ in range(51):
+    for d_ in range(0, 51, 5):
         labels: Dict[int, int] = get_labels()
         labels[argquery] = 0
         if d_ in depth_to_clusters:
@@ -102,7 +102,7 @@ def query_plots(
             gray_points = umap_data[gray_argpoints]
             gray_labels = [labels[g] for g in gray_argpoints]
             plot(
-                angles=(angle, angle + step),
+                angles=(angle, angle + step // 2),
                 data_=gray_points,
                 labels=gray_labels,
                 folder=base_path,
@@ -111,14 +111,14 @@ def query_plots(
                 s=0.025,
                 title=f'depth: {d_}, fraction: {len(gray_argpoints) / 100_000:.4f}'
             )
-            angle += step
+            angle += step // 2
             green_argpoints: List[int] = [int(p) for cluster in green for p in cluster.argpoints]
             for g in green_argpoints:
                 if g != argquery:
                     labels[g] = 2
             gray_labels = [labels[g] for g in gray_argpoints]
             plot(
-                angles=(angle, angle + step),
+                angles=(angle, angle + step // 2),
                 data_=gray_points,
                 labels=gray_labels,
                 folder=base_path,
@@ -127,7 +127,7 @@ def query_plots(
                 s=0.025,
                 title=f'depth: {d_}, fraction: {len(gray_argpoints) / 100_000:.4f}'
             )
-            angle += step
+            angle += step // 2
         else:
             break
     return
@@ -152,7 +152,6 @@ def make_apogee_plots(
             depth_to_clusters=depth_to_clusters,
             base_path=plot_folder
         )
-        return
     return
 
 
