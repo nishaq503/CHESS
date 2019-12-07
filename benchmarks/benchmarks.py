@@ -3,8 +3,8 @@ from time import time
 
 import numpy as np
 
-from chess.manifold import Manifold, Graph, Cluster
 from chess.criterion import *
+from chess.manifold import Manifold
 
 
 def benchmark_clustering(manifold: Manifold, timing_file: str, staring_depth: int, ending_depth: int) -> Manifold:

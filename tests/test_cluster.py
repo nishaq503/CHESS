@@ -96,7 +96,7 @@ class TestCluster(unittest.TestCase):
     def test_neighbors_more(self):
         data, labels = spiral_2d()
         np.random.seed(42)
-        manifold = Manifold(data, 'euclidean')
+        manifold = Manifold(data, 'euclidean', propagate=True)
         manifold.build(MinRadius(MIN_RADIUS), MaxDepth(10))
         for depth, graph in enumerate(manifold.graphs):
             for cluster in graph:
