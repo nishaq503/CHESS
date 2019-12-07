@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 from chess.manifold import Cluster, Manifold
-from chess import manifold as _manifold_
+from benchmarks import benchmarks
 
 
 def get_embedding(dataset: str) -> np.ndarray:
@@ -64,8 +64,8 @@ def plot(angles, data_, labels, folder, figsize, dpi, s, title):
     plt.margins(0, 0, 0)
     for azimuth in range(angles[0], angles[1]):
         ax.view_init(elev=10, azim=azimuth)
-        plt.savefig(folder + f'{_manifold_.PLOT_NUMBER:05d}.png', bbox_inches='tight', pad_inches=0)
-        _manifold_.PLOT_NUMBER += 1
+        plt.savefig(folder + f'{benchmarks.PLOT_NUMBER:05d}.png', bbox_inches='tight', pad_inches=0)
+        benchmarks.PLOT_NUMBER += 1
         plt.close('all')
         return
     return

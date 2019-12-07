@@ -6,6 +6,8 @@ import numpy as np
 from chess.criterion import *
 from chess.manifold import Manifold
 
+PLOT_NUMBER = 0
+
 
 def benchmark_clustering(manifold: Manifold, timing_file: str, staring_depth: int, ending_depth: int) -> Manifold:
     for depth in range(staring_depth, ending_depth + 1):
