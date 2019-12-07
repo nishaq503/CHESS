@@ -108,5 +108,5 @@ def benchmark_greengenes_100k():
 
 if __name__ == '__main__':
     print('ready to benchmark!')
-    benchmark_apogee2_100k()
-    benchmark_greengenes_100k()
+    # benchmark_apogee2_100k()
+    # benchmark_greengenes_100k()

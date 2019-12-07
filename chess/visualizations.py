@@ -7,7 +7,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 def get_apogee_embedding():
     apo100k_umap_embedding_memmap = np.memmap(
-        filename='/scratch/nishaq/APOGEE2/apo100k_umap.memmap',
+        filename='/data/nishaq/APOGEE2/apo100k_umap.memmap',
         dtype=np.float32,
         mode='r',
         shape=(100_000, 3),
@@ -20,7 +20,7 @@ def get_apogee_embedding():
 
 def get_greengenes_embedding():
     gg100k_umap_embedding_memmap = np.memmap(
-        filename='/scratch/nishaq/GreenGenes/gg100k_umap.memmap',
+        filename='/data/nishaq/GreenGenes/gg100k_umap.memmap',
         dtype=np.float32,
         mode='r',
         shape=(100_000, 3),
@@ -89,14 +89,14 @@ def make_labels(label):
 
 
 def make_apogee_plots():
-    folder = f'presentation/apogee2/umap/'
+    folder = f'../presentation/apogee2/umap/'
     data = get_apogee_embedding()
     full_rotation(data=data, labels=None, step=60, folder=folder)
     return
 
 
 def make_greengenes_plots():
-    folder = f'presentation/greengenes/umap/'
+    folder = f'../presentation/greengenes/umap/'
     data = get_greengenes_embedding()
 
     full_rotation(data=data, labels=None, step=60, folder=folder)
@@ -104,5 +104,6 @@ def make_greengenes_plots():
 
 
 if __name__ == '__main__':
+    # print('ready to make plots!')
     make_greengenes_plots()
     make_apogee_plots()
