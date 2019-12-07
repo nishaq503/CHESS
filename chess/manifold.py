@@ -558,7 +558,12 @@ class Manifold:
                 self.graphs.append(g)
                 if 'propagate' not in self.__dict__:
                     self.__dict__['propagate'] = False
-                [c.update_neighbors(propagate=self.__dict__['propagate']) for c in clusters]
+                if 'calculate_neighbors' in self.__dict__ and self.__dict__['calculate_neighbors'] is False:
+                    for c in clusters:
+                        c.neighbors = dict()
+                    continue
+                else:
+                    [c.update_neighbors(propagate=self.__dict__['propagate']) for c in clusters]
             else:
                 break
         return self

@@ -10,7 +10,7 @@ from chess.manifold import Manifold
 def benchmark_clustering(manifold: Manifold, timing_file: str, staring_depth: int, ending_depth: int) -> Manifold:
     for depth in range(staring_depth, ending_depth + 1):
         start = time()
-        manifold.deepen(MaxDepth(depth))
+        manifold.deepen(MaxDepth(depth), MinPoints(10))
         end = time()
         with open(timing_file, 'a') as outfile:
             outfile.write(f'{depth}, {len(manifold.graphs[-1])}, {end - start:.5f}\n')
@@ -39,12 +39,14 @@ def benchmark_apogee2_100k():
             of.write('new_depth, num_leaves, time_taken\n')
 
     np.random.seed(42)
-    manifold = Manifold(data_memmap, 'euclidean')
+    manifold = Manifold(data_memmap, 'euclidean', propagate=False, calculate_neighbors=False)
     old_depth = 0
     if old_depth > 0:
         s = time()
-        with open(f'manifold_logs/chess_apogee2_100k_{old_depth}.json', 'r') as infile:
-            manifold = manifold.load(fp=infile, data=data_memmap)
+        with open(f'manifold_logs/chess_apogee2_100k_{old_depth}.pickle', 'rb') as infile:
+            manifold = manifold.pickle_load(fp=infile, data=data_memmap)
+            manifold.__dict__['propagate'] = False
+            manifold.__dict__['calculate_neighbors'] = False
         print(f'reading from json with depth {old_depth} took {time() - s:.4f} seconds.')
     step = 10
     for d in range(old_depth, 50, step):
@@ -54,8 +56,8 @@ def benchmark_apogee2_100k():
             staring_depth=d + 1,
             ending_depth=d + step,
         )
-        with open(f'manifold_logs/chess_apogee2_100k_{d + step}.json', 'w') as outfile:
-            manifold.dump(fp=outfile)
+        with open(f'manifold_logs/chess_apogee2_100k_{d + step}.pickle', 'wb') as outfile:
+            manifold.pickle_dump(fp=outfile)
     return
 
 
@@ -80,12 +82,14 @@ def benchmark_greengenes_100k():
             of.write('new_depth, num_leaves, time_taken\n')
 
     np.random.seed(42)
-    manifold = Manifold(data_memmap, 'hamming')
-    old_depth = 0
+    manifold = Manifold(data_memmap, 'hamming', propagate=False, calculate_neighbors=False)
+    old_depth = 20
     if old_depth > 0:
         s = time()
-        with open(f'manifold_logs/chess_gg100k_{old_depth}.json', 'r') as infile:
-            manifold = manifold.load(fp=infile, data=data_memmap)
+        with open(f'manifold_logs/chess_gg100k_{old_depth}.pickle', 'rb') as infile:
+            manifold = manifold.pickle_load(fp=infile, data=data_memmap)
+            manifold.__dict__['propagate'] = False
+            manifold.__dict__['calculate_neighbors'] = False
         print(f'reading from json with depth {old_depth} took {time() - s:.4f} seconds.')
     max_depth, step = 50, 10
     for d in range(old_depth, max_depth, step):
@@ -95,12 +99,12 @@ def benchmark_greengenes_100k():
             staring_depth=d + 1,
             ending_depth=d + step,
         )
-        with open(f'manifold_logs/chess_gg100k_{d + step}.json', 'w') as outfile:
-            manifold.dump(fp=outfile)
+        with open(f'manifold_logs/chess_gg100k_{d + step}.pickle', 'wb') as outfile:
+            manifold.pickle_dump(fp=outfile)
     return
 
 
 if __name__ == '__main__':
     # print(f'not benchmarking!!!')
-    benchmark_apogee2_100k()
-    # benchmark_greengenes_100k()
+    # benchmark_apogee2_100k()
+    benchmark_greengenes_100k()
