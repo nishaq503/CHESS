@@ -33,7 +33,7 @@ def benchmark_apogee2_100k():
         shape=(num_data, num_dims),
     )
 
-    clustering_benchmarks_file = '../benchmarks/logs/apogee2_100k_clustering_times.csv'
+    clustering_benchmarks_file = 'manifold_logs/apogee2_100k_clustering_times.csv'
     if not os.path.exists(clustering_benchmarks_file):
         with open(clustering_benchmarks_file, 'w') as of:
             of.write('new_depth, num_leaves, time_taken\n')
@@ -43,7 +43,7 @@ def benchmark_apogee2_100k():
     old_depth = 0
     if old_depth > 0:
         s = time()
-        with open(f'../benchmarks/logs/chess_apogee2_100k_{old_depth}.json', 'r') as infile:
+        with open(f'manifold_logs/chess_apogee2_100k_{old_depth}.json', 'r') as infile:
             manifold = manifold.load(fp=infile, data=data_memmap)
         print(f'reading from json with depth {old_depth} took {time() - s:.4f} seconds.')
     step = 10
@@ -54,7 +54,7 @@ def benchmark_apogee2_100k():
             staring_depth=d + 1,
             ending_depth=d + step,
         )
-        with open(f'../benchmarks/logs/chess_apogee2_100k_{d + step}.json', 'w') as outfile:
+        with open(f'manifold_logs/chess_apogee2_100k_{d + step}.json', 'w') as outfile:
             manifold.dump(fp=outfile)
     return
 
@@ -74,7 +74,7 @@ def benchmark_greengenes_100k():
         shape=(num_data, num_dims),
     )
 
-    clustering_benchmarks_file = 'logs/gg100k_clustering_times.csv'
+    clustering_benchmarks_file = 'manifold_logs/gg100k_clustering_times.csv'
     if not os.path.exists(clustering_benchmarks_file):
         with open(clustering_benchmarks_file, 'w') as of:
             of.write('new_depth, num_leaves, time_taken\n')
@@ -84,7 +84,7 @@ def benchmark_greengenes_100k():
     old_depth = 0
     if old_depth > 0:
         s = time()
-        with open(f'logs/chess_gg100k_{old_depth}.json', 'r') as infile:
+        with open(f'manifold_logs/chess_gg100k_{old_depth}.json', 'r') as infile:
             manifold = manifold.load(fp=infile, data=data_memmap)
         print(f'reading from json with depth {old_depth} took {time() - s:.4f} seconds.')
     max_depth, step = 50, 10
@@ -95,12 +95,12 @@ def benchmark_greengenes_100k():
             staring_depth=d + 1,
             ending_depth=d + step,
         )
-        with open(f'logs/chess_gg100k_{d + step}.json', 'w') as outfile:
+        with open(f'manifold_logs/chess_gg100k_{d + step}.json', 'w') as outfile:
             manifold.dump(fp=outfile)
     return
 
 
 if __name__ == '__main__':
-    # benchmark_apogee2_100k()
+    # print(f'not benchmarking!!!')
+    benchmark_apogee2_100k()
     # benchmark_greengenes_100k()
-    print(f'not benchmarking!!!')
