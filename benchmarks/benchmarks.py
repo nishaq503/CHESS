@@ -168,7 +168,7 @@ def benchmark_search_apo100k():
         with open(search_stats_file, 'w') as of:
             of.write('argquery, query_radius, current_depth, cluster_names\n')
 
-    np.random.seed(50)
+    np.random.seed(42)
     manifold = Manifold(data_memmap, 'euclidean', propagate=False, calculate_neighbors=False)
     old_depth = 50
     if old_depth > 0:
@@ -194,8 +194,8 @@ def benchmark_search_apo100k():
 
 
 if __name__ == '__main__':
-    # print(f'not benchmarking!!!')
+    print(f'Ready for benchmarks!')
     # benchmark_apogee2_100k()
     # benchmark_greengenes_100k()
     # benchmark_search_gg100k()
-    benchmark_search_apo100k()
+    # benchmark_search_apo100k()
