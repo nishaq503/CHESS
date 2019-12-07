@@ -1,3 +1,5 @@
+import os
+import tempfile
 import unittest
 
 from chess.criterion import *
@@ -123,3 +125,22 @@ class TestManifold(unittest.TestCase):
         # TODO
         self.assertIsInstance(repr(m), str)
         return
+
+    # noinspection DuplicatedCode
+    def test_dump_load(self):
+        original = Manifold(self.data, 'euclidean')
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, 'dump'), 'w') as outfile:
+                original.dump(outfile)
+            with open(os.path.join(d, 'dump'), 'r') as infile:
+                loaded: Manifold = Manifold.load(infile, self.data)
+        self.assertEqual(original, loaded)
+
+        original.build()
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, 'dump'), 'w') as outfile:
+                original.dump(outfile)
+            with open(os.path.join(d, 'dump'), 'r') as infile:
+                loaded: Manifold = Manifold.load(infile, self.data)
+        self.assertEqual(len(original.graphs), len(loaded.graphs))
+        self.assertEqual(original, loaded)

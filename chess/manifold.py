@@ -1,6 +1,7 @@
+import json
 from collections import deque
 from operator import itemgetter
-from typing import Set, Dict, TextIO, Iterable, Deque
+from typing import Set, Dict, Iterable, Deque, TextIO
 
 from scipy.spatial.distance import pdist, cdist
 
@@ -40,13 +41,11 @@ class Cluster:
         return
 
     def __eq__(self, other: 'Cluster') -> bool:
-        return all((
-            self.name == other.name,
-            set(self.argpoints) == set(other.argpoints),
-        ))
+        return self.name == other.name and all((m == o for m, o in zip(sorted(self.argpoints), sorted(other.argpoints))))
 
     def __hash__(self):
         # TODO: Investigate int base k conversions.
+        # if 'loading' in self.manifold.__dict__
         return hash(self.name)
 
     def __str__(self) -> str:
@@ -172,17 +171,19 @@ class Cluster:
     @property
     def local_fractal_dimension(self) -> float:  # TODO: Cover
         """ The local fractal dimension of the cluster. """
-        if self.nsamples == 1:
-            return Radius(0.)
-        count = [d <= (self.radius / 2)
-                 for batch in self
-                 for d in self.distance(self.manifold.data[batch])]
-        count = np.sum(count)
-        return count if count == 0. else np.log2(len(self.argpoints) / count)
+        if '_local_fractal_dimension' not in self.__dict__:
+            if self.nsamples == 1:
+                return 0.
+            count = [d <= (self.radius / 2)
+                     for batch in self
+                     for d in self.distance(self.manifold.data[batch])]
+            count = np.sum(count)
+            self.__dict__['_local_fractal_dimension'] = count if count == 0. else np.log2(len(self.argpoints) / count)
+        return self.__dict__['_local_fractal_dimension']
 
     def clear_cache(self) -> None:  # TODO: Cover
         """ Clears the cache for the cluster. """
-        for prop in ['_argsamples', '_argcenter', '_argradius', '_radius']:
+        for prop in ['_argsamples', '_argcenter', '_argradius', '_radius', '_local_fractal_dimension']:
             try:
                 del self.__dict__[prop]
             except KeyError:
@@ -279,7 +280,7 @@ class Cluster:
                     _argcenter=self.argcenter,
                     _argradius=self.argradius,
                     _radius=self.radius,
-                )
+                    )
             }
             return self.children
 
@@ -351,12 +352,34 @@ class Cluster:
         """ Checks if point is within radius + self.radius of cluster. """
         return self.distance(np.expand_dims(point, axis=0))[0] <= (self.radius + radius)
 
-    def dump(self, fp) -> None:  # TODO
-        pass
+    def to_dict(self) -> Dict:
+        return {
+            'name': self.name,
+            'argpoints': list(map(int, self.argpoints)),
+            'argsamples': list(map(int, self.argsamples)),
+            'argcenter': int(self.argcenter),
+            'argradius': int(self.argradius),
+            'radius': float(self.radius),
+            'local_fractal_dimension': float(self.local_fractal_dimension),
+            'children': [c.to_dict() for c in self.children],
+            'neighbors': {n.name: d for n, d in self.neighbors.items()},
+        }
 
     @staticmethod
-    def load(fp):  # TODO
-        pass
+    def from_dict(manifold: 'Manifold', loaded_dict: Dict):
+        cluster = Cluster(
+            manifold=manifold,
+            argpoints=loaded_dict['argpoints'],
+            name=loaded_dict['name'],
+            _argsamples=loaded_dict['argsamples'],
+            _argcenter=loaded_dict['argcenter'],
+            _argradius=loaded_dict['argradius'],
+            _radius=loaded_dict['radius'],
+            _local_fractal_dimension=loaded_dict['local_fractal_dimension'],
+            neighbors=loaded_dict['neighbors']
+        )
+        cluster.children = [Cluster.from_dict(manifold, ld) for ld in loaded_dict['children']]
+        return cluster
 
 
 class Graph:
@@ -372,7 +395,9 @@ class Graph:
         return
 
     def __eq__(self, other: 'Graph') -> bool:
-        return self.clusters == other.clusters
+        my_clusters = sorted([c.name for c in self.clusters])
+        other_clusters = sorted([c.name for c in other.clusters])
+        return all((m == o for m, o in zip(my_clusters, other_clusters)))
 
     def __iter__(self) -> Iterable[Cluster]:
         yield from self.clusters
@@ -480,16 +505,15 @@ class Manifold:
         else:
             raise ValueError(f"Invalid argument to argpoints. {argpoints}")  # TODO: Cover
 
-        self.graphs: List['Graph'] = [Graph(Cluster(self, self.argpoints, ''))]
-
         self.__dict__.update(**kwargs)
+        if 'loading' in self.__dict__ and self.__dict__['loading'] is True:
+            self.graphs: List['Graph'] = list()
+        else:
+            self.graphs: List['Graph'] = [Graph(Cluster(self, self.argpoints, ''))]
         return
 
     def __eq__(self, other: 'Manifold') -> bool:
-        return all((
-            self.metric == other.metric,
-            self.graphs[-1] == other.graphs[-1],
-        ))
+        return self.metric == other.metric and self.graphs[-1] == other.graphs[-1]
 
     def __getitem__(self, depth: int) -> 'Graph':
         return self.graphs[depth]
@@ -552,9 +576,48 @@ class Manifold:
         assert name == cluster.name, f'wanted {name} but got {cluster.name}.'
         return cluster
 
-    def dump(self, fp: TextIO) -> None:  # TODO:
-        pass
+    def to_dict(self) -> Dict:
+        root_dict = self.select('').to_dict()
+        return {
+            'metric': self.metric,
+            'argpoints': list(map(int, self.argpoints)),
+            'root': root_dict,
+        }
+
+    def dump(self, fp: TextIO):  # TODO:
+        my_dict = self.to_dict()
+        json.dump(my_dict, fp)
+        return
+
+    @staticmethod
+    def from_dict(loaded_dict, data: Data, **kwargs) -> 'Manifold':
+        manifold: 'Manifold' = Manifold(
+            data=data,
+            metric=loaded_dict['metric'],
+            argpoints=loaded_dict['argpoints'],
+            **kwargs,
+        )
+        root: 'Cluster' = Cluster.from_dict(manifold, loaded_dict['root'])
+        graphs: List['Graph'] = [Graph(root)]
+        while True:
+            graph: Graph = graphs[-1]
+            clusters: List['Cluster'] = [cluster for cluster in graph if len(cluster.children) > 0]
+            if len(clusters) == 0:
+                if len(graphs) > 1:
+                    graphs.pop()
+                break
+            children = [child for cluster in clusters for child in cluster.children]
+            graphs.append(Graph(*children))
+
+        manifold.graphs = graphs
+
+        for graph in manifold.graphs:
+            for cluster in graph.clusters:
+                cluster.neighbors = {manifold.select(n): d for n, d in cluster.__dict__['neighbors'].items()}
+                del cluster.__dict__['neighbors']
+        return manifold
 
     @staticmethod
     def load(fp: TextIO, data: Data) -> 'Manifold':  # TODO:
-        pass
+        loaded_dict = json.load(fp)
+        return Manifold.from_dict(loaded_dict, data)
