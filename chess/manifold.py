@@ -210,6 +210,13 @@ class Cluster:
                     distances = cdist(np.expand_dims(point, 0), centers, self.metric)[0]
                     radii = [radius + c.radius for c in children]
                     results = [c for c, d, r in zip(children, distances, radii) if d <= r]
+                    if 'search_stats_file' in self.manifold.__dict__:
+                        with open(self.manifold.__dict__['search_stats_file'], 'a') as search_stats_file:
+                            line = f'{self.manifold.__dict__["argquery"]}, {radius}, {d}'
+                            cluster_names = ';'.join([c.name for c in children])
+                            search_stats_file.write(f'{line}, {cluster_names}\n')
+                            cluster_names = ';'.join([c.name for c in results])
+                            search_stats_file.write(f'{line}, {cluster_names}\n')
                     if len(results) == 0:
                         break  # TODO: Cover
                 assert depth == results[0].depth, (depth, results[0].depth)
@@ -251,6 +258,7 @@ class Cluster:
                         results.append(current)  # TODO: Cover
         else:
             raise ValueError(f'mode must be one of iterative, recursive, dfs, or bfs. got {mode} instead.')  # TODO: Cover
+
         return results
 
     def prune(self) -> None:  # TODO: Cover
@@ -354,7 +362,7 @@ class Cluster:
         return self.distance(np.expand_dims(point, axis=0))[0] <= (self.radius + radius)
 
     def to_dict(self) -> Dict:
-        return {
+        my_dict = {
             'name': self.name,
             'argpoints': list(map(int, self.argpoints)),
             'argsamples': list(map(int, self.argsamples)),
@@ -363,8 +371,12 @@ class Cluster:
             'radius': float(self.radius),
             'local_fractal_dimension': float(self.local_fractal_dimension),
             'children': [c.to_dict() for c in self.children],
-            'neighbors': {n.name: d for n, d in self.neighbors.items()},
         }
+        try:
+            my_dict['neighbors'] = {n.name: d for n, d in self.neighbors.items()}
+        except AttributeError:
+            my_dict['neighbors'] = {}
+        return my_dict
 
     @staticmethod
     def from_dict(manifold: 'Manifold', loaded_dict: Dict):
@@ -560,7 +572,7 @@ class Manifold:
                     self.__dict__['propagate'] = False
                 if 'calculate_neighbors' in self.__dict__ and self.__dict__['calculate_neighbors'] is False:
                     for c in clusters:
-                        c.neighbors = dict()
+                        c.neighbors = {c: 0}
                     continue
                 else:
                     [c.update_neighbors(propagate=self.__dict__['propagate']) for c in clusters]
