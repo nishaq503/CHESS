@@ -127,20 +127,39 @@ class TestManifold(unittest.TestCase):
         return
 
     # noinspection DuplicatedCode
-    def test_dump_load(self):
+    def test_json(self):
         original = Manifold(self.data, 'euclidean')
         with tempfile.TemporaryDirectory() as d:
             with open(os.path.join(d, 'dump'), 'w') as outfile:
-                original.dump(outfile)
+                original.json_dump(outfile)
             with open(os.path.join(d, 'dump'), 'r') as infile:
-                loaded: Manifold = Manifold.load(infile, self.data)
+                loaded: Manifold = Manifold.json_load(infile, self.data)
         self.assertEqual(original, loaded)
 
         original.build()
         with tempfile.TemporaryDirectory() as d:
             with open(os.path.join(d, 'dump'), 'w') as outfile:
-                original.dump(outfile)
+                original.json_dump(outfile)
             with open(os.path.join(d, 'dump'), 'r') as infile:
-                loaded: Manifold = Manifold.load(infile, self.data)
+                loaded: Manifold = Manifold.json_load(infile, self.data)
+        self.assertEqual(len(original.graphs), len(loaded.graphs))
+        self.assertEqual(original, loaded)
+
+    # noinspection DuplicatedCode
+    def test_pickle(self):
+        original = Manifold(self.data, 'euclidean')
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, 'dump'), 'wb') as outfile:
+                original.pickle_dump(outfile)
+            with open(os.path.join(d, 'dump'), 'rb') as infile:
+                loaded: Manifold = Manifold.pickle_load(infile, self.data)
+        self.assertEqual(original, loaded)
+
+        original.build()
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, 'dump'), 'wb') as outfile:
+                original.pickle_dump(outfile)
+            with open(os.path.join(d, 'dump'), 'rb') as infile:
+                loaded: Manifold = Manifold.pickle_load(infile, self.data)
         self.assertEqual(len(original.graphs), len(loaded.graphs))
         self.assertEqual(original, loaded)

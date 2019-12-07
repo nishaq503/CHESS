@@ -1,7 +1,8 @@
 import json
+import pickle
 from collections import deque
 from operator import itemgetter
-from typing import Set, Dict, Iterable, Deque, TextIO
+from typing import Set, Dict, Iterable, Deque, TextIO, BinaryIO
 
 from scipy.spatial.distance import pdist, cdist
 
@@ -584,7 +585,7 @@ class Manifold:
             'root': root_dict,
         }
 
-    def dump(self, fp: TextIO):  # TODO:
+    def json_dump(self, fp: TextIO):  # TODO:
         my_dict = self.to_dict()
         json.dump(my_dict, fp)
         return
@@ -618,6 +619,16 @@ class Manifold:
         return manifold
 
     @staticmethod
-    def load(fp: TextIO, data: Data) -> 'Manifold':  # TODO:
+    def json_load(fp: TextIO, data: Data) -> 'Manifold':  # TODO:
         loaded_dict = json.load(fp)
+        return Manifold.from_dict(loaded_dict, data)
+
+    def pickle_dump(self, fp: BinaryIO):
+        my_dict = self.to_dict()
+        pickle.dump(my_dict, fp)
+        return
+
+    @staticmethod
+    def pickle_load(fp: BinaryIO, data: Data) -> 'Manifold':
+        loaded_dict = pickle.load(fp)
         return Manifold.from_dict(loaded_dict, data)
