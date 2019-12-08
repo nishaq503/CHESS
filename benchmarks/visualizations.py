@@ -52,6 +52,7 @@ def plot(angles, data_, labels, folder, figsize, dpi, s, title):
     y_limits = [int(np.min(y)), int(np.max(y))]
     z_limits = [int(np.min(z)), int(np.max(z))]
     plt.clf()
+    plt.close('all')
     fig = plt.figure(figsize=figsize, dpi=dpi)
     ax = fig.add_subplot(111, projection='3d')
     ax.scatter(x, y, z, c=labels, s=s, cmap='Set1')
@@ -92,42 +93,53 @@ def query_plots(
         depth_to_clusters: Dict[int, Tuple[List[Cluster], List[Cluster]]],
         base_path: str,
 ):
-    angle, step = 0, 30
-    for d_ in range(0, 51, 5):
-        labels: Dict[int, int] = get_labels()
-        labels[argquery] = 0
-        if d_ in depth_to_clusters:
+    angle, step = 0, 15
+    for d_ in range(0, 41):
+        if d_ < 15:
+            continue
+        if depth_to_clusters:
             gray, green = depth_to_clusters[d_]
             gray_argpoints: List[int] = [int(p) for cluster in gray for p in cluster.argpoints]
             gray_points = umap_data[gray_argpoints]
-            gray_labels = [labels[g] for g in gray_argpoints]
+            gray_labels = [8 if g != argquery else 0 for g in gray_argpoints]
+            if len(gray_labels) >= 9:
+                for g in range(9):
+                    if gray_argpoints[g] == argquery:
+                        gray_labels[9] = g
+                    else:
+                        gray_labels[g] = g
+            fraction: float = len(gray_argpoints) / 100_000
             plot(
-                angles=(angle, angle + step // 2),
+                angles=(angle, angle + step),
                 data_=gray_points,
                 labels=gray_labels,
                 folder=base_path,
                 figsize=(12, 12),
                 dpi=150,
-                s=0.025,
-                title=f'depth: {d_}, fraction: {len(gray_argpoints) / 100_000:.4f}'
+                s=2. if fraction < 0.1 else 0.1,
+                title=f'argquery: {argquery} depth: {d_}, fraction: {fraction:.6f}'
             )
-            angle += step // 2
+            angle += step
             green_argpoints: List[int] = [int(p) for cluster in green for p in cluster.argpoints]
-            for g in green_argpoints:
-                if g != argquery:
-                    labels[g] = 2
-            gray_labels = [labels[g] for g in gray_argpoints]
+            green_set = set(green_argpoints)
+            gray_labels = [2 if g in green_set else 8 for g in gray_argpoints]
+            if len(gray_labels) >= 9:
+                for g in range(9):
+                    if gray_argpoints[g] == argquery:
+                        gray_labels[9] = g
+                    else:
+                        gray_labels[g] = g
             plot(
-                angles=(angle, angle + step // 2),
+                angles=(angle, angle + step),
                 data_=gray_points,
                 labels=gray_labels,
                 folder=base_path,
                 figsize=(12, 12),
                 dpi=150,
-                s=0.025,
-                title=f'depth: {d_}, fraction: {len(gray_argpoints) / 100_000:.4f}'
+                s=2. if fraction < 0.1 else 0.1,
+                title=f'argquery: {argquery} depth: {d_}, fraction: {fraction:.6f}'
             )
-            angle += step // 2
+            angle += step
         else:
             break
     return
@@ -168,15 +180,15 @@ def get_apogee_metadata() -> Dict[int, Dict[int, Tuple[List[str], List[str]]]]:
         temp_df.drop(labels='argquery', axis=1, inplace=True)
         temp_df.drop(labels='query_radius', axis=1, inplace=True)
 
-        df_by_argquery[i] = dict()
-        for d in range(51):
+        df_by_argquery[aq] = dict()
+        for d in range(0, 41):
             d_df: pd.DataFrame = temp_df[temp_df.current_depth == d]
             d_df.reset_index(drop=True, inplace=True)
             names: List[List[str]] = [list(), list()]
             for j, row in d_df.iterrows():
                 cluster_names = row.cluster_names
                 names[j] = list(cluster_names.split(';'))
-            df_by_argquery[i][d] = (names[0], names[1])
+            df_by_argquery[aq][d] = (names[0], names[1])
 
     return df_by_argquery
 
