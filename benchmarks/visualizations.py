@@ -16,7 +16,7 @@ def get_embedding(dataset: str) -> np.ndarray:
         dtype = np.float32
     elif dataset == 'greengenes':
         filename = '/scratch/nishaq/GreenGenes/gg100k_umap.memmap'
-        dtype = np.int8
+        dtype = np.float32
     else:
         raise ValueError(f'dataset must be apogee or greengenes. Got {dataset} instead.')
 
@@ -67,13 +67,13 @@ def plot(angles, data_, labels, folder, figsize, dpi, s, title):
         ax.view_init(elev=10, azim=azimuth)
         plt.savefig(folder + f'{benchmarks.PLOT_NUMBER:05d}.png', bbox_inches='tight', pad_inches=0)
         benchmarks.PLOT_NUMBER += 1
-        break
+        # break  # TODO: remove
     plt.close('all')
     return
 
 
 def get_labels() -> Dict[int, int]:
-    labels = {i_: 8 for i_ in range(100_000)}
+    labels = {i: 8 for i in range(100_000)}
     labels[0] = 0  # red, query
     labels[1] = 1  # blue
     labels[2] = 2  # green, potential points
@@ -94,11 +94,11 @@ def query_plots(
         base_path: str,
 ):
     angle, step = 0, 15
-    for d_ in range(0, 41):
-        if d_ < 15:
+    for d in range(0, 41):
+        if d < 15:
             continue
         if depth_to_clusters:
-            gray, green = depth_to_clusters[d_]
+            gray, green = depth_to_clusters[d]
             gray_argpoints: List[int] = [int(p) for cluster in gray for p in cluster.argpoints]
             gray_points = umap_data[gray_argpoints]
             gray_labels = [8 if g != argquery else 0 for g in gray_argpoints]
@@ -117,7 +117,7 @@ def query_plots(
                 figsize=(12, 12),
                 dpi=150,
                 s=2. if fraction < 0.1 else 0.1,
-                title=f'argquery: {argquery} depth: {d_}, fraction: {fraction:.6f}'
+                title=f'depth: {d}, fraction: {fraction:.6f}'
             )
             angle += step
             green_argpoints: List[int] = [int(p) for cluster in green for p in cluster.argpoints]
@@ -137,7 +137,7 @@ def query_plots(
                 figsize=(12, 12),
                 dpi=150,
                 s=2. if fraction < 0.1 else 0.1,
-                title=f'argquery: {argquery} depth: {d_}, fraction: {fraction:.6f}'
+                title=f'depth: {d}, fraction: {fraction:.6f}'
             )
             angle += step
         else:
@@ -145,13 +145,20 @@ def query_plots(
     return
 
 
-def make_apogee_plots(
+def make_plots(
+        dataset: str,
         manifold: Manifold,
         meta_data: Dict[int, Dict[int, Tuple[List[str], List[str]]]]
 ):
-    embedding = get_embedding('apogee')
-    plot_folder = '../presentation/apogee2/umap/'
-    for i_, q in enumerate(meta_data.keys()):
+    if dataset == 'apogee':
+        embedding = get_embedding(dataset)
+        plot_folder = '../presentation/apogee2/umap/'
+    elif dataset == 'greengenes':
+        embedding = get_embedding(dataset)
+        plot_folder = '../presentation/greengenes/tsne/'
+    else:
+        raise ValueError(f'dataset must be either apogee or greengenes. Got {dataset} instead.')
+    for q in meta_data.keys():
         depth_to_cluster_names: Dict[int, Tuple[List[str], List[str]]] = meta_data[q]
         depth_to_clusters: Dict[int, Tuple[List[Cluster], List[Cluster]]] = dict()
         for k, v in depth_to_cluster_names.items():
@@ -164,17 +171,24 @@ def make_apogee_plots(
             depth_to_clusters=depth_to_clusters,
             base_path=plot_folder
         )
+        break  # TODO: remove
     return
 
 
-def get_apogee_metadata() -> Dict[int, Dict[int, Tuple[List[str], List[str]]]]:
-    search_file = 'manifold_logs/apo100k_search_stats.csv'
-    search_stats: pd.DataFrame = pd.read_csv(search_file, sep=', ')
+def get_metadata(dataset: str) -> Dict[int, Dict[int, Tuple[List[str], List[str]]]]:
+    if dataset == 'apogee':
+        search_file = 'manifold_logs/apo100k_search_stats.csv'
+        search_stats: pd.DataFrame = pd.read_csv(search_file, sep=', ')
+    elif dataset == 'greengenes':
+        search_file = 'manifold_logs/gg100k_search_stats.csv'
+        search_stats: pd.DataFrame = pd.read_csv(search_file, sep=', ')
+    else:
+        raise ValueError(f'dataset must be either apogee or greengenes. Got {dataset} instead.')
 
     argqueries = sorted(list(set(search_stats.argquery.values)))
 
     df_by_argquery: Dict[int, Dict[int, Tuple[List[str], List[str]]]] = dict()
-    for i, aq in enumerate(argqueries):
+    for aq in argqueries:
         temp_df: pd.DataFrame = search_stats[search_stats.argquery == aq]
         temp_df.reset_index(drop=True, inplace=True)
         temp_df.drop(labels='argquery', axis=1, inplace=True)
@@ -193,17 +207,26 @@ def get_apogee_metadata() -> Dict[int, Dict[int, Tuple[List[str], List[str]]]]:
     return df_by_argquery
 
 
-def get_apogee_manifold() -> Manifold:
-    data = get_data('apogee')
-    with open('manifold_logs/chess_apogee2_100k_50.pickle', 'rb') as infile:
-        manifold: Manifold = Manifold.pickle_load(infile, data)
+def get_manifold(dataset: str) -> Manifold:
+    data = get_data(dataset)
+    if dataset == 'apogee':
+        with open('manifold_logs/chess_apogee2_100k_50.pickle', 'rb') as infile:
+            manifold: Manifold = Manifold.pickle_load(infile, data)
+    elif dataset == 'greengenes':
+        with open('manifold_logs/chess_gg100k_50.pickle', 'rb') as infile:
+            manifold: Manifold = Manifold.pickle_load(infile, data)
 
     manifold.__dict__['propagate'] = False
     manifold.__dict__['calculate_neighbors'] = False
     return manifold
 
 
+def main():
+    dataset = 'greengenes'
+    manifold: Manifold = get_manifold(dataset=dataset)
+    meta_data = get_metadata(dataset=dataset)
+    make_plots(dataset=dataset, manifold=manifold, meta_data=meta_data)
+
+
 if __name__ == '__main__':
-    m: Manifold = get_apogee_manifold()
-    searches_meta_data = get_apogee_metadata()
-    make_apogee_plots(m, searches_meta_data)
+    main()
