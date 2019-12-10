@@ -261,6 +261,33 @@ class Cluster:
 
         return results
 
+    # noinspection DuplicatedCode
+    def overlap_search(self) -> Dict['Cluster', Radius]:
+        """ Finds all other clusters at the same depth at self that have overlap with self. """
+        initial_depth = self.manifold.graphs[0].depth
+        assert initial_depth is not None, 'Manifold must have at least one cluster in the 0\'th layer. Got no clusters in the 0\'th layer.'
+        assert initial_depth <= self.depth, f'Overlap search cannot be started at a depth lower than self.depth.' \
+                                            f'self.depth is {self.depth} but tried starting at {initial_depth}.'
+
+        results: List['Cluster'] = list(self.manifold.graphs[0].clusters)
+        for depth in range(initial_depth, self.depth):
+            if len(results) > 0:
+                centers: np.ndarray = np.asarray([c.center for c in results], dtype=np.float64)
+                distances = self.distance(centers)
+                radii = [self.radius + 2 * c.radius for c in results]
+                results = [c for c, d, r in zip(results, distances, radii) if d <= r]
+                results = [child for cluster in results for child in cluster.children]
+            else:
+                break
+        assert all((self.depth == c.depth for c in results)), 'Results are at different depth level than self.'
+        centers: np.ndarray = np.asarray([c.center for c in results], dtype=np.float64)
+        distances = self.distance(centers)
+        radii = [self.radius + c.radius for c in results]
+        overlaps: Dict['Cluster', Radius] = {c: d for c, d, r in zip(results, distances, radii) if d <= r}
+        assert self in overlaps, 'self was not in the set returned from '
+        del overlaps[self]
+        return overlaps
+
     def prune(self) -> None:  # TODO: Cover
         """ Removes all references to descendents. """
         if self.children:
@@ -331,6 +358,11 @@ class Cluster:
             distance = self.distance(np.expand_dims(other.center, axis=0))[0]
             self.neighbors.update({other: distance}), other.neighbors.update({self: distance})
         return
+
+    def new_update_neighbors(self) -> Dict['Cluster', Radius]:
+        """ Finds neighbors with new proof by Najib. """
+        self.neighbors: Dict['Cluster', Radius] = self.overlap_search()
+        return self.neighbors
 
     def update_neighbors(self, propagate: bool = True) -> Dict['Cluster', Radius]:
         """ Find neighbors, update them, return the set. """
@@ -426,6 +458,14 @@ class Graph:
 
     def __contains__(self, cluster: 'Cluster') -> bool:  # TODO: Cover
         return cluster in self.clusters
+
+    @property
+    def manifold(self) -> 'Manifold':
+        return next(iter(self.clusters)).manifold if len(self.clusters) > 0 else None
+
+    @property
+    def depth(self) -> int:
+        return next(iter(self.clusters)).depth if len(self.clusters) > 0 else None
 
     @property
     def edges(self) -> Set[Set['Cluster']]:  # TODO: Cover
@@ -570,10 +610,13 @@ class Manifold:
                 self.graphs.append(g)
                 if 'propagate' not in self.__dict__:
                     self.__dict__['propagate'] = False
-                if 'calculate_neighbors' in self.__dict__ and self.__dict__['calculate_neighbors'] is False:
-                    for c in clusters:
-                        c.neighbors = {c: 0}
-                    continue
+                # if 'calculate_neighbors' in self.__dict__ and self.__dict__['calculate_neighbors'] is False:
+                #     for c in clusters:
+                #         c.neighbors = {c: 0}
+                #     continue
+                # else:
+                if 'new_calculate_neighbors' in self.__dict__ and self.__dict__['new_calculate_neighbors'] is True:
+                    [c.new_update_neighbors() for c in clusters]
                 else:
                     [c.update_neighbors(propagate=self.__dict__['propagate']) for c in clusters]
             else:

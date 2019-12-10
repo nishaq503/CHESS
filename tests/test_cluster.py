@@ -96,8 +96,9 @@ class TestCluster(unittest.TestCase):
     def test_neighbors_more(self):
         data, labels = spiral_2d()
         np.random.seed(42)
-        manifold = Manifold(data, 'euclidean', propagate=True)
-        manifold.build(MinRadius(MIN_RADIUS), MaxDepth(10))
+        manifold = Manifold(data, 'euclidean', new_calculate_neighbors=True)  # 9.540 sec for depth 15
+        # manifold = Manifold(data, 'euclidean', propagate=True)  # 22.253 sec for depth 15
+        manifold.build(MinRadius(MIN_RADIUS), MaxDepth(15))
         for depth, graph in enumerate(manifold.graphs):
             for cluster in graph:
                 potential_neighbors = [c for c in graph if c.name != cluster.name]
