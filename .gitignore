@@ -141,4 +141,6 @@ old_notebooks
 plots
 timing.py
 benchmarks/logs
+benchmarks/manifold_logs
 *.ipynb
+presentation

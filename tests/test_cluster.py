@@ -30,9 +30,9 @@ class TestCluster(unittest.TestCase):
         return
 
     def test_argpoints(self):
-        self.assertListEqual(
-            self.manifold.argpoints,
-            self.cluster.argpoints
+        self.assertSetEqual(
+            set(self.manifold.argpoints),
+            set(self.cluster.argpoints)
         )
         return
 
@@ -73,6 +73,27 @@ class TestCluster(unittest.TestCase):
             [self.assertEqual(parent.depth + i, c.depth) for c in children]
         return
 
+    @staticmethod
+    def trace_lineage(cluster: Cluster, other: Cluster):  # TODO: Cover
+        assert cluster.depth == other.depth
+        assert cluster.overlaps(other.center, other.radius)
+        lineage = [other.name[:i] for i in range(other.depth) if cluster.name[:i] != other.name[:i]]
+        ancestors = [other.manifold.select(n) for n in reversed(lineage)]
+        for ancestor in ancestors:
+            print(f'checking {ancestor.name}...')
+            if not cluster.overlaps(ancestor.center, 2 * ancestor.radius):
+                print(f'{cluster.name} did not overlap with {ancestor.name}')
+                distance = cluster.distance(np.asarray([ancestor.center], dtype=np.float64))[0]
+                print(f'cluster.radius: {cluster.radius} vs ancestor.radius: {ancestor.radius}')
+                print(f'distance: {distance} vs cluster.radius + 2 * ancestor.radius: {cluster.radius + 2 * ancestor.radius}')
+                print(f'off by {(distance - (cluster.radius + 2 * ancestor.radius)) / distance} percent')
+                print(f'cluster.depth: {cluster.depth} vs ancestor.depth: {ancestor.depth}')
+                print(f'cluster_population: {len(cluster.argpoints)} vs ancestor_population: {len(ancestor.argpoints)}')
+                print('\n\n\n')
+                return
+        else:
+            raise ValueError(f'all divergent ancestors had overlap')
+
     def test_neighbors_more(self):
         data, labels = bullseye()
         np.random.seed(42)
@@ -80,16 +101,12 @@ class TestCluster(unittest.TestCase):
         manifold.build(MinRadius(MIN_RADIUS), MaxDepth(12))
         for depth, graph in enumerate(manifold.graphs):
             for cluster in graph:
-                # TODO: Remove.
-                # cluster.update_neighbors()
-                neighbors = manifold.find_clusters(cluster.center, cluster.radius, cluster.depth) - {cluster}
-                if neighbors ^ cluster.neighbors.keys():
-                    print("fuck")
-                self.assertEqual(depth, cluster.depth)
-                [self.assertEqual(cluster.depth, n.depth) for n in set(cluster.neighbors.keys())]
-                self.assertEqual(0, len(set(cluster.neighbors.keys()) - neighbors))
-                if len(set(neighbors - set(cluster.neighbors.keys()))) != 0:
-                    self.assertEqual(0, len(set(neighbors - set(cluster.neighbors.keys()))))
+                neighbors = manifold.find_clusters(cluster.center, cluster.radius, depth) - {cluster}
+                if (neighbors - set(cluster.neighbors.keys())) or (set(cluster.neighbors.keys()) - neighbors):
+                    print(depth, cluster.name, ':', [n.name for n in neighbors])
+                    print(depth, cluster.name, ':', [n.name for n in (neighbors - set(cluster.neighbors.keys()))])
+                    print(depth, cluster.name, ':', [n.name for n in (set(cluster.neighbors.keys()) - neighbors)])
+                # self.assertTrue(len(neighbors) >= len(set(cluster.neighbors.keys())))
                 self.assertSetEqual(neighbors, set(cluster.neighbors.keys()))
 
     def test_tree_search(self):

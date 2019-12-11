@@ -23,7 +23,6 @@ class TestCriterion(unittest.TestCase):
     def test_combinations(self):
         min_radius, min_points, max_depth = 0.15, 10, 20
         self.manifold.build(MinRadius(min_radius), MinPoints(min_points), MaxDepth(max_depth))
-        print(len(self.manifold.graphs))
         self.assertTrue(all((c.radius >= min_radius for g in self.manifold for c in g)))
         [self.assertEqual(1, len(c.children)) for g in self.manifold.graphs for c in g
          if c.radius <= min_radius or len(c.argpoints) <= min_points or c.depth >= max_depth]
