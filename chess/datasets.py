@@ -12,7 +12,8 @@ def ring_data(num_points: int, radius: float, noise: float) -> np.ndarray:
     theta: np.ndarray = 2 * np.pi * np.random.rand(num_points)
     x: np.ndarray = radius * np.cos(theta) + noise * np.random.randn(num_points)
     y: np.ndarray = radius * np.sin(theta) + noise * np.random.randn(num_points)
-    return np.stack([x, y], axis=1)
+    ring = np.stack([x, y], axis=1)
+    return np.asarray(ring, dtype=np.float64)
 
 
 def bullseye(num_rings: int = 4, n: int = 1_000) -> Tuple[np.ndarray, List[int]]:
@@ -22,7 +23,7 @@ def bullseye(num_rings: int = 4, n: int = 1_000) -> Tuple[np.ndarray, List[int]]
         ring: np.ndarray = ring_data(num_points=n * r, radius=r, noise=0.1)
         labels.extend([r for _ in range(n * r)])
         data = np.concatenate([data, ring], axis=0)
-    return data, labels
+    return np.asarray(data, dtype=np.float64), labels
 
 
 def line(num_points: int = 10_000, m: float = 1, c: float = 0., noise: float = 0.05) -> Tuple[np.ndarray, List[int]]:
@@ -31,13 +32,13 @@ def line(num_points: int = 10_000, m: float = 1, c: float = 0., noise: float = 0
     data = np.asarray((x, y)).T
     data = data + np.random.rand(*data.shape) * noise
     labels = np.ones_like(x.T)
-    return data, list(labels)
+    return np.asarray(data, dtype=np.float64), list(labels)
 
 
 def xor(num_points: int = 10_000) -> Tuple[np.ndarray, List[int]]:
     data = np.random.rand(num_points, 2)
     labels = [int((x > 0.5) != (y > 0.5)) for x, y, in data]
-    return data, labels
+    return np.asarray(data, dtype=np.float64), labels
 
 
 def spiral_2d(num_points: int = 10_000, noise: float = 0.25) -> Tuple[np.ndarray, List[int]]:
@@ -53,7 +54,7 @@ def spiral_2d(num_points: int = 10_000, noise: float = 0.25) -> Tuple[np.ndarray
 
     data = np.concatenate([x_a, x_b])
     labels = list(np.concatenate([np.zeros(len(x_a)), np.ones(len(x_a))]))
-    return data, labels
+    return np.asarray(data, dtype=np.float64), labels
 
 
 def generate_torus(num_points: int, r_tube: float, r_torus: float, noise: float) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -75,7 +76,7 @@ def tori(num_points: int = 20_000, noise: float = 0.1) -> Tuple[np.ndarray, List
     labels.extend([1 for _ in x])
 
     data = np.concatenate([torus_1, torus_2], axis=0)
-    return data, labels
+    return np.asarray(data, dtype=np.float64), labels
 
 
 def spiral_3d(num_points: int, radius: float, height: float, num_turns: int, noise: float) -> np.ndarray:
@@ -102,7 +103,7 @@ def skewer(num_points: int = 12_000, radius: float = 1., height: float = 5., num
     labels.extend([1 for _ in range(line_data.shape[0])])
 
     data = np.concatenate([spiral_data, line_data], axis=0)
-    return data, labels
+    return np.asarray(data, dtype=np.float64), labels
 
 
 def plot():
