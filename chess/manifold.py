@@ -392,9 +392,9 @@ class Cluster:
         data = {
             'name': self.name,
             '_radius': self.radius,
+            '_argradius': self.argradius,
             '_argsamples': self.argsamples,
             '_argcenter': self.argcenter,
-            '_argradius': self.argradius,
             '_local_fractal_dimension': self.local_fractal_dimension,
         }
         if self.children:
@@ -612,6 +612,7 @@ class Manifold:
         pickle.dump({
             'metric': self.metric,
             'argpoints': self.argpoints,
+            'root': [c.json() for c in self.graphs[0]],
             'leaves': [c.json() for c in self.graphs[-1]]
         }, fp)
         return
