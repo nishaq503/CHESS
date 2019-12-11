@@ -612,5 +612,10 @@ class Manifold:
     @staticmethod
     def load(fp: TextIO, data: Data) -> 'Manifold':
         m = Manifold(data, **pickle.load(fp))
-        # TODO: Rebuild upper layers.
+        while len(m.graphs[-1]) > 1:
+            children = sorted([c for c in m.graphs[-1]], key=lambda c: c.name)
+            # TODO: Merge parents here.
+            parents = []
+            m.graphs.append(Graph(parents))
+        m.graphs = reversed(m.graphs)
         return m
