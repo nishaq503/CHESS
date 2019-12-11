@@ -70,14 +70,6 @@ class Cluster:
     def __contains__(self, point: Data) -> bool:
         return self.overlaps(point=point, radius=0.)
 
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        return
-
     @property
     def metric(self) -> str:
         """ The metric used in the manifold. """
@@ -397,21 +389,23 @@ class Cluster:
         return self.distance(np.expand_dims(point, axis=0))[0] <= (self.radius + radius)
 
     def json(self):
-        return {
+        data = {
             'name': self.name,
-            'argpoints': self.argpoints,
+            '_radius': self.radius,
+            '_argsamples': self.argsamples,
+            '_argcenter': self.argcenter,
+            '_argradius': self.argradius,
+            '_local_fractal_dimension': self.local_fractal_dimension,
         }
+        if self.children:
+            data['children'] = [c.json() for c in self.children]
+        else:
+            data['argpoints'] = self.argpoints
+        return data
 
     @staticmethod
     def from_json(data):
         return Cluster(**data)
-
-    def dump(self, fp) -> None:
-        pass
-
-    @staticmethod
-    def load(fp):
-        pass
 
 
 class Graph:
@@ -443,15 +437,6 @@ class Graph:
 
     def __contains__(self, cluster: 'Cluster') -> bool:  # TODO: Cover
         return cluster in self.clusters
-
-    def __getstate__(self):
-        return tuple(self.clusters)
-
-    def __setstate__(self, state):
-        self.clusters = set()
-        for cluster in state:
-            self.clusters.add(cluster)
-        return
 
     @property
     def manifold(self) -> 'Manifold':
@@ -604,6 +589,7 @@ class Manifold:
                 self.graphs.append(g)
                 [c.update_neighbors() for c in g] # TODO: Remove
             else:
+                [c.children.clear() for c in self.graphs[-1]]
                 break
         return self
 
@@ -622,15 +608,6 @@ class Manifold:
         assert name == cluster.name, f'wanted {name} but got {cluster.name}.'
         return cluster
 
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        del state['data']
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        return
-
     def dump(self, fp: TextIO) -> None:
         pickle.dump({
             'metric': self.metric,
@@ -646,7 +623,6 @@ class Manifold:
         graphs = [Graph(*[Cluster.from_json({'manifold': manifold, **e}) for e in d['leaves']])]
         while len(graphs[-1]) > 1:
             children = sorted([c for c in graphs[-1]], key=lambda c: c.name)
-            # TODO: Merge parents here.
             parents = {}
             for child in children:
                 parent_name = child.name[:-1]
