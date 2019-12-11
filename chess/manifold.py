@@ -1,7 +1,7 @@
 import pickle
 from collections import deque
 from operator import itemgetter
-from typing import Set, Dict, Iterable, Deque, TextIO, BinaryIO
+from typing import Set, Dict, Iterable, Deque, TextIO
 
 from scipy.spatial.distance import pdist, cdist
 
@@ -590,7 +590,16 @@ class Manifold:
         """ Returns the cluster with the given name. """
         # TODO: Support multiple roots
         # TODO: Support clipping of layers from self.graphs
-        return next(filter(lambda c: c.name == name, self.graphs[len(name)]))
+        assert len(name) < len(self.graphs)
+        cluster: Cluster = next(iter(self.graphs[0]))
+        for depth in range(len(name) + 1):
+            partial_name = name[:depth]
+            for child in cluster.children:
+                if child.name == partial_name:
+                    cluster = child
+                    break
+        assert name == cluster.name, f'wanted {name} but got {cluster.name}.'
+        return cluster
 
     def dump(self, fp: TextIO) -> None:
         pickle.dump({
