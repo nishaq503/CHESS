@@ -1,5 +1,5 @@
-from chess.manifold import Cluster as _Cluster, Manifold as _Manifold
 import chess
+from chess.manifold import Cluster as _Cluster, Manifold as _Manifold
 
 
 class MaxDepth:
@@ -63,7 +63,7 @@ class LeavesComponent:  # TODO: Cover
 
     def __call__(self, cluster: _Cluster):
         parent_component = self.manifold.graphs[cluster.depth].component(cluster)
-        return any((c.overlaps(cluster.center, cluster.radius) for c in parent_component))
+        return any((c.overlaps(cluster.medoid, cluster.radius) for c in parent_component))
 
 
 class MinCardinality:  # TODO: Cover

@@ -28,9 +28,6 @@ class Cluster:
     # TODO: RE above, if we store the percentages we can calculate sparseness
 
     def __init__(self, manifold: 'Manifold', argpoints: Vector, name: str, **kwargs):
-        if len(argpoints) == 0:
-            raise ValueError(f"Cluster {name} need argpoints.")
-
         self.manifold: 'Manifold' = manifold
         self.argpoints: Vector = argpoints
         self.name: str = name
@@ -39,6 +36,11 @@ class Cluster:
         self.children: Set['Cluster'] = set()
 
         self.__dict__.update(**kwargs)
+
+        if not argpoints and self.children:
+            self.argpoints = [p for child in self.children for p in child.argpoints]
+        elif not argpoints:
+            raise ValueError(f"Cluster {name} need argpoints.")
         return
 
     def __eq__(self, other: 'Cluster') -> bool:
@@ -132,23 +134,29 @@ class Cluster:
         return len(self.argsamples)
 
     @property
-    def center(self) -> Data:  # TODO: slow
-        """ The centroid of the cluster. """
-        return self.manifold.data[self.argcenter]
+    def centroid(self) -> Data:
+        """ The centroid of the cluster. (Geometric Mean) """
+        return np.average(self.samples, axis=0)
 
     @property
-    def argcenter(self) -> int:  # TODO: slow
-        """ The index used to retrieve the center. """
+    def medoid(self) -> Data:  # TODO: slow
+        """ The medoid of the cluster. (Geometric Median) """
+        return self.manifold.data[self.argmedoid]
+
+    @property
+    def argmedoid(self) -> int:  # TODO: slow
+        """ The index used to retrieve the medoid. """
         # TODO: Benchmark squareform(pdist) vs cdist
-        if '_argcenter' not in self.__dict__:
-            self.__dict__['_argcenter'] = self.argsamples[int(np.argmin(cdist(self.samples, self.samples, self.metric).sum(axis=1)))]
-        return self.__dict__['_argcenter']
+        if '_argmedoid' not in self.__dict__:
+            self.__dict__['_argmedoid'] = self.argsamples[
+                int(np.argmin(cdist(self.samples, self.samples, self.metric).sum(axis=1)))]
+        return self.__dict__['_argmedoid']
 
     @property
     def radius(self) -> Radius:  # TODO: Slow
         """ The radius of the cluster.
 
-        Computed as distance from center to farthest point.
+        Computed as distance from medoid to farthest point.
         """
         if '_min_radius' in self.__dict__:
             return self.__dict__['_min_radius']
@@ -158,7 +166,7 @@ class Cluster:
 
     @property
     def argradius(self) -> int:
-        """ The index used to retrieve the point which is farthest from the center.
+        """ The index used to retrieve the point which is farthest from the medoid.
         """
         if ('_argradius' not in self.__dict__) or ('_radius' not in self.__dict__):
             def argmax_max(b):
@@ -186,7 +194,7 @@ class Cluster:
 
     def clear_cache(self) -> None:  # TODO: Cover
         """ Clears the cache for the cluster. """
-        for prop in ['_argsamples', '_argcenter', '_argradius', '_radius', '_local_fractal_dimension']:
+        for prop in ['_argsamples', '_argmedoid', '_argradius', '_radius', '_local_fractal_dimension']:
             try:
                 del self.__dict__[prop]
             except KeyError:
@@ -208,7 +216,7 @@ class Cluster:
                     children: List[Cluster] = [c for candidate in results for c in candidate.children]
                     if len(children) == 0:
                         break  # TODO: Cover. Is this even possible?
-                    centers = np.asarray([c.center for c in children])
+                    centers = np.asarray([c.medoid for c in children])
                     distances = cdist(np.expand_dims(point, 0), centers, self.metric)[0]
                     radii = [radius + c.radius for c in children]
                     results = [c for c, d, r in zip(children, distances, radii) if d <= r]
@@ -274,7 +282,7 @@ class Cluster:
         results: List['Cluster'] = list(self.manifold.graphs[0].clusters)
         for depth in range(initial_depth, self.depth):
             if len(results) > 0:
-                centers: np.ndarray = np.asarray([c.center for c in results], dtype=np.float64)
+                centers: np.ndarray = np.asarray([c.medoid for c in results], dtype=np.float64)
                 distances = self.distance(centers)
                 radii = [self.radius + 2 * c.radius for c in results]
                 results = [c for c, d, r in zip(results, distances, radii) if d <= r]
@@ -282,7 +290,7 @@ class Cluster:
             else:
                 break
         assert all((self.depth == c.depth for c in results)), 'Results are at different depth level than self.'
-        centers: np.ndarray = np.asarray([c.center for c in results], dtype=np.float64)
+        centers: np.ndarray = np.asarray([c.medoid for c in results], dtype=np.float64)
         distances = self.distance(centers)
         radii = [self.radius + c.radius for c in results]
         overlaps: Dict['Cluster', Radius] = {c: d for c, d, r in zip(results, distances, radii) if d <= r}
@@ -316,7 +324,7 @@ class Cluster:
                     self.argpoints,
                     self.name + '0',
                     _argsamples=self.argsamples,
-                    _argcenter=self.argcenter,
+                    _argmedoid=self.argmedoid,
                     _argradius=self.argradius,
                     _radius=self.radius,
                     )
@@ -352,14 +360,14 @@ class Cluster:
         if propagate:
             lineages = [(self.name[:i], other.name[:i]) for i in range(self.depth + 1) if self.name[:i] != other.name[:i]]
             clusters = [(self.manifold.select(l1), self.manifold.select(l2)) for l1, l2 in lineages]
-            centers = np.stack([c.center for c, _ in clusters], axis=0), np.stack([c.center for _, c in clusters], axis=0)
+            centers = np.stack([c.medoid for c, _ in clusters], axis=0), np.stack([c.medoid for _, c in clusters], axis=0)
             assert centers[0].shape == centers[1].shape, (centers[0].shape, centers[1].shape)
             if len(centers[0].shape) == 1:
                 centers = np.expand_dims(centers[0], axis=0), np.expand_dims(centers[1], axis=0)  # TODO: Cover
             distances = list(np.diag(cdist(centers[0], centers[1], self.metric)))
             [(c1.neighbors.update({c2: d}), c2.neighbors.update({c1: d})) for (c1, c2), d in zip(clusters, distances)]
         else:  # TODO: Cover
-            distance = self.distance(np.expand_dims(other.center, axis=0))[0]
+            distance = self.distance(np.expand_dims(other.medoid, axis=0))[0]
             self.neighbors.update({other: distance}), other.neighbors.update({self: distance})
         return
 
@@ -370,19 +378,19 @@ class Cluster:
 
     def update_neighbors(self, propagate: bool = True) -> Dict['Cluster', Radius]:
         """ Find neighbors, update them, return the set. """
-        neighbors = list(self.manifold.find_clusters(self.center, self.radius, self.depth) - {self})
+        neighbors = list(self.manifold.find_clusters(self.medoid, self.radius, self.depth) - {self})
         if len(neighbors) == 0:
             self.neighbors = dict()
         else:
             assert all((self.depth == n.depth) for n in neighbors)
-            distances = self.distance(np.asarray([n.center for n in neighbors]))
+            distances = self.distance(np.asarray([n.medoid for n in neighbors]))
             self.neighbors = {n: d for n, d in zip(neighbors, distances)}
             [n.neighbors.update({self: d}) for n, d in self.neighbors.items()]
         return self.neighbors
 
     def distance(self, points: Data) -> np.ndarray:
-        """ Returns the distance from self.center to every point in points. """
-        return cdist(np.expand_dims(self.center, 0), points, self.metric)[0]
+        """ Returns the distance from self.medoid to every point in points. """
+        return cdist(np.expand_dims(self.medoid, 0), points, self.metric)[0]
 
     def overlaps(self, point: Data, radius: Radius) -> bool:
         """ Checks if point is within radius + self.radius of cluster. """
@@ -391,10 +399,11 @@ class Cluster:
     def json(self):
         data = {
             'name': self.name,
+            'argpoints': None,  # Do save them until at leaves.
             '_radius': self.radius,
             '_argradius': self.argradius,
             '_argsamples': self.argsamples,
-            '_argcenter': self.argcenter,
+            '_argmedoid': self.argmedoid,
             '_local_fractal_dimension': self.local_fractal_dimension,
         }
         if self.children:
@@ -621,19 +630,18 @@ class Manifold:
     def load(fp: TextIO, data: Data) -> 'Manifold':
         d = pickle.load(fp)
         manifold = Manifold(data, metric=d['metric'], argpoints=d['argpoints'])
-        graphs = [Graph(*[Cluster.from_json({'manifold': manifold, **e}) for e in d['leaves']])]
-        while len(graphs[-1]) > 1:
-            children = sorted([c for c in graphs[-1]], key=lambda c: c.name)
-            parents = {}
-            for child in children:
-                parent_name = child.name[:-1]
-                if parent_name not in parents.keys():
-                    parent = Cluster(**child.__dict__.copy())
-                    parent.name = parent.name[:-1]
-                    parents[parent.name] = parent
-                else:
-                    parents[parent_name].argpoints = parents[parent_name].argpoints + child.argpoints
-                    parents[parent_name].clear_cache()
-            graphs.append(Graph(*parents.values()))
-        manifold.graphs = list(reversed(graphs))
+
+        def build(node):
+            children = set([build(c) for c in node.pop('children', [])])
+            return Cluster(manifold=manifold, children=children, **node)
+
+        graphs = [Graph(*[build(r) for r in d['root']])]
+        while True:
+            layer = Graph(*(child for cluster in graphs[-1] for child in cluster.children))
+            if not layer:
+                break
+            else:
+                graphs.append(layer)
+
+        manifold.graphs = graphs
         return manifold

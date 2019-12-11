@@ -93,7 +93,7 @@ class TestManifoldFunctional(unittest.TestCase):
 class TestManifold(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.data = np.random.randn(1_00, 1_00)
+        cls.data = np.random.randn(1_000_000, 1_00)
         return
 
     def test_init(self):
@@ -139,10 +139,13 @@ class TestManifold(unittest.TestCase):
         return
 
     def test_dump_load(self):
+        print("Building.")
         original = Manifold(self.data, 'euclidean').build()
         with TemporaryFile() as fp:
+            print("Dumping.")
             original.dump(fp)
             fp.seek(0)
+            print("Loading.")
             loaded = Manifold.load(fp, self.data)
         self.assertEqual(original, loaded)
         self.assertEqual(original[0], loaded[0])

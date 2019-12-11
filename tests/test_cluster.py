@@ -10,7 +10,7 @@ MIN_RADIUS = 0.5
 class TestCluster(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.data = np.random.randn(100, 100)
+        cls.data = np.random.randn(1_000, 100)
         cls.manifold = Manifold(cls.data, 'euclidean')
         cls.all_zeros = np.zeros((100, 100))
         cls.cluster = Cluster(cls.manifold, cls.manifold.argpoints, '')
@@ -57,6 +57,11 @@ class TestCluster(unittest.TestCase):
     def test_overlaps(self):
         point = np.ones((100, ))
         self.assertTrue(self.cluster.overlaps(point, 1.))
+        return
+
+    def test_centroid(self):
+        self.assertEqual((100,), self.cluster.centroid.shape)
+        return
 
     def test_neighbors(self):
         data = np.concatenate([np.random.randn(1000, 2) * -1, np.random.randn(1000, 2) * 1])
@@ -76,14 +81,14 @@ class TestCluster(unittest.TestCase):
     @staticmethod
     def trace_lineage(cluster: Cluster, other: Cluster):  # TODO: Cover
         assert cluster.depth == other.depth
-        assert cluster.overlaps(other.center, other.radius)
+        assert cluster.overlaps(other.medoid, other.radius)
         lineage = [other.name[:i] for i in range(other.depth) if cluster.name[:i] != other.name[:i]]
         ancestors = [other.manifold.select(n) for n in reversed(lineage)]
         for ancestor in ancestors:
             print(f'checking {ancestor.name}...')
-            if not cluster.overlaps(ancestor.center, 2 * ancestor.radius):
+            if not cluster.overlaps(ancestor.medoid, 2 * ancestor.radius):
                 print(f'{cluster.name} did not overlap with {ancestor.name}')
-                distance = cluster.distance(np.asarray([ancestor.center], dtype=np.float64))[0]
+                distance = cluster.distance(np.asarray([ancestor.medoid], dtype=np.float64))[0]
                 print(f'cluster.radius: {cluster.radius} vs ancestor.radius: {ancestor.radius}')
                 print(f'distance: {distance} vs cluster.radius + 2 * ancestor.radius: {cluster.radius + 2 * ancestor.radius}')
                 print(f'off by {(distance - (cluster.radius + 2 * ancestor.radius)) / distance} percent')
@@ -101,7 +106,7 @@ class TestCluster(unittest.TestCase):
         manifold.build(MinRadius(MIN_RADIUS), MaxDepth(12))
         for depth, graph in enumerate(manifold.graphs):
             for cluster in graph:
-                neighbors = manifold.find_clusters(cluster.center, cluster.radius, depth) - {cluster}
+                neighbors = manifold.find_clusters(cluster.medoid, cluster.radius, depth) - {cluster}
                 if (neighbors - set(cluster.neighbors.keys())) or (set(cluster.neighbors.keys()) - neighbors):
                     print(depth, cluster.name, ':', [n.name for n in neighbors])
                     print(depth, cluster.name, ':', [n.name for n in (neighbors - set(cluster.neighbors.keys()))])
@@ -115,11 +120,11 @@ class TestCluster(unittest.TestCase):
         m.build(MinRadius(MIN_RADIUS), MaxDepth(12))
         for depth, graph in enumerate(m.graphs):
             for cluster in graph:
-                linear = set([c for c in graph if c.overlaps(cluster.center, cluster.radius)])
-                tree = set(next(iter(m.graphs[0])).tree_search(cluster.center, cluster.radius, cluster.depth))
+                linear = set([c for c in graph if c.overlaps(cluster.medoid, cluster.radius)])
+                tree = set(next(iter(m.graphs[0])).tree_search(cluster.medoid, cluster.radius, cluster.depth))
                 print(depth, [c.name for c in (linear ^ tree)])
                 for d in range(depth, 0, -1):
                     parents = set([m.select(cluster.name[:-1]) for cluster in linear])
                     for parent in parents:
-                        self.assertIn(parent, parent.tree_search(cluster.center, cluster.radius, parent.depth))
+                        self.assertIn(parent, parent.tree_search(cluster.medoid, cluster.radius, parent.depth))
                 # self.assertSetEqual(linear, tree, f"Sets unequal for cluster: {cluster.name}")
