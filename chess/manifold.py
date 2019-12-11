@@ -10,6 +10,7 @@ from chess.types import *
 
 SUBSAMPLE_LIMIT = 10
 BATCH_SIZE = 10
+MIN_RADIUS = 0.
 
 
 class Cluster:
@@ -163,7 +164,7 @@ class Cluster:
             # noinspection PyTypeChecker
             argradii_radii = [argmax_max(batch) for batch in self]
             self.__dict__['_argradius'], self.__dict__['_radius'] = max(argradii_radii, key=itemgetter(1))
-            self.__dict__['_radius'] = max(self.__dict__['_radius'], 0.)
+            self.__dict__['_radius'] = max(self.__dict__['_radius'], MIN_RADIUS)
         return self.__dict__['_argradius']
 
     @property
@@ -337,8 +338,8 @@ class Cluster:
             Cluster(self.manifold, p1_idx, self.name + '1'),
             Cluster(self.manifold, p2_idx, self.name + '2'),
         }
-        assert all((c.radius <= self.radius for c in self.children)), f'a child had larger radius after partition:' \
-                                                                      f' self.radius {self.radius} vs {[c.radius for c in self.children]}'
+        # assert all((c.radius <= self.radius for c in self.children)), f'a child had larger radius after partition:' \
+        #                                                               f' self.radius {self.radius} vs {[c.radius for c in self.children]}'
         return self.children
 
     def add_edge(self, other: 'Cluster', propagate: bool):

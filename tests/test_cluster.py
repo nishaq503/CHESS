@@ -93,11 +93,11 @@ class TestCluster(unittest.TestCase):
             raise ValueError(f'all divergent ancestors had overlap')
 
     def test_neighbors_more(self):
-        data, labels = skewer()
+        data, labels = bullseye()
         np.random.seed(42)
         manifold = Manifold(data, 'euclidean', new_calculate_neighbors=True)
         # manifold = Manifold(data, 'euclidean', propagate=True)
-        manifold.build(MinRadius(0.), MaxDepth(12))
+        manifold.build(MinRadius(0.), MaxDepth(8))
         for depth, graph in enumerate(manifold.graphs):
             for cluster in graph:
                 potential_neighbors = [c for c in graph if c.name != cluster.name]
