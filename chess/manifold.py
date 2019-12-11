@@ -70,6 +70,14 @@ class Cluster:
     def __contains__(self, point: Data) -> bool:
         return self.overlaps(point=point, radius=0.)
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        return
+
     @property
     def metric(self) -> str:
         """ The metric used in the manifold. """
@@ -394,6 +402,10 @@ class Cluster:
             'argpoints': self.argpoints,
         }
 
+    @staticmethod
+    def from_json(data):
+        return Cluster(**data)
+
     def dump(self, fp) -> None:
         pass
 
@@ -431,6 +443,15 @@ class Graph:
 
     def __contains__(self, cluster: 'Cluster') -> bool:  # TODO: Cover
         return cluster in self.clusters
+
+    def __getstate__(self):
+        return tuple(self.clusters)
+
+    def __setstate__(self, state):
+        self.clusters = set()
+        for cluster in state:
+            self.clusters.add(cluster)
+        return
 
     @property
     def manifold(self) -> 'Manifold':
@@ -601,21 +622,41 @@ class Manifold:
         assert name == cluster.name, f'wanted {name} but got {cluster.name}.'
         return cluster
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['data']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        return
+
     def dump(self, fp: TextIO) -> None:
         pickle.dump({
             'metric': self.metric,
-            'graphs': [self.graphs[-1]]},
-            fp
-        )
+            'argpoints': self.argpoints,
+            'leaves': [c.json() for c in self.graphs[-1]]
+        }, fp)
         return
 
     @staticmethod
     def load(fp: TextIO, data: Data) -> 'Manifold':
-        m = Manifold(data, **pickle.load(fp))
-        while len(m.graphs[-1]) > 1:
-            children = sorted([c for c in m.graphs[-1]], key=lambda c: c.name)
+        d = pickle.load(fp)
+        manifold = Manifold(data, metric=d['metric'], argpoints=d['argpoints'])
+        graphs = [Graph(*[Cluster.from_json({'manifold': manifold, **e}) for e in d['leaves']])]
+        while len(graphs[-1]) > 1:
+            children = sorted([c for c in graphs[-1]], key=lambda c: c.name)
             # TODO: Merge parents here.
-            parents = []
-            m.graphs.append(Graph(parents))
-        m.graphs = reversed(m.graphs)
-        return m
+            parents = {}
+            for child in children:
+                parent_name = child.name[:-1]
+                if parent_name not in parents.keys():
+                    parent = Cluster(**child.__dict__.copy())
+                    parent.name = parent.name[:-1]
+                    parents[parent.name] = parent
+                else:
+                    parents[parent_name].argpoints = parents[parent_name].argpoints + child.argpoints
+                    parents[parent_name].clear_cache()
+            graphs.append(Graph(*parents.values()))
+        manifold.graphs = list(reversed(graphs))
+        return manifold

@@ -1,5 +1,3 @@
-import os
-import tempfile
 import unittest
 from tempfile import TemporaryFile
 
@@ -41,7 +39,6 @@ class TestManifoldFunctional(unittest.TestCase):
             self.assertEqual(len(linear_results), len(m.find_points(data[point], 0.5, mode='recursive')))
             self.assertEqual(len(linear_results), len(m.find_points(data[point], 0.5, mode='dfs')))
             self.assertEqual(len(linear_results), len(m.find_points(data[point], 0.5, mode='bfs')))
-            # self.assertEqual(len(linear_search(data[point], 0.5, data, m.metric)), len(m.find_points(data[point], 0.5, mode='recursive')))
         return
 
     def test_all_same(self):
@@ -142,10 +139,11 @@ class TestManifold(unittest.TestCase):
         return
 
     def test_dump_load(self):
-        original = Manifold(self.data, 'euclidean')
-        with TemporaryFile() as f:
-            original.dump(f)
-            f.seek(0)
-            loaded = Manifold.load(f, self.data)
+        original = Manifold(self.data, 'euclidean').build()
+        with TemporaryFile() as fp:
+            original.dump(fp)
+            fp.seek(0)
+            loaded = Manifold.load(fp, self.data)
         self.assertEqual(original, loaded)
+        self.assertEqual(original[0], loaded[0])
         return
