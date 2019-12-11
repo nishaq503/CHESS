@@ -1,3 +1,4 @@
+import pickle
 from collections import deque
 from operator import itemgetter
 from typing import Set, Dict, TextIO, Iterable
@@ -25,6 +26,8 @@ class Cluster:
     """
     # TODO: argpoints -> indices?
     # TODO: Siblings? Maybe a boolean like sibling(other) -> bool?
+    # TODO: Consider storing % taken from parent and % of population per cluster
+    # TODO: RE above, if we store the percentages we can calculate sparseness
 
     def __init__(self, manifold: 'Manifold', argpoints: Vector, name: str, **kwargs):
         if len(argpoints) == 0:
@@ -276,6 +279,12 @@ class Cluster:
         """ Checks if point is within radius + self.radius of cluster. """
         return self.distance(np.expand_dims(point, axis=0))[0] <= (self.radius + radius)
 
+    def json(self):
+        return {
+            'name': self.name,
+            'argpoints': self.argpoints,
+        }
+
     def dump(self, fp) -> None:
         pass
 
@@ -392,7 +401,6 @@ class Manifold:
     with a radius, along with providing the ability to reset the build
     of the list of graphs, and iteratively deepening it.
     """
-    # TODO: len(manifold)?
 
     def __init__(self, data: Data, metric: str, argpoints: Union[Vector, float] = None, **kwargs):
         self.data: Data = data
@@ -469,8 +477,15 @@ class Manifold:
         return next(filter(lambda c: c.name == name, self.graphs[len(name)]))
 
     def dump(self, fp: TextIO) -> None:
-        pass
+        pickle.dump({
+            'metric': self.metric,
+            'graphs': [self.graphs[-1]]},
+            fp
+        )
+        return
 
     @staticmethod
     def load(fp: TextIO, data: Data) -> 'Manifold':
-        pass
+        m = Manifold(data, **pickle.load(fp))
+        # TODO: Rebuild upper layers.
+        return m

@@ -1,4 +1,5 @@
 import unittest
+from tempfile import TemporaryFile
 
 from chess import criterion
 from chess.manifold import *
@@ -109,6 +110,14 @@ class TestManifold(unittest.TestCase):
 
     def test_repr(self):
         m = Manifold(self.data, 'euclidean')
-        # TODO
         self.assertIsInstance(repr(m), str)
+        return
+
+    def test_dump_load(self):
+        original = Manifold(self.data, 'euclidean')
+        with TemporaryFile() as f:
+            original.dump(f)
+            f.seek(0)
+            loaded = Manifold.load(f, self.data)
+        self.assertEqual(original, loaded)
         return
