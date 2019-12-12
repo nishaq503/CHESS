@@ -104,7 +104,7 @@ class TestManifold(unittest.TestCase):
         return
 
     def test_load(self):
-        original = Manifold(self.data, 'euclidean').build(MinPoints(100))
+        original = Manifold(self.data, 'euclidean').build(MinPoints(len(self.data) / 10))
         with TemporaryFile() as fp:
             original.dump(fp)
             fp.seek(0)

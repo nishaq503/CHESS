@@ -533,7 +533,7 @@ class Manifold:
         elif type(argpoints) is float:
             self.argpoints = list(np.random.choice(len(data), int(len(data) * argpoints), replace=False))
         else:
-            raise ValueError(f"Invalid argument to argpoints. {argpoints}")  # TODO: Cover
+            raise ValueError(f"Invalid argument to argpoints. {argpoints}")
 
         self.graphs: List['Graph'] = [Graph(Cluster(self, self.argpoints, ''))]
 
@@ -582,6 +582,7 @@ class Manifold:
     def deepen(self, *criterion) -> 'Manifold':
         """ Iteratively deepens the stack of graphs whilst checking criterion. """
         while True:
+            logging.info(f'current depth: {len(self.graphs)}')
             clusters = self._partition_threaded(criterion)
             if len(self.graphs[-1]) < len(clusters):
                 g = Graph(*clusters)
