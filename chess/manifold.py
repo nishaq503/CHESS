@@ -1,6 +1,8 @@
 import pickle
 from collections import deque
 from operator import itemgetter
+from queue import Queue
+from threading import Thread
 from typing import Set, Dict, Iterable, Deque, TextIO
 
 from scipy.spatial.distance import pdist, cdist
@@ -271,33 +273,6 @@ class Cluster:
 
         return results
 
-    # noinspection DuplicatedCode
-    def overlap_search(self) -> Dict['Cluster', Radius]:
-        """ Finds all other clusters at the same depth at self that have overlap with self. """
-        initial_depth = self.manifold.graphs[0].depth
-        assert initial_depth is not None, 'Manifold must have at least one cluster in the 0\'th layer. Got no clusters in the 0\'th layer.'
-        assert initial_depth <= self.depth, f'Overlap search cannot be started at a depth lower than self.depth.' \
-                                            f'self.depth is {self.depth} but tried starting at {initial_depth}.'
-
-        results: List['Cluster'] = list(self.manifold.graphs[0].clusters)
-        for depth in range(initial_depth, self.depth):
-            if len(results) > 0:
-                centers: np.ndarray = np.asarray([c.medoid for c in results], dtype=np.float64)
-                distances = self.distance(centers)
-                radii = [self.radius + 2 * c.radius for c in results]
-                results = [c for c, d, r in zip(results, distances, radii) if d <= r]
-                results = [child for cluster in results for child in cluster.children]
-            else:
-                break
-        assert all((self.depth == c.depth for c in results)), 'Results are at different depth level than self.'
-        centers: np.ndarray = np.asarray([c.medoid for c in results], dtype=np.float64)
-        distances = self.distance(centers)
-        radii = [self.radius + c.radius for c in results]
-        overlaps: Dict['Cluster', Radius] = {c: d for c, d, r in zip(results, distances, radii) if d <= r}
-        assert self in overlaps, 'self was not in the set returned from '
-        del overlaps[self]
-        return overlaps
-
     def prune(self) -> None:  # TODO: Cover
         """ Removes all references to descendents. """
         if self.children:
@@ -351,32 +326,9 @@ class Cluster:
             Cluster(self.manifold, p1_idx, self.name + '1'),
             Cluster(self.manifold, p2_idx, self.name + '2'),
         }
-        [c.update_neighbors() for c in self.children]
         return self.children
 
-    def add_edge(self, other: 'Cluster', propagate: bool):
-        if self.depth != other.depth:
-            raise ValueError(f'Cannot add an edge between two clusters at different depths.')  # TODO: Cover
-        if propagate:
-            lineages = [(self.name[:i], other.name[:i]) for i in range(self.depth + 1) if self.name[:i] != other.name[:i]]
-            clusters = [(self.manifold.select(l1), self.manifold.select(l2)) for l1, l2 in lineages]
-            centers = np.stack([c.medoid for c, _ in clusters], axis=0), np.stack([c.medoid for _, c in clusters], axis=0)
-            assert centers[0].shape == centers[1].shape, (centers[0].shape, centers[1].shape)
-            if len(centers[0].shape) == 1:
-                centers = np.expand_dims(centers[0], axis=0), np.expand_dims(centers[1], axis=0)  # TODO: Cover
-            distances = list(np.diag(cdist(centers[0], centers[1], self.metric)))
-            [(c1.neighbors.update({c2: d}), c2.neighbors.update({c1: d})) for (c1, c2), d in zip(clusters, distances)]
-        else:  # TODO: Cover
-            distance = self.distance(np.expand_dims(other.medoid, axis=0))[0]
-            self.neighbors.update({other: distance}), other.neighbors.update({self: distance})
-        return
-
-    def new_update_neighbors(self) -> Dict['Cluster', Radius]:
-        """ Finds neighbors with new proof by Najib. """
-        self.neighbors: Dict['Cluster', Radius] = self.overlap_search()
-        return self.neighbors
-
-    def update_neighbors(self, propagate: bool = True) -> Dict['Cluster', Radius]:
+    def update_neighbors(self) -> Dict['Cluster', Radius]:
         """ Find neighbors, update them, return the set. """
         neighbors = list(self.manifold.find_clusters(self.medoid, self.radius, self.depth) - {self})
         if len(neighbors) == 0:
@@ -592,15 +544,34 @@ class Manifold:
     def deepen(self, *criterion) -> 'Manifold':
         """ Iteratively deepens the stack of graphs whilst checking criterion. """
         while True:
-            clusters = [child for cluster in self.graphs[-1] for child in cluster.partition(*criterion)]
+            clusters = self._partition_threaded(criterion)
             if len(self.graphs[-1]) < len(clusters):
                 g = Graph(*clusters)
                 self.graphs.append(g)
-                [c.update_neighbors() for c in g] # TODO: Remove
+                [c.update_neighbors() for c in g]
             else:
                 [c.children.clear() for c in self.graphs[-1]]
                 break
         return self
+
+    def _partition_single(self, criterion):
+        return [child for cluster in self.graphs[-1] for child in cluster.partition(*criterion)]
+
+    def _partition_threaded(self, criterion):
+        q = Queue()
+        threads = [
+            Thread(
+                target=_partition_helper,
+                args=(c, criterion, q),
+                name=c.name
+            )
+            for c in self.graphs[-1]]
+        [t.start() for t in threads]
+        [t.join() for t in threads]
+        clusters = []
+        while not q.empty():
+            clusters.append(q.get())
+        return clusters
 
     def select(self, name: str) -> Cluster:
         """ Returns the cluster with the given name. """
@@ -645,3 +616,8 @@ class Manifold:
 
         manifold.graphs = graphs
         return manifold
+
+
+def _partition_helper(cluster, criterion, queue):
+    [queue.put(c) for c in cluster.partition(*criterion)]
+    return
