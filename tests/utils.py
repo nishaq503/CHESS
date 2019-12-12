@@ -1,5 +1,6 @@
 """ Utilities for Testing.
 """
+import numpy as np
 from scipy.spatial.distance import cdist
 
 from chess.manifold import BATCH_SIZE, Cluster
