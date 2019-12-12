@@ -17,7 +17,7 @@ from chess.types import *
 SUBSAMPLE_LIMIT = 10
 BATCH_SIZE = 10
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(module)s.%(funcName)s:%(message)s")
+logging.basicConfig(level=logging.CRITICAL, format="%(levelname)s:%(name)s:%(module)s.%(funcName)s:%(message)s")
 
 
 class Cluster:
@@ -227,21 +227,29 @@ class Cluster:
             depth = len(self.manifold.graphs)
         if depth < self.depth:
             raise ValueError('depth must not be less than cluster.depth')
-        results = self._tree_search_iterative(point, radius, depth) if self.overlaps(point, radius) else []
+        results = []
+        if self.depth == depth:
+            results = [self]
+        elif self.overlaps(point, radius):
+            results = self._tree_search_iterative(point, radius, depth)
         return results
 
     def _tree_search_iterative(self, point, radius, depth):
-        assert self.overlaps(point, radius)
+        assert self.overlaps(point, radius), f'_tree_search was started with no overlap.'
+        assert self.depth < depth, f'_tree_search needs to have depth ({depth}) > self.depth ({self.depth}). '
         # results ONLY contains clusters that have overlap with point
-        results: List[Cluster] = [self]
-        for d in range(self.depth, depth + 1):
-            children: List[Cluster] = [c for candidate in results for c in candidate.children]
+        results: List[Cluster] = []
+        candidates: List[Cluster] = [self]
+        for d in range(self.depth, depth):
+            results.extend([c for c in candidates if len(c.children) < 1])
+            candidates = [c for c in candidates if len(c.children) > 0]
+            children: List[Cluster] = [c for candidate in candidates for c in candidate.children]
             if len(children) == 0:
                 break  # TODO: Cover. Is this even possible?
             centers = np.asarray([c.medoid for c in children])
             distances = cdist(np.expand_dims(point, 0), centers, self.metric)[0]
             radii = [radius + c.radius for c in children]
-            results = [c for c, d, r in zip(children, distances, radii) if d <= r]
+            candidates = [c for c, d, r in zip(children, distances, radii) if d <= r]
             if 'search_stats_file' in self.manifold.__dict__:
                 with open(self.manifold.__dict__['search_stats_file'], 'a') as search_stats_file:
                     line = f'{self.manifold.__dict__["argquery"]}, {radius}, {d}'
@@ -249,10 +257,12 @@ class Cluster:
                     search_stats_file.write(f'{line}, {cluster_names}\n')
                     cluster_names = ';'.join([c.name for c in results])
                     search_stats_file.write(f'{line}, {cluster_names}\n')
-            if len(results) == 0:
+            if len(candidates) == 0:
                 break  # TODO: Cover
-        assert depth == results[0].depth, (depth, results[0].depth)
-        assert all((depth == r.depth for r in results))
+        for r in results:
+            assert depth >= r.depth, (depth, r.depth)
+        for c in candidates:
+            assert depth == c.depth, (depth, c.depth)
         return results
 
     def _tree_search_recursive(self, point, radius, depth):
@@ -368,7 +378,9 @@ class Cluster:
         if len(neighbors) == 0:
             self.neighbors = dict()
         else:
-            assert all((self.depth == n.depth) for n in neighbors)
+            for n in neighbors:
+                if self.depth != n.depth:
+                    assert (self.depth == n.depth), (self.depth, n.depth)
             distances = self.distance(np.asarray([n.medoid for n in neighbors]))
             self.neighbors = {n: d for n, d in zip(neighbors, distances)}
             [n.neighbors.update({self: d}) for n, d in self.neighbors.items()]
