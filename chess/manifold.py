@@ -126,10 +126,10 @@ class Cluster:
                 indices = self.argpoints
             else:
                 n = int(np.sqrt(len(self)))
-                indices = np.random.choice(self.argpoints, n, replace=False)
+                indices = list(np.random.choice(self.argpoints, n, replace=False))
 
             # Handle Duplicates.
-            if pdist(self.manifold.data[indices], self.metric).max(initial=0.) == 0.:
+            if pdist(self.manifold.data[indices], self.metric).max(initial=0.) == 0.:  # TODO: Handle in batches.
                 indices = np.unique(self.manifold.data[self.argpoints], return_index=True, axis=0)[1]
                 if len(indices) > n:
                     indices = np.random.choice(indices, n, replace=False)
@@ -193,6 +193,7 @@ class Cluster:
             # noinspection PyTypeChecker
             argradii_radii = [argmax_max(batch) for batch in self]
             self.__dict__['_argradius'], self.__dict__['_radius'] = max(argradii_radii, key=itemgetter(1))
+            self.__dict__['_argradius'], self.__dict__['_radius'] = int(self.__dict__['_argradius']), float(self.__dict__['_radius'])
         return self.__dict__['_argradius']
 
     @property
@@ -211,7 +212,7 @@ class Cluster:
 
     def clear_cache(self) -> None:  # TODO: Cover
         """ Clears the cache for the cluster. """
-        logging.debug(f'clearning cache for {self}')
+        logging.debug(f'clearing cache for {self}')
         for prop in ['_argsamples', '_argmedoid', '_argradius', '_radius', '_local_fractal_dimension']:
             try:
                 del self.__dict__[prop]
@@ -226,33 +227,32 @@ class Cluster:
             depth = len(self.manifold.graphs)
         if depth < self.depth:
             raise ValueError('depth must not be less than cluster.depth')
-        results = self._tree_search_iterative(point, radius, depth)
+        results = self._tree_search_iterative(point, radius, depth) if self.overlaps(point, radius) else []
         return results
 
     def _tree_search_iterative(self, point, radius, depth):
-        results: List[Cluster] = list()
-        if self.overlaps(point, radius):
-            # results ONLY contains clusters that have overlap with point
-            results.append(self)
-            for d in range(self.depth, depth):
-                children: List[Cluster] = [c for candidate in results for c in candidate.children]
-                if len(children) == 0:
-                    break  # TODO: Cover. Is this even possible?
-                centers = np.asarray([c.medoid for c in children])
-                distances = cdist(np.expand_dims(point, 0), centers, self.metric)[0]
-                radii = [radius + c.radius for c in children]
-                results = [c for c, d, r in zip(children, distances, radii) if d <= r]
-                if 'search_stats_file' in self.manifold.__dict__:
-                    with open(self.manifold.__dict__['search_stats_file'], 'a') as search_stats_file:
-                        line = f'{self.manifold.__dict__["argquery"]}, {radius}, {d}'
-                        cluster_names = ';'.join([c.name for c in children])
-                        search_stats_file.write(f'{line}, {cluster_names}\n')
-                        cluster_names = ';'.join([c.name for c in results])
-                        search_stats_file.write(f'{line}, {cluster_names}\n')
-                if len(results) == 0:
-                    break  # TODO: Cover
-            assert depth == results[0].depth, (depth, results[0].depth)
-            assert all((depth == r.depth for r in results))
+        assert self.overlaps(point, radius)
+        # results ONLY contains clusters that have overlap with point
+        results: List[Cluster] = [self]
+        for d in range(self.depth, depth + 1):
+            children: List[Cluster] = [c for candidate in results for c in candidate.children]
+            if len(children) == 0:
+                break  # TODO: Cover. Is this even possible?
+            centers = np.asarray([c.medoid for c in children])
+            distances = cdist(np.expand_dims(point, 0), centers, self.metric)[0]
+            radii = [radius + c.radius for c in children]
+            results = [c for c, d, r in zip(children, distances, radii) if d <= r]
+            if 'search_stats_file' in self.manifold.__dict__:
+                with open(self.manifold.__dict__['search_stats_file'], 'a') as search_stats_file:
+                    line = f'{self.manifold.__dict__["argquery"]}, {radius}, {d}'
+                    cluster_names = ';'.join([c.name for c in children])
+                    search_stats_file.write(f'{line}, {cluster_names}\n')
+                    cluster_names = ';'.join([c.name for c in results])
+                    search_stats_file.write(f'{line}, {cluster_names}\n')
+            if len(results) == 0:
+                break  # TODO: Cover
+        assert depth == results[0].depth, (depth, results[0].depth)
+        assert all((depth == r.depth for r in results))
         return results
 
     def _tree_search_recursive(self, point, radius, depth):
@@ -270,6 +270,9 @@ class Cluster:
         return results
 
     def _tree_search_dfs(self, point, radius, depth):
+        assert self.overlaps(point, radius)
+        if depth == -1:
+            depth = len(self.manifold.graphs)  # TODO: Cover
         results: List[Cluster] = list()
         stack: List[Cluster] = [self]
         while len(stack) > 0:
@@ -285,11 +288,12 @@ class Cluster:
         return results
 
     def _tree_search_bfs(self, point, radius, depth):
+        assert self.overlaps(point, radius)
         results: List[Cluster] = list()
         queue: Deque[Cluster] = deque([self])
         while len(queue) > 0:
             current: Cluster = queue.popleft()
-            if current.overlaps(point, radius):
+            if current.overlaps(point, radius):  # TODO: Consider vectorizing over a frontier to use only one distance call.
                 if current.depth < depth:
                     if len(current.children) < 2:
                         results.append(current)
@@ -354,6 +358,7 @@ class Cluster:
             Cluster(self.manifold, p1_idx, self.name + '1'),
             Cluster(self.manifold, p2_idx, self.name + '2'),
         }
+        logging.debug(f'{self} was partitioned.')
         return self.children
 
     def update_neighbors(self) -> Dict['Cluster', Radius]:
@@ -409,7 +414,7 @@ class Graph:
     """
     def __init__(self, *clusters):
         logging.debug(f'Graph(clusters={[str(c) for c in clusters]})')
-        assert all([c.depth == clusters[0].depth for c in clusters[1:]])
+        assert all([c.depth == clusters[0].depth for c in clusters[1:]])  # TODO: Does this return False when there is only one cluster?
         self.clusters = set(clusters)
         return
 
@@ -482,11 +487,12 @@ class Graph:
 
     def component(self, cluster: 'Cluster') -> Set['Cluster']:
         """ Returns the component to which cluster belongs. """
+        # TODO: Consider a Cluster.component property with constant time lookup.
         return next(filter(lambda component: cluster in component, self.components))
 
     @staticmethod
     def bft(start: 'Cluster'):
-        """ Breadth-First Search starting at start. """
+        """ Breadth-First Traversal starting at start. """
         logging.debug(f'starting from {start}')
         visited = set()
         queue = deque([start])
@@ -499,7 +505,7 @@ class Graph:
 
     @staticmethod
     def dft(start: 'Cluster'):  # TODO: Cover
-        """ Depth-First Search starting at start. """
+        """ Depth-First Traversal starting at start. """
         logging.debug(f'starting from {start}')
         visited = set()
         stack: List[Cluster] = [start]
@@ -527,11 +533,11 @@ class Manifold:
         self.metric: str = metric
 
         if argpoints is None:
-            self.argpoints = list(range(len(self.data)))
+            self.argpoints = list(range(self.data.shape[0]))
         elif type(argpoints) is list:
             self.argpoints = list(map(int, argpoints))
         elif type(argpoints) is float:
-            self.argpoints = list(np.random.choice(len(data), int(len(data) * argpoints), replace=False))
+            self.argpoints = list(np.random.choice(self.data.shape[0], int(self.data.shape[0] * argpoints), replace=False))
         else:
             raise ValueError(f"Invalid argument to argpoints. {argpoints}")
 
