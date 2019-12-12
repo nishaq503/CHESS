@@ -88,10 +88,25 @@ class TestGraph(unittest.TestCase):
         return
 
     def test_component(self):
-        raise NotImplementedError
+        root = self.manifold.select('')
+        self.assertTrue(self.manifold.graphs[0].component(root))
+        with self.assertRaises(StopIteration):
+            self.manifold.graphs[1].component(root)
+        return
 
     def test_bft(self):
-        raise NotImplementedError
+        g = self.manifold.graphs[-1].bft(next(iter(self.manifold.graphs[-1])))
+        self.assertGreater(len(g), 0)
+        self.assertLessEqual(len(g), len(self.manifold.graphs[-1]))
+
+        # TODO: Should this work?
+        g = self.manifold.graphs[-1].bft(next(iter(self.manifold.graphs[-2])))
+        self.assertGreater(len(g), 0)
+        self.assertLessEqual(len(g), len(self.manifold.graphs[-1]))
+        return
 
     def test_dft(self):
-        raise NotImplementedError
+        g = self.manifold.graphs[-1].dft(next(iter(self.manifold.graphs[-1])))
+        self.assertGreater(len(g), 0)
+        self.assertLessEqual(len(g), len(self.manifold.graphs[-1]))
+        return
