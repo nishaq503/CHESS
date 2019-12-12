@@ -639,12 +639,9 @@ class Manifold:
     def load(fp: TextIO, data: Data) -> 'Manifold':
         d = pickle.load(fp)
         manifold = Manifold(data, metric=d['metric'], argpoints=d['argpoints'])
-
-        def build(node):
-            children = set([build(c) for c in node.pop('children', [])])
-            return Cluster(manifold=manifold, children=children, **node)
-
-        graphs = [Graph(*[build(r) for r in d['root']])]
+        graphs = [
+            Graph(*[Cluster.from_json(manifold, r) for r in d['root']])  # Graphs contains only root layer.
+        ]
         while True:
             layer = Graph(*(child for cluster in graphs[-1] for child in cluster.children))
             if not layer:
