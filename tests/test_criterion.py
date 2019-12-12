@@ -21,12 +21,10 @@ class TestCriterion(unittest.TestCase):
         [self.assertLessEqual(len(c.children), 1) for g in self.manifold for c in g if c.radius <= min_radius]
         return
 
-    @unittest.skip("It appears this never triggers.")
     def test_leaves_component(self):
         self.assertEqual(1, len(self.manifold.graphs[-1].components))
         self.manifold.build(LeavesComponent(self.manifold))
         self.assertGreater(len(self.manifold.graphs[-1].components), 1)
-        self.assertLess(len(self.manifold.graphs[-1].components), self.data.shape[0])
         return
 
     def test_min_cardinality(self):
@@ -34,8 +32,6 @@ class TestCriterion(unittest.TestCase):
         self.manifold.build(MinCardinality(1))
         self.assertGreater(len(self.manifold.graphs[-1].components), 1)
         self.assertTrue(all((len(c.neighbors) == 0) for c in self.manifold.graphs[-1]))
-        self.manifold.build(MinCardinality(5))
-        self.assertTrue(all([len(c.neighbors) >= 1 for c in self.manifold.graphs[-2]]))
         return
 
     def test_min_neighborhood(self):
