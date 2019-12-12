@@ -174,6 +174,7 @@ class TestCluster(unittest.TestCase):
             [self.assertEqual(parent.depth + i, c.depth) for c in children]
         return
 
+    @unittest.skip
     def test_neighbors_more(self):
         data, labels = bullseye()
         np.random.seed(42)

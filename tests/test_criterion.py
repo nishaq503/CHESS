@@ -29,13 +29,18 @@ class TestCriterion(unittest.TestCase):
         self.assertLess(len(self.manifold.graphs[-1].components), self.data.shape[0])
         return
 
-    def test_min_cardinality(self):
+    def test_singleton_cardinality(self):
         self.assertEqual(1, len(self.manifold.graphs[-1].components))
         self.manifold.build(MinCardinality(1))
         self.assertGreater(len(self.manifold.graphs[-1].components), 1)
         self.assertTrue(all((len(c.neighbors) == 0) for c in self.manifold.graphs[-1]))
+        return
+
+    def test_min_cardinality(self):
         self.manifold.build(MinCardinality(5))
-        self.assertTrue(all([len(c.neighbors) >= 1 for c in self.manifold.graphs[-2]]))
+        for cluster in self.manifold.graphs[-2]:
+            self.assertTrue(len(cluster.neighbors) >= 1, f'{cluster.name} had only {len(cluster.neighbors)} neighbors.')
+        # self.assertTrue(all([len(c.neighbors) >= 1 for c in self.manifold.graphs[-2]]))
         return
 
     def test_min_neighborhood(self):
