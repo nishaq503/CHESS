@@ -396,7 +396,8 @@ class Cluster:
 
     @staticmethod
     def from_json(manifold, data):
-        return Cluster(manifold, **data)
+        children = set([Cluster.from_json(manifold, c) for c in data.pop('children', [])])
+        return Cluster(manifold, children=children, **data)
 
 
 class Graph:
