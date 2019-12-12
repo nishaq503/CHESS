@@ -4,7 +4,7 @@ from chess.criterion import *
 from chess.datasets import *
 from chess.manifold import *
 
-MIN_RADIUS = 0.5
+MIN_RADIUS = 0.1
 
 
 class TestCluster(unittest.TestCase):
@@ -138,12 +138,13 @@ class TestCluster(unittest.TestCase):
     def test_tree_search(self):
         data, labels = bullseye()
         m = Manifold(data, 'euclidean')
-        m.build(MinRadius(MIN_RADIUS), MaxDepth(12))
+        m.build(MinRadius(MIN_RADIUS), MaxDepth(8))
         for depth, graph in enumerate(m.graphs):
             for cluster in graph:
                 linear = set([c for c in graph if c.overlaps(cluster.medoid, cluster.radius)])
                 tree = set(next(iter(m.graphs[0])).tree_search(cluster.medoid, cluster.radius, cluster.depth))
-                print(depth, [c.name for c in (linear ^ tree)])
+                self.assertEqual(0, len(tree - linear))
+                # print(depth, [c.name for c in (linear ^ tree)])
                 for d in range(depth, 0, -1):
                     parents = set([m.select(cluster.name[:-1]) for cluster in linear])
                     for parent in parents:
@@ -174,19 +175,28 @@ class TestCluster(unittest.TestCase):
             [self.assertNotIn(c, c.neighbors.keys()) for c in children]
             [self.assertEqual(parent.depth + i, c.depth) for c in children]
 
-        data, labels = bullseye()
-        np.random.seed(42)
-        manifold = Manifold(data, 'euclidean')
-        manifold.build(MinRadius(MIN_RADIUS), MaxDepth(12))
-        for depth, graph in enumerate(manifold.graphs):
-            for cluster in graph:
-                neighbors = manifold.find_clusters(cluster.medoid, cluster.radius, depth) - {cluster}
-                if (neighbors - set(cluster.neighbors.keys())) or (set(cluster.neighbors.keys()) - neighbors):
-                    print(depth, cluster.name, ':', [n.name for n in neighbors])
-                    print(depth, cluster.name, ':', [n.name for n in (neighbors - set(cluster.neighbors.keys()))])
-                    print(depth, cluster.name, ':', [n.name for n in (set(cluster.neighbors.keys()) - neighbors)])
-                # self.assertTrue(len(neighbors) >= len(set(cluster.neighbors.keys())))
-                self.assertSetEqual(neighbors, set(cluster.neighbors.keys()))
+        # data, labels = bullseye()
+        # np.random.seed(42)
+        # manifold = Manifold(data, 'euclidean')
+        # manifold.build(MinRadius(MIN_RADIUS), MaxDepth(12))
+        # for depth, graph in enumerate(manifold.graphs):
+        #     for cluster in graph:
+        #         potential_neighbors = [c for c in graph if c.name != cluster.name]
+        #         if len(potential_neighbors) == 0:
+        #             continue
+        #         elif len(potential_neighbors) == 1:
+        #             centers = np.expand_dims(potential_neighbors[0].medoid, axis=0)
+        #         else:
+        #             centers = np.stack([c.medoid for c in potential_neighbors])
+        #         distances = list(cluster.distance(centers))
+        #         radii = [cluster.radius + c.radius for c in potential_neighbors]  # TODO: Slow
+        #         neighbors = {c for c, d, r in zip(potential_neighbors, distances, radii) if d <= r}
+        #         if (neighbors - set(cluster.neighbors.keys())) or (set(cluster.neighbors.keys()) - neighbors):
+        #             print(depth, cluster.name, ':', [n.name for n in neighbors])
+        #             print(depth, cluster.name, 'missed:', [n.name for n in (neighbors - set(cluster.neighbors.keys()))])
+        #             print(depth, cluster.name, 'extra:', [n.name for n in (set(cluster.neighbors.keys()) - neighbors)])
+        #         self.assertTrue(len(neighbors) >= len(set(cluster.neighbors.keys())))
+        #         self.assertSetEqual(neighbors, set(cluster.neighbors.keys()))
         return
 
     def test_distance(self):
