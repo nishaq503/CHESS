@@ -27,7 +27,7 @@ class TestCriterion(unittest.TestCase):
         self.assertGreater(len(self.manifold.graphs[-1].components), 1)
         return
 
-    def test_min_cardinality(self):
+    def test_singleton_cardinality(self):
         self.assertEqual(1, len(self.manifold.graphs[-1].components))
         self.manifold.build(MinCardinality(1))
         self.assertGreater(len(self.manifold.graphs[-1].components), 1)

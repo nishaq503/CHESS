@@ -144,12 +144,10 @@ class TestCluster(unittest.TestCase):
                 linear = set([c for c in graph if c.overlaps(cluster.medoid, cluster.radius)])
                 tree = set(next(iter(m.graphs[0])).tree_search(cluster.medoid, cluster.radius, cluster.depth))
                 self.assertEqual(0, len(tree - linear))
-                # print(depth, [c.name for c in (linear ^ tree)])
                 for d in range(depth, 0, -1):
                     parents = set([m.select(cluster.name[:-1]) for cluster in linear])
                     for parent in parents:
                         self.assertIn(parent, parent.tree_search(cluster.medoid, cluster.radius, parent.depth))
-                # self.assertSetEqual(linear, tree, f"Sets unequal for cluster: {cluster.name}")
 
     def test_prune(self):
         self.cluster.prune()
@@ -174,29 +172,35 @@ class TestCluster(unittest.TestCase):
             children = [c for C in children for c in C.partition()]
             [self.assertNotIn(c, c.neighbors.keys()) for c in children]
             [self.assertEqual(parent.depth + i, c.depth) for c in children]
+        return
 
-        # data, labels = bullseye()
-        # np.random.seed(42)
-        # manifold = Manifold(data, 'euclidean')
-        # manifold.build(MinRadius(MIN_RADIUS), MaxDepth(12))
-        # for depth, graph in enumerate(manifold.graphs):
-        #     for cluster in graph:
-        #         potential_neighbors = [c for c in graph if c.name != cluster.name]
-        #         if len(potential_neighbors) == 0:
-        #             continue
-        #         elif len(potential_neighbors) == 1:
-        #             centers = np.expand_dims(potential_neighbors[0].medoid, axis=0)
-        #         else:
-        #             centers = np.stack([c.medoid for c in potential_neighbors])
-        #         distances = list(cluster.distance(centers))
-        #         radii = [cluster.radius + c.radius for c in potential_neighbors]  # TODO: Slow
-        #         neighbors = {c for c, d, r in zip(potential_neighbors, distances, radii) if d <= r}
-        #         if (neighbors - set(cluster.neighbors.keys())) or (set(cluster.neighbors.keys()) - neighbors):
-        #             print(depth, cluster.name, ':', [n.name for n in neighbors])
-        #             print(depth, cluster.name, 'missed:', [n.name for n in (neighbors - set(cluster.neighbors.keys()))])
-        #             print(depth, cluster.name, 'extra:', [n.name for n in (set(cluster.neighbors.keys()) - neighbors)])
-        #         self.assertTrue(len(neighbors) >= len(set(cluster.neighbors.keys())))
-        #         self.assertSetEqual(neighbors, set(cluster.neighbors.keys()))
+    @unittest.skip
+    def test_neighbors_more(self):
+        data, labels = bullseye()
+        np.random.seed(42)
+        manifold = Manifold(data, 'euclidean')
+        manifold.build(MinRadius(MIN_RADIUS), MaxDepth(8))
+        for depth, graph in enumerate(manifold.graphs):
+            for cluster in graph:
+                potential_neighbors = [c for c in graph if c.name != cluster.name]
+                if len(potential_neighbors) == 0:
+                    continue
+                elif len(potential_neighbors) == 1:
+                    centers = np.expand_dims(potential_neighbors[0].medoid, axis=0)
+                else:
+                    centers = np.stack([c.medoid for c in potential_neighbors])
+                distances = list(cluster.distance(centers))
+                radii = [cluster.radius + c.radius for c in potential_neighbors]  # TODO: Slow
+                potential_neighbors = {c for c, d, r in zip(potential_neighbors, distances, radii) if d <= r}
+                if set(cluster.neighbors.keys()) - potential_neighbors:
+                    print(depth, cluster.name, ':', [n.name for n in potential_neighbors])
+                    print(depth, cluster.name, 'extra:', [n.name for n in (set(cluster.neighbors.keys()) - potential_neighbors)])
+                if potential_neighbors - set(cluster.neighbors.keys()):
+                    print(depth, cluster.name, ':', [n.name for n in potential_neighbors])
+                    print(depth, cluster.name, 'missed:', [n.name for n in (potential_neighbors - set(cluster.neighbors.keys()))])
+                self.assertTrue(len(potential_neighbors) >= len(set(cluster.neighbors.keys())))
+                self.assertSetEqual(set(), set(cluster.neighbors.keys()) - potential_neighbors)
+                self.assertSetEqual(set(), potential_neighbors - set(cluster.neighbors.keys()))
         return
 
     def test_distance(self):
