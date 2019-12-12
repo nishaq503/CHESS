@@ -1,3 +1,8 @@
+""" Clustered Hierarchical Entropy-scaling Manifold Mapping.
+
+# TODO: https://docs.python.org/3/whatsnew/3.8.html#f-strings-support-for-self-documenting-expressions-and-debugging
+"""
+import logging
 import pickle
 from collections import deque
 from operator import itemgetter
@@ -11,6 +16,8 @@ from chess.types import *
 
 SUBSAMPLE_LIMIT = 10
 BATCH_SIZE = 10
+
+logging.basicConfig(level=logging.DEBUG, format="%(levelname)s:%(name)s:%(module)s.%(funcName)s:%(message)s")
 
 
 class Cluster:
@@ -30,6 +37,7 @@ class Cluster:
     # TODO: RE above, if we store the percentages we can calculate sparseness
 
     def __init__(self, manifold: 'Manifold', argpoints: Vector, name: str, **kwargs):
+        logging.debug(f"Cluster(name={name}, argpoints={argpoints})")
         self.manifold: 'Manifold' = manifold
         self.argpoints: Vector = argpoints
         self.name: str = name
@@ -56,7 +64,7 @@ class Cluster:
         return hash(self.name)
 
     def __str__(self) -> str:
-        return self.name
+        return self.name or 'root'
 
     def __repr__(self) -> str:
         return ','.join([self.name, ';'.join(map(str, self.argpoints))])
@@ -112,6 +120,7 @@ class Cluster:
         AKA, if len(argsamples) == 1, the cluster contains only duplicates.
         """
         if '_argsamples' not in self.__dict__:
+            logging.debug(f"building cache for {self}")
             if len(self) <= SUBSAMPLE_LIMIT:
                 n = len(self.argpoints)
                 indices = self.argpoints
@@ -150,6 +159,7 @@ class Cluster:
         """ The index used to retrieve the medoid. """
         # TODO: Benchmark squareform(pdist) vs cdist
         if '_argmedoid' not in self.__dict__:
+            logging.debug(f"building cache for {self}")
             self.__dict__['_argmedoid'] = self.argsamples[
                 int(np.argmin(cdist(self.samples, self.samples, self.metric).sum(axis=1)))]
         return self.__dict__['_argmedoid']
@@ -161,8 +171,10 @@ class Cluster:
         Computed as distance from medoid to farthest point.
         """
         if '_min_radius' in self.__dict__:
+            logging.debug(f'taking min_radius from {self}')
             return self.__dict__['_min_radius']
         elif '_radius' not in self.__dict__:
+            logging.debug(f'building cache for {self}')
             _ = self.argradius
         return self.__dict__['_radius']
 
@@ -171,6 +183,8 @@ class Cluster:
         """ The index used to retrieve the point which is farthest from the medoid.
         """
         if ('_argradius' not in self.__dict__) or ('_radius' not in self.__dict__):
+            logging.debug(f'building cache for {self}')
+
             def argmax_max(b):
                 distances = self.distance(self.manifold.data[b])
                 argmax = np.argmax(distances)
@@ -185,6 +199,7 @@ class Cluster:
     def local_fractal_dimension(self) -> float:  # TODO: Cover
         """ The local fractal dimension of the cluster. """
         if '_local_fractal_dimension' not in self.__dict__:
+            logging.debug(f'building cache for {self}')
             if self.nsamples == 1:
                 return 0.
             count = [d <= (self.radius / 2)
@@ -196,6 +211,7 @@ class Cluster:
 
     def clear_cache(self) -> None:  # TODO: Cover
         """ Clears the cache for the cluster. """
+        logging.debug(f'clearning cache for {self}')
         for prop in ['_argsamples', '_argmedoid', '_argradius', '_radius', '_local_fractal_dimension']:
             try:
                 del self.__dict__[prop]
@@ -205,6 +221,7 @@ class Cluster:
     def tree_search(self, point: Data, radius: Radius, depth: int, mode: str) -> List['Cluster']:
         """ Searches down the tree for clusters that overlap point with radius at depth.
         """
+        logging.debug(f'tree_search(point={point}, radius={radius}, depth={depth}, mode={mode}')
         results: List[Cluster] = list()
         if mode == 'iterative':
             if depth == -1:
@@ -275,6 +292,7 @@ class Cluster:
 
     def prune(self) -> None:  # TODO: Cover
         """ Removes all references to descendents. """
+        logging.debug(str(self))
         if self.children:
             [c.neighbors.remove(c) for c in self.children]
             [c.prune() for c in self.children]
@@ -292,7 +310,8 @@ class Cluster:
                 len(self.argsamples) > 1,
                 *(c(self) for c in criterion)
         )):
-            # TODO: self.__dict__ - name?
+            # TODO: self.__dict__.copy() - name?
+            logging.debug(f'{self} did not partition.')
             self.children = {
                 Cluster(
                     self.manifold,
@@ -330,6 +349,7 @@ class Cluster:
 
     def update_neighbors(self) -> Dict['Cluster', Radius]:
         """ Find neighbors, update them, return the set. """
+        logging.debug(self.name)
         neighbors = list(self.manifold.find_clusters(self.medoid, self.radius, self.depth) - {self})
         if len(neighbors) == 0:
             self.neighbors = dict()
@@ -377,6 +397,7 @@ class Graph:
     solely within a layer of Manifold.graphs.
     """
     def __init__(self, *clusters):
+        logging.debug(f'Graph(clusters={[str(c) for c in clusters]})')
         assert all([c.depth == clusters[0].depth for c in clusters[1:]])
         self.clusters = set(clusters)
         return
@@ -412,6 +433,7 @@ class Graph:
         """ Returns all edges within the graph.
         """
         if '_edges' not in self.__dict__:
+            logging.debug(f'building cache for {self.clusters}')
             self.__dict__['_edges'] = set({c, n} for c in self.clusters for n in c.neighbors.keys())
         return self.__dict__['_edges']
 
@@ -420,6 +442,7 @@ class Graph:
         """ Returns all subgraphs within the graph.
         """
         if '_subgraphs' not in self.__dict__:
+            logging.debug(f'building cache for {self.clusters}')
             self.__dict__['_subgraphs'] = [Graph(*component) for component in self.components]
         return self.__dict__['_subgraphs']
 
@@ -429,6 +452,7 @@ class Graph:
         """
         # TODO: Isn't this the same thing as subgraphs?
         if '_components' not in self.__dict__:
+            logging.debug(f'building cache for {self.clusters}')
             unvisited = set(self.clusters)
             self.__dict__['_components'] = list()
             while unvisited:
@@ -440,6 +464,7 @@ class Graph:
     def clear_cache(self) -> None:  # TODO: Cover
         """ Clears the cache of the graph. """
         for prop in ['_components', '_subgraphs', '_edges']:
+            logging.debug(str(self.clusters))
             try:
                 del self.__dict__[prop]
             except KeyError:
@@ -452,6 +477,7 @@ class Graph:
     @staticmethod
     def bft(start: 'Cluster'):  # TODO: Cover
         """ Breadth-First Search starting at start. """
+        logging.debug(f'starting from {start}')
         visited = set()
         queue = deque([start])
         while queue:
@@ -464,6 +490,7 @@ class Graph:
     @staticmethod
     def dft(start: 'Cluster'):  # TODO: Cover
         """ Depth-First Search starting at start. """
+        logging.debug(f'starting from {start}')
         visited = set()
         stack: List[Cluster] = [start]
         while stack:
@@ -485,6 +512,7 @@ class Manifold:
     """
 
     def __init__(self, data: Data, metric: str, argpoints: Union[Vector, float] = None, **kwargs):
+        logging.debug(f'Manifold(data={data.shape}, metric={metric}, argpoints={argpoints})')
         self.data: Data = data
         self.metric: str = metric
 
