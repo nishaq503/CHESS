@@ -74,7 +74,11 @@ class MinCardinality:
         self.cardinality = cardinality
 
     def __call__(self, cluster: _Cluster):
-        return len(cluster.manifold.graphs[cluster.depth].component(cluster)) > self.cardinality
+        return any((
+            # If there are fewer points than needed, we don't check cardinality.
+            len(cluster.manifold.graphs[cluster.depth]) <= self.cardinality,
+            len(cluster.manifold.graphs[cluster.depth].component(cluster)) >= self.cardinality
+        ))
 
 
 class MinNeighborhood:
