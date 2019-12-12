@@ -17,7 +17,7 @@ from chess.types import *
 SUBSAMPLE_LIMIT = 10
 BATCH_SIZE = 10
 
-logging.basicConfig(level=logging.DEBUG, format="%(levelname)s:%(name)s:%(module)s.%(funcName)s:%(message)s")
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(module)s.%(funcName)s:%(message)s")
 
 
 class Cluster:
@@ -218,76 +218,85 @@ class Cluster:
             except KeyError:
                 pass
 
-    def tree_search(self, point: Data, radius: Radius, depth: int, mode: str) -> List['Cluster']:
+    def tree_search(self, point: Data, radius: Radius, depth: int) -> List['Cluster']:
         """ Searches down the tree for clusters that overlap point with radius at depth.
         """
         logging.debug(f'tree_search(point={point}, radius={radius}, depth={depth}, mode={mode}')
-        results: List[Cluster] = list()
-        if mode == 'iterative':
-            if depth == -1:
-                depth = len(self.manifold.graphs)
-            if depth < self.depth:
-                raise ValueError('depth must not be less than cluster.depth')
-            if self.overlaps(point, radius):
-                # results ONLY contains clusters that have overlap with point
-                results.append(self)
-                for d in range(self.depth, depth):
-                    children: List[Cluster] = [c for candidate in results for c in candidate.children]
-                    if len(children) == 0:
-                        break  # TODO: Cover. Is this even possible?
-                    centers = np.asarray([c.medoid for c in children])
-                    distances = cdist(np.expand_dims(point, 0), centers, self.metric)[0]
-                    radii = [radius + c.radius for c in children]
-                    results = [c for c, d, r in zip(children, distances, radii) if d <= r]
-                    if 'search_stats_file' in self.manifold.__dict__:
-                        with open(self.manifold.__dict__['search_stats_file'], 'a') as search_stats_file:
-                            line = f'{self.manifold.__dict__["argquery"]}, {radius}, {d}'
-                            cluster_names = ';'.join([c.name for c in children])
-                            search_stats_file.write(f'{line}, {cluster_names}\n')
-                            cluster_names = ';'.join([c.name for c in results])
-                            search_stats_file.write(f'{line}, {cluster_names}\n')
-                    if len(results) == 0:
-                        break  # TODO: Cover
-                assert depth == results[0].depth, (depth, results[0].depth)
-                assert all((depth == r.depth for r in results))
-        elif mode == 'recursive':
-            assert self.overlaps(point, radius)
-            if depth == -1:
-                depth = len(self.manifold.graphs)  # TODO: Cover
-            if self.radius <= radius or len(self.children) < 2:
-                results.append(self)  # TODO: Cover
-            elif self.depth < depth:
-                if len(self.children) < 1:
-                    results.append(self)  # TODO: Cover Is this even possible?
-                else:
-                    [results.append(c) for c in self.children if c.overlaps(point, radius)]
-        elif mode == 'dfs':
-            stack: List[Cluster] = [self]
-            while len(stack) > 0:
-                current: Cluster = stack.pop()
-                if current.overlaps(point, radius):
-                    if current.depth < depth:
-                        if len(current.children) < 2:
-                            results.append(current)
-                        else:
-                            stack.extend(current.children)
-                    else:
-                        results.append(current)  # TODO: Cover
-        elif mode == 'bfs':
-            queue: Deque[Cluster] = deque([self])
-            while len(queue) > 0:
-                current: Cluster = queue.popleft()
-                if current.overlaps(point, radius):
-                    if current.depth < depth:
-                        if len(current.children) < 2:
-                            results.append(current)
-                        else:
-                            [queue.append(c) for c in current.children]
-                    else:
-                        results.append(current)  # TODO: Cover
-        else:
-            raise ValueError(f'mode must be one of iterative, recursive, dfs, or bfs. got {mode} instead.')  # TODO: Cover
+        results = self._tree_search_iterative(point, radius, depth)
+        return results
 
+    def _tree_search_iterative(self, point, radius, depth):
+        results: List[Cluster] = list()
+        if depth == -1:
+            depth = len(self.manifold.graphs)
+        if depth < self.depth:
+            raise ValueError('depth must not be less than cluster.depth')
+        if self.overlaps(point, radius):
+            # results ONLY contains clusters that have overlap with point
+            results.append(self)
+            for d in range(self.depth, depth):
+                children: List[Cluster] = [c for candidate in results for c in candidate.children]
+                if len(children) == 0:
+                    break  # TODO: Cover. Is this even possible?
+                centers = np.asarray([c.medoid for c in children])
+                distances = cdist(np.expand_dims(point, 0), centers, self.metric)[0]
+                radii = [radius + c.radius for c in children]
+                results = [c for c, d, r in zip(children, distances, radii) if d <= r]
+                if 'search_stats_file' in self.manifold.__dict__:
+                    with open(self.manifold.__dict__['search_stats_file'], 'a') as search_stats_file:
+                        line = f'{self.manifold.__dict__["argquery"]}, {radius}, {d}'
+                        cluster_names = ';'.join([c.name for c in children])
+                        search_stats_file.write(f'{line}, {cluster_names}\n')
+                        cluster_names = ';'.join([c.name for c in results])
+                        search_stats_file.write(f'{line}, {cluster_names}\n')
+                if len(results) == 0:
+                    break  # TODO: Cover
+            assert depth == results[0].depth, (depth, results[0].depth)
+            assert all((depth == r.depth for r in results))
+        return results
+
+    def _tree_search_recursive(self, point, radius, depth):
+        assert self.overlaps(point, radius)
+        results: List[Cluster] = list()
+        if depth == -1:
+            depth = len(self.manifold.graphs)  # TODO: Cover
+        if self.radius <= radius or len(self.children) < 2:
+            results.append(self)  # TODO: Cover
+        elif self.depth < depth:
+            if len(self.children) < 1:
+                results.append(self)  # TODO: Cover Is this even possible?
+            else:
+                [results.append(c) for c in self.children if c.overlaps(point, radius)]
+        return results
+
+    def _tree_search_dfs(self, point, radius, depth):
+        results: List[Cluster] = list()
+        stack: List[Cluster] = [self]
+        while len(stack) > 0:
+            current: Cluster = stack.pop()
+            if current.overlaps(point, radius):
+                if current.depth < depth:
+                    if len(current.children) < 2:
+                        results.append(current)
+                    else:
+                        stack.extend(current.children)
+                else:
+                    results.append(current)  # TODO: Cover
+        return results
+
+    def _tree_search_bfs(self, point, radius, depth):
+        results: List[Cluster] = list()
+        queue: Deque[Cluster] = deque([self])
+        while len(queue) > 0:
+            current: Cluster = queue.popleft()
+            if current.overlaps(point, radius):
+                if current.depth < depth:
+                    if len(current.children) < 2:
+                        results.append(current)
+                    else:
+                        [queue.append(c) for c in current.children]
+                else:
+                    results.append(current)  # TODO: Cover
         return results
 
     def prune(self) -> None:  # TODO: Cover
@@ -548,9 +557,9 @@ class Manifold:
     def __repr__(self) -> str:
         return '\n'.join([self.metric, repr(self.graphs[-1])])
 
-    def find_points(self, point: Data, radius: Radius, mode: str = 'iterative') -> Vector:
+    def find_points(self, point: Data, radius: Radius) -> Vector:
         """ Returns all indices of points that are within radius of point. """
-        candidates = [p for c in self.find_clusters(point, radius, len(self.graphs), mode) for p in c.argpoints]
+        candidates = [p for c in self.find_clusters(point, radius, len(self.graphs)) for p in c.argpoints]
         results: Vector = list()
         point = np.expand_dims(point, axis=0)
         for i in range(0, len(candidates), BATCH_SIZE):
@@ -559,9 +568,9 @@ class Manifold:
             results.extend([p for p, d in zip(batch, distances) if d <= radius])
         return results
 
-    def find_clusters(self, point: Data, radius: Radius, depth: int, mode: str = 'iterative') -> Set['Cluster']:
+    def find_clusters(self, point: Data, radius: Radius, depth: int) -> Set['Cluster']:
         """ Returns all clusters within radius of point at depth. """
-        return {r for c in self.graphs[0] for r in c.tree_search(point, radius, depth, mode)}
+        return {r for c in self.graphs[0] for r in c.tree_search(point, radius, depth)}
 
     def build(self, *criterion) -> 'Manifold':
         """ Rebuilds the stack of graphs. """
