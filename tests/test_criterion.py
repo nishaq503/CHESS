@@ -7,7 +7,7 @@ from chess.manifold import *
 class TestCriterion(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.data = np.random.randn(100, 2)
+        cls.data = np.concatenate([np.random.randn(100, 2) + i * 100 for i in range(5)])
         return
 
     def setUp(self) -> None:
@@ -21,7 +21,7 @@ class TestCriterion(unittest.TestCase):
         [self.assertLessEqual(len(c.children), 1) for g in self.manifold for c in g if c.radius <= min_radius]
         return
 
-    @unittest.skip
+    @unittest.skip("It appears this never triggers.")
     def test_leaves_component(self):
         self.assertEqual(1, len(self.manifold.graphs[-1].components))
         self.manifold.build(LeavesComponent(self.manifold))
@@ -30,7 +30,12 @@ class TestCriterion(unittest.TestCase):
         return
 
     def test_min_cardinality(self):
+        self.assertEqual(1, len(self.manifold.graphs[-1].components))
         self.manifold.build(MinCardinality(1))
+        self.assertGreater(len(self.manifold.graphs[-1].components), 1)
+        self.assertTrue(all((len(c.neighbors) == 0) for c in self.manifold.graphs[-1]))
+        self.manifold.build(MinCardinality(5))
+        self.assertTrue(all([len(c.neighbors) >= 1 for c in self.manifold.graphs[-2]]))
         return
 
     def test_min_neighborhood(self):

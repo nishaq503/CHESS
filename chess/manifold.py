@@ -15,9 +15,9 @@ from scipy.spatial.distance import pdist, cdist
 from chess.types import *
 
 SUBSAMPLE_LIMIT = 10
-BATCH_SIZE = 10
+BATCH_SIZE = 100
 
-logging.basicConfig(level=logging.CRITICAL, format="%(levelname)s:%(name)s:%(module)s.%(funcName)s:%(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s:%(levelname)s:%(name)s:%(module)s.%(funcName)s:%(message)s")
 
 
 class Cluster:
@@ -259,10 +259,8 @@ class Cluster:
                     search_stats_file.write(f'{line}, {cluster_names}\n')
             if len(candidates) == 0:
                 break  # TODO: Cover
-        for r in results:
-            assert depth >= r.depth, (depth, r.depth)
-        for c in candidates:
-            assert depth == c.depth, (depth, c.depth)
+        assert all((depth >= r.depth for r in results))
+        assert all((depth == c.depth for c in candidates))
         return results
 
     def _tree_search_recursive(self, point, radius, depth):
@@ -378,9 +376,7 @@ class Cluster:
         if len(neighbors) == 0:
             self.neighbors = dict()
         else:
-            for n in neighbors:
-                if self.depth != n.depth:
-                    assert (self.depth == n.depth), (self.depth, n.depth)
+            assert all((self.depth == n.depth) for n in neighbors)
             distances = self.distance(np.asarray([n.medoid for n in neighbors]))
             self.neighbors = {n: d for n, d in zip(neighbors, distances)}
             [n.neighbors.update({self: d}) for n, d in self.neighbors.items()]
