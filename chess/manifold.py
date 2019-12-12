@@ -221,16 +221,16 @@ class Cluster:
     def tree_search(self, point: Data, radius: Radius, depth: int) -> List['Cluster']:
         """ Searches down the tree for clusters that overlap point with radius at depth.
         """
-        logging.debug(f'tree_search(point={point}, radius={radius}, depth={depth}, mode={mode}')
+        logging.debug(f'tree_search(point={point}, radius={radius}, depth={depth}')
+        if depth == -1:
+            depth = len(self.manifold.graphs)
+        if depth < self.depth:
+            raise ValueError('depth must not be less than cluster.depth')
         results = self._tree_search_iterative(point, radius, depth)
         return results
 
     def _tree_search_iterative(self, point, radius, depth):
         results: List[Cluster] = list()
-        if depth == -1:
-            depth = len(self.manifold.graphs)
-        if depth < self.depth:
-            raise ValueError('depth must not be less than cluster.depth')
         if self.overlaps(point, radius):
             # results ONLY contains clusters that have overlap with point
             results.append(self)
