@@ -303,9 +303,9 @@ class Cluster:
         """ Removes all references to descendents. """
         logging.debug(str(self))
         if self.children:
-            [c.neighbors.remove(c) for c in self.children]
             [c.prune() for c in self.children]
             self.children = set()
+        [c.neighbors.pop(c) for c in self.neighbors.keys()]
         return
 
     def partition(self, *criterion) -> Iterable['Cluster']:
@@ -381,6 +381,7 @@ class Cluster:
         data = {
             'name': self.name,
             'argpoints': None,  # Do save them until at leaves.
+            'children': [],
             '_radius': self.radius,
             '_argradius': self.argradius,
             '_argsamples': self.argsamples,
@@ -394,8 +395,8 @@ class Cluster:
         return data
 
     @staticmethod
-    def from_json(data):
-        return Cluster(**data)
+    def from_json(manifold, data):
+        return Cluster(manifold, **data)
 
 
 class Graph:

@@ -12,8 +12,11 @@ class TestCluster(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.data = np.random.randn(1_000, 100)
         cls.manifold = Manifold(cls.data, 'euclidean')
-        cls.all_zeros = np.zeros((100, 100))
-        cls.cluster = Cluster(cls.manifold, cls.manifold.argpoints, '')
+        return
+
+    def setUp(self) -> None:
+        self.cluster = Cluster(self.manifold, self.manifold.argpoints, '')
+        self.children = list(self.cluster.partition())
         return
 
     def test_init(self):
@@ -22,10 +25,55 @@ class TestCluster(unittest.TestCase):
             Cluster(self.manifold, [], '')
         return
 
+    def test_eq(self):
+        self.assertEqual(self.cluster, self.cluster)
+        self.assertNotEqual(self.cluster, self.children[0])
+        self.assertNotEqual(self.children[0], self.children[1])
+        return
+
+    def test_hash(self):
+        self.assertIsInstance(hash(self.cluster), int)
+        return
+
+    def test_str(self):
+        self.assertEqual('root', self.cluster)
+        self.assertEqual('1', self.cluster[0])
+        return
+
+    def test_repr(self):
+        self.assertIsInstance(repr(self.cluster), str)
+        return
+
+    def test_iter(self):
+        self.assertEqual(
+            (self.data.shape[0] / BATCH_SIZE, BATCH_SIZE, self.data.shape[1]),
+            np.array(list(self.cluster.data)).shape
+        )
+        return
+
+    def test_getitem(self):
+        _ = self.cluster[0]
+        with self.assertRaises(IndexError):
+            _ = self.cluster[len(self.data) + 1]
+        return
+
+    def test_contains(self):
+        self.assertIn(self.data[0], self.cluster)
+        return
+
+    def test_metric(self):
+        self.assertEqual(self.manifold.metric, self.cluster.metric)
+        return
+
+    def test_depth(self):
+        self.assertEqual(0, self.cluster.depth)
+        self.assertEqual(1, self.children[0].depth)
+        return
+
     def test_points(self):
         self.assertTrue(np.array_equal(
             self.manifold.data,
-            self.cluster.points
+            np.array(list(self.cluster.data)).reshape(self.data.shape)
         ))
         return
 
@@ -37,7 +85,8 @@ class TestCluster(unittest.TestCase):
         return
 
     def test_samples(self):
-        pass
+        self.assertEqual((self.cluster.nsamples, self.data.shape[-1]), self.cluster.samples.shape)
+        return
 
     def test_argsamples(self):
         data = np.zeros((100, 100))
@@ -50,69 +99,41 @@ class TestCluster(unittest.TestCase):
 
     def test_nsamples(self):
         self.assertEqual(
-            np.sqrt(len(self.data)),
+            int(np.sqrt(len(self.data))),
             self.cluster.nsamples
         )
-
-    def test_overlaps(self):
-        point = np.ones((100, ))
-        self.assertTrue(self.cluster.overlaps(point, 1.))
         return
 
     def test_centroid(self):
-        self.assertEqual((100,), self.cluster.centroid.shape)
+        self.assertEqual((self.data.shape[-1],), self.cluster.centroid.shape)
+        self.assertFalse(np.any(self.cluster.centroid == self.data))
         return
 
-    def test_neighbors(self):
-        data = np.concatenate([np.random.randn(1000, 2) * -1, np.random.randn(1000, 2) * 1])
-        m = Manifold(data, 'euclidean').build()
-        parent = Cluster(m, m.argpoints, '')
-        children = parent.partition()
-        [self.assertNotIn(c, c.neighbors) for c in children]
-        [self.assertEqual(parent.depth + 1, c.depth) for c in children]
-
-        for i in range(2, 10):
-            # noinspection PyUnresolvedReferences
-            children = [c for C in children for c in C.partition()]
-            [self.assertNotIn(c, c.neighbors.keys()) for c in children]
-            [self.assertEqual(parent.depth + i, c.depth) for c in children]
+    def test_medoid(self):
+        self.assertEqual((self.data.shape[-1],), self.cluster.medoid.shape)
+        self.assertTrue(np.any(self.cluster.medoid == self.data))
         return
 
-    @staticmethod
-    def trace_lineage(cluster: Cluster, other: Cluster):  # TODO: Cover
-        assert cluster.depth == other.depth
-        assert cluster.overlaps(other.medoid, other.radius)
-        lineage = [other.name[:i] for i in range(other.depth) if cluster.name[:i] != other.name[:i]]
-        ancestors = [other.manifold.select(n) for n in reversed(lineage)]
-        for ancestor in ancestors:
-            print(f'checking {ancestor.name}...')
-            if not cluster.overlaps(ancestor.medoid, 2 * ancestor.radius):
-                print(f'{cluster.name} did not overlap with {ancestor.name}')
-                distance = cluster.distance(np.asarray([ancestor.medoid], dtype=np.float64))[0]
-                print(f'cluster.radius: {cluster.radius} vs ancestor.radius: {ancestor.radius}')
-                print(f'distance: {distance} vs cluster.radius + 2 * ancestor.radius: {cluster.radius + 2 * ancestor.radius}')
-                print(f'off by {(distance - (cluster.radius + 2 * ancestor.radius)) / distance} percent')
-                print(f'cluster.depth: {cluster.depth} vs ancestor.depth: {ancestor.depth}')
-                print(f'cluster_population: {len(cluster.argpoints)} vs ancestor_population: {len(ancestor.argpoints)}')
-                print('\n\n\n')
-                return
-        else:
-            raise ValueError(f'all divergent ancestors had overlap')
+    def test_argmedoid(self):
+        self.assertIn(self.cluster.argmedoid, self.cluster.argpoints)
+        return
 
-    def test_neighbors_more(self):
-        data, labels = bullseye()
-        np.random.seed(42)
-        manifold = Manifold(data, 'euclidean')
-        manifold.build(MinRadius(MIN_RADIUS), MaxDepth(12))
-        for depth, graph in enumerate(manifold.graphs):
-            for cluster in graph:
-                neighbors = manifold.find_clusters(cluster.medoid, cluster.radius, depth) - {cluster}
-                if (neighbors - set(cluster.neighbors.keys())) or (set(cluster.neighbors.keys()) - neighbors):
-                    print(depth, cluster.name, ':', [n.name for n in neighbors])
-                    print(depth, cluster.name, ':', [n.name for n in (neighbors - set(cluster.neighbors.keys()))])
-                    print(depth, cluster.name, ':', [n.name for n in (set(cluster.neighbors.keys()) - neighbors)])
-                # self.assertTrue(len(neighbors) >= len(set(cluster.neighbors.keys())))
-                self.assertSetEqual(neighbors, set(cluster.neighbors.keys()))
+    def test_radius(self):
+        self.assertGreaterEqual(self.cluster.radius, 0.0)
+        return
+
+    def test_argradius(self):
+        self.assertIn(self.cluster.argradius, self.cluster.argpoints)
+        return
+
+    def test_local_fractal_dimension(self):
+        self.assertGreaterEqual(self.cluster.local_fractal_dimension, 0)
+        return
+
+    def test_clear_cache(self):
+        self.cluster.clear_cache()
+        self.assertNotIn('_argsamples', self.cluster.__dict__)
+        return
 
     def test_tree_search(self):
         data, labels = bullseye()
@@ -128,3 +149,66 @@ class TestCluster(unittest.TestCase):
                     for parent in parents:
                         self.assertIn(parent, parent.tree_search(cluster.medoid, cluster.radius, parent.depth))
                 # self.assertSetEqual(linear, tree, f"Sets unequal for cluster: {cluster.name}")
+
+    def test_prune(self):
+        self.cluster.prune()
+        self.assertFalse(self.cluster.children)
+        return
+
+    def test_partition(self):
+        children = list(self.cluster.partition())
+        self.assertGreater(len(children), 1)
+        return
+
+    def test_neighbors(self):
+        data = np.concatenate([np.random.randn(1000, 2) * -1, np.random.randn(1000, 2) * 1])
+        m = Manifold(data, 'euclidean').build()
+        parent = Cluster(m, m.argpoints, '')
+        children = parent.partition()
+        [self.assertNotIn(c, c.neighbors) for c in children]
+        [self.assertEqual(parent.depth + 1, c.depth) for c in children]
+
+        for i in range(2, 10):
+            # noinspection PyUnresolvedReferences
+            children = [c for C in children for c in C.partition()]
+            [self.assertNotIn(c, c.neighbors.keys()) for c in children]
+            [self.assertEqual(parent.depth + i, c.depth) for c in children]
+
+        data, labels = bullseye()
+        np.random.seed(42)
+        manifold = Manifold(data, 'euclidean')
+        manifold.build(MinRadius(MIN_RADIUS), MaxDepth(12))
+        for depth, graph in enumerate(manifold.graphs):
+            for cluster in graph:
+                neighbors = manifold.find_clusters(cluster.medoid, cluster.radius, depth) - {cluster}
+                if (neighbors - set(cluster.neighbors.keys())) or (set(cluster.neighbors.keys()) - neighbors):
+                    print(depth, cluster.name, ':', [n.name for n in neighbors])
+                    print(depth, cluster.name, ':', [n.name for n in (neighbors - set(cluster.neighbors.keys()))])
+                    print(depth, cluster.name, ':', [n.name for n in (set(cluster.neighbors.keys()) - neighbors)])
+                # self.assertTrue(len(neighbors) >= len(set(cluster.neighbors.keys())))
+                self.assertSetEqual(neighbors, set(cluster.neighbors.keys()))
+        return
+
+    def test_distance(self):
+        self.assertGreater(self.children[0].distance(np.expand_dims(self.children[1].medoid, 0)), 0)
+        return
+
+    def test_overlaps(self):
+        point = np.ones((100,))
+        self.assertTrue(self.cluster.overlaps(point, 1.))
+        return
+
+    def test_to_json(self):
+        data = self.cluster.json()
+        self.assertFalse(data['argpoints'])
+        self.assertTrue(data['children'])
+        data = self.children[0].json()
+        self.assertTrue(data['argpoints'])
+        self.assertFalse(data['children'])
+        return
+
+    def test_from_json(self):
+        # TODO: This probably shouldn't be legal, since children have to be created
+        c = Cluster.from_json(self.manifold, self.cluster.json())
+        self.assertEqual(self.cluster, c)
+        return
