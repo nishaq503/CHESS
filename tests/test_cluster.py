@@ -10,10 +10,13 @@ MIN_RADIUS = 0.5
 class TestCluster(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.data = np.random.randn(100, 100)
+        cls.data = np.random.randn(1_000, 100)
         cls.manifold = Manifold(cls.data, 'euclidean')
-        cls.all_zeros = np.zeros((100, 100))
-        cls.cluster = Cluster(cls.manifold, cls.manifold.argpoints, '')
+        return
+
+    def setUp(self) -> None:
+        self.cluster = Cluster(self.manifold, self.manifold.argpoints, '')
+        self.children = list(self.cluster.partition())
         return
 
     def test_init(self):
@@ -22,11 +25,56 @@ class TestCluster(unittest.TestCase):
             Cluster(self.manifold, [], '')
         return
 
-    def test_points(self):  # TODO: Tom
-        # self.assertTrue(np.array_equal(
-        #     self.manifold.data,
-        #     self.cluster.points  # iterator needs to be made list
-        # ))
+    def test_eq(self):
+        self.assertEqual(self.cluster, self.cluster)
+        self.assertNotEqual(self.cluster, self.children[0])
+        self.assertNotEqual(self.children[0], self.children[1])
+        return
+
+    def test_hash(self):
+        self.assertIsInstance(hash(self.cluster), int)
+        return
+
+    def test_str(self):
+        self.assertEqual('root', str(self.cluster))
+        self.assertSetEqual({'1', '2'}, set([str(c) for c in self.children]))
+        return
+
+    def test_repr(self):
+        self.assertIsInstance(repr(self.cluster), str)
+        return
+
+    def test_iter(self):
+        self.assertEqual(
+            (self.data.shape[0] / BATCH_SIZE, BATCH_SIZE, self.data.shape[1]),
+            np.array(list(self.cluster.data)).shape
+        )
+        return
+
+    def test_getitem(self):
+        _ = self.cluster[0]
+        with self.assertRaises(IndexError):
+            _ = self.cluster[len(self.data) + 1]
+        return
+
+    def test_contains(self):
+        self.assertIn(self.data[0], self.cluster)
+        return
+
+    def test_metric(self):
+        self.assertEqual(self.manifold.metric, self.cluster.metric)
+        return
+
+    def test_depth(self):
+        self.assertEqual(0, self.cluster.depth)
+        self.assertEqual(1, self.children[0].depth)
+        return
+
+    def test_points(self):
+        self.assertTrue(np.array_equal(
+            self.manifold.data,
+            np.array(list(self.cluster.data)).reshape(self.data.shape)
+        ))
         return
 
     def test_argpoints(self):
@@ -37,7 +85,8 @@ class TestCluster(unittest.TestCase):
         return
 
     def test_samples(self):
-        pass
+        self.assertEqual((self.cluster.nsamples, self.data.shape[-1]), self.cluster.samples.shape)
+        return
 
     def test_argsamples(self):
         data = np.zeros((100, 100))
@@ -50,17 +99,70 @@ class TestCluster(unittest.TestCase):
 
     def test_nsamples(self):
         self.assertEqual(
-            np.sqrt(len(self.data)),
+            int(np.sqrt(len(self.data))),
             self.cluster.nsamples
         )
+        return
 
-    def test_overlaps(self):
-        point = np.ones((100, ))
-        self.assertTrue(self.cluster.overlaps(point, 1.))
+    def test_centroid(self):
+        self.assertEqual((self.data.shape[-1],), self.cluster.centroid.shape)
+        self.assertFalse(np.any(self.cluster.centroid == self.data))
+        return
+
+    def test_medoid(self):
+        self.assertEqual((self.data.shape[-1],), self.cluster.medoid.shape)
+        self.assertTrue(np.any(self.cluster.medoid == self.data))
+        return
+
+    def test_argmedoid(self):
+        self.assertIn(self.cluster.argmedoid, self.cluster.argpoints)
+        return
+
+    def test_radius(self):
+        self.assertGreaterEqual(self.cluster.radius, 0.0)
+        return
+
+    def test_argradius(self):
+        self.assertIn(self.cluster.argradius, self.cluster.argpoints)
+        return
+
+    def test_local_fractal_dimension(self):
+        self.assertGreaterEqual(self.cluster.local_fractal_dimension, 0)
+        return
+
+    def test_clear_cache(self):
+        self.cluster.clear_cache()
+        self.assertNotIn('_argsamples', self.cluster.__dict__)
+        return
+
+    def test_tree_search(self):
+        data, labels = bullseye()
+        m = Manifold(data, 'euclidean')
+        m.build(MinRadius(MIN_RADIUS), MaxDepth(12))
+        for depth, graph in enumerate(m.graphs):
+            for cluster in graph:
+                linear = set([c for c in graph if c.overlaps(cluster.medoid, cluster.radius)])
+                tree = set(next(iter(m.graphs[0])).tree_search(cluster.medoid, cluster.radius, cluster.depth))
+                print(depth, [c.name for c in (linear ^ tree)])
+                for d in range(depth, 0, -1):
+                    parents = set([m.select(cluster.name[:-1]) for cluster in linear])
+                    for parent in parents:
+                        self.assertIn(parent, parent.tree_search(cluster.medoid, cluster.radius, parent.depth))
+                # self.assertSetEqual(linear, tree, f"Sets unequal for cluster: {cluster.name}")
+
+    def test_prune(self):
+        self.cluster.prune()
+        self.assertFalse(self.cluster.children)
+        return
+
+    def test_partition(self):
+        children = list(self.cluster.partition())
+        self.assertGreater(len(children), 1)
+        return
 
     def test_neighbors(self):
         data = np.concatenate([np.random.randn(1000, 2) * -1, np.random.randn(1000, 2) * 1])
-        m = Manifold(data, 'euclidean')
+        m = Manifold(data, 'euclidean').build()
         parent = Cluster(m, m.argpoints, '')
         children = parent.partition()
         [self.assertNotIn(c, c.neighbors) for c in children]
@@ -71,72 +173,42 @@ class TestCluster(unittest.TestCase):
             children = [c for C in children for c in C.partition()]
             [self.assertNotIn(c, c.neighbors.keys()) for c in children]
             [self.assertEqual(parent.depth + i, c.depth) for c in children]
-        return
 
-    @staticmethod
-    def trace_lineage(left: Cluster, right: Cluster):  # TODO: Cover
-        assert left.depth == right.depth
-        assert left.overlaps(right.center, right.radius)
-        lineages = [(left.name[:i], right.name[:i]) for i in range(left.depth) if left.name[:i] != right.name[:i]]
-        ancestors = [(left.manifold.select(l_), right.manifold.select(r_)) for l_, r_ in reversed(lineages)]
-        for al, ar in ancestors:
-            print(f'checking {al.name, ar.name}...')
-            if not al.overlaps(ar.center, ar.radius):
-                print(f'{al.name, ar.name} do not have overlap but their descendents {left.name, right.name} do.')
-                # noinspection PyTypeChecker
-                d_ancestors, r_ancestors = al.distance([ar.center])[0], al.radius + ar.radius
-                # noinspection PyTypeChecker
-                d, r = left.distance([right.center])[0], left.radius + right.radius
-                print(f'ancestors\' distance: {d_ancestors}, radii_sum: {r_ancestors}')
-                print(f'children\'s distance: {d}, radii_sum: {r}')
-                return
-        else:
-            raise ValueError(f'all divergent ancestors had overlap')
-
-    def test_neighbors_more(self):
-        data, labels = spiral_2d()
+        data, labels = bullseye()
         np.random.seed(42)
-        manifold = Manifold(data, 'euclidean', propagate=True)
-        manifold.build(MinRadius(MIN_RADIUS), MaxDepth(10))
+        manifold = Manifold(data, 'euclidean')
+        manifold.build(MinRadius(MIN_RADIUS), MaxDepth(12))
         for depth, graph in enumerate(manifold.graphs):
             for cluster in graph:
-                potential_neighbors = [c for c in graph if c.name != cluster.name]
-                if len(potential_neighbors) == 0:
-                    continue
-                elif len(potential_neighbors) == 1:
-                    centers = np.expand_dims(potential_neighbors[0].center, axis=0)
-                else:
-                    centers = np.stack([c.center for c in potential_neighbors])
-                distances = list(cluster.distance(centers))
-                radii = [cluster.radius + c.radius for c in potential_neighbors]  # TODO: Slow
-                naive_neighbors = {c for c, d, r in zip(potential_neighbors, distances, radii) if d <= r}
-                if naive_neighbors - set(cluster.neighbors.keys()):  # TODO: Cover
-                    offenders = list(naive_neighbors - set(cluster.neighbors.keys()))
-                    [self.trace_lineage(cluster, o) for o in offenders]
-                self.assertSetEqual(set(), (naive_neighbors - set(cluster.neighbors.keys())),
-                                    msg=f'\nmissed: {sorted([n.name for n in naive_neighbors - set(cluster.neighbors.keys())])}'
-                                        f'\nextras: {sorted([n.name for n in set(cluster.neighbors.keys()) - naive_neighbors])}')
+                neighbors = manifold.find_clusters(cluster.medoid, cluster.radius, depth) - {cluster}
+                if (neighbors - set(cluster.neighbors.keys())) or (set(cluster.neighbors.keys()) - neighbors):
+                    print(depth, cluster.name, ':', [n.name for n in neighbors])
+                    print(depth, cluster.name, ':', [n.name for n in (neighbors - set(cluster.neighbors.keys()))])
+                    print(depth, cluster.name, ':', [n.name for n in (set(cluster.neighbors.keys()) - neighbors)])
+                # self.assertTrue(len(neighbors) >= len(set(cluster.neighbors.keys())))
+                self.assertSetEqual(neighbors, set(cluster.neighbors.keys()))
+        return
 
-    def test_add_edge_with_propagation(self):
-        data = np.random.random((1000, 2))
-        data = np.concatenate([data - 100, data + 100], axis=0)
-        manifold = Manifold(data, 'euclidean')
-        manifold.build(MaxDepth(5), MinPoints(1))
-        bottom = manifold.graphs[-1]
-        for _ in range(100):
-            c1: Cluster
-            c2: Cluster
-            c1 = next(iter(bottom))
-            for c2 in bottom:
-                if c1.name != c2.name and c1 not in set(c2.neighbors.keys()):
-                    break
-            else:
-                continue
-            c1.add_edge(c2, True)
+    def test_distance(self):
+        self.assertGreater(self.children[0].distance(np.expand_dims(self.children[1].medoid, 0)), 0)
+        return
 
-            lineages = [(c1.name[:i], c2.name[:i]) for i in range(c1.depth) if c1.name[:i] != c2.name[:i]]
-            clusters = [(manifold.select(l1), manifold.select(l2)) for l1, l2 in lineages]
-            for l1, l2 in reversed(clusters):
-                self.assertNotEqual(l1.name, l2.name)
-                self.assertIn(l1, set(l2.neighbors.keys()), msg=f'{l2.name} did not have an edge with {l1.name} but {c1.name} and {c2.name} have an edge.')
-                self.assertIn(l2, set(l1.neighbors.keys()), msg=f'{l1.name} did not have an edge with {l2.name} but {c1.name} and {c2.name} have an edge.')
+    def test_overlaps(self):
+        point = np.ones((100,))
+        self.assertTrue(self.cluster.overlaps(point, 1.))
+        return
+
+    def test_to_json(self):
+        data = self.cluster.json()
+        self.assertFalse(data['argpoints'])
+        self.assertTrue(data['children'])
+        data = self.children[0].json()
+        self.assertTrue(data['argpoints'])
+        self.assertFalse(data['children'])
+        return
+
+    def test_from_json(self):
+        # TODO: This probably shouldn't be legal, since children have to be created
+        c = Cluster.from_json(self.manifold, self.cluster.json())
+        self.assertEqual(self.cluster, c)
+        return

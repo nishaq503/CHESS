@@ -1,6 +1,5 @@
-import os
-import tempfile
 import unittest
+from tempfile import TemporaryFile
 
 from chess.criterion import *
 from chess.manifold import *
@@ -8,83 +7,16 @@ from chess.manifold import *
 np.random.seed(42)
 
 
-def linear_search(point: Data, radius: Radius, data: Data, metric: str):
-    point = np.expand_dims(point, 0)
-    results, argresults = list(), list()
-    for i in range(0, len(data), BATCH_SIZE):
-        batch = data[i: i + BATCH_SIZE]
-        distances = cdist(point, batch, metric)[0]
-        results.extend([p for p, d in zip(batch, distances) if d <= radius])
-        argresults.extend([j for j, d in zip(range(i, min(i + BATCH_SIZE, data.shape[0])), distances) if d <= radius])
-    return results, argresults
-
-
-class TestManifoldFunctional(unittest.TestCase):
-    def test_random(self):
-        # We begin by getting some data and building with no constraints.
-        data = np.random.randn(100, 100)
-        m = Manifold(data, 'euclidean')
-        m.build()
-        # With no constraints, clusters should be singletons.
-        self.assertEqual(1, len(m.find_clusters(data[0], 0., -1)))
-        self.assertEqual(1, len(m.find_points(data[0], 0.)))
-
-        data = np.random.randn(1000, 100)
-        m = Manifold(data, 'euclidean')
-        m.build(MinPoints(10))
-        for _ in range(10):
-            point = int(np.random.choice(1000))
-            linear_results, linear_argresults = linear_search(data[point], 0.5, data, m.metric)
-            self.assertTrue(1 <= len(linear_argresults))
-            self.assertIn(point, linear_argresults)
-            self.assertEqual(len(linear_results), len(m.find_points(data[point], 0.5, mode='iterative')))
-            self.assertEqual(len(linear_results), len(m.find_points(data[point], 0.5, mode='recursive')))
-            self.assertEqual(len(linear_results), len(m.find_points(data[point], 0.5, mode='dfs')))
-            self.assertEqual(len(linear_results), len(m.find_points(data[point], 0.5, mode='bfs')))
-            # self.assertEqual(len(linear_search(data[point], 0.5, data, m.metric)), len(m.find_points(data[point], 0.5, mode='recursive')))
-        return
-
-    def test_all_same(self):
-        # A bit simpler, every point is the same.
-        data = np.ones((1000, 3))
-        m = Manifold(data, 'euclidean')
-        m.build()
-        # There should only ever be one cluster here.
-        self.assertEqual(1, len(m.graphs))
-        m.deepen()
-        # Even after explicit deepen calls.
-        self.assertEqual(1, len(m.graphs))
-        self.assertEqual(1, len(m.find_clusters(data[0], 0.0, -1)))
-        # And, we should get all 1000 points back for any of the data.
-        self.assertEqual(1000, len(m.find_points(data[0], 0.0)))
-        return
-
-    def test_two_points_with_dups(self):
-        # Here we have two distinct clusters.
-        data = np.concatenate([np.ones((500, 2)) * -2, np.ones((500, 2)) * 2])
-        m = Manifold(data, 'euclidean')
-        # We expect building to stop with two clusters.
-        m.build()
-        self.assertEqual(2, len(m.graphs[-1]))
-        return
-
-    def test_two_clumps(self):  # TODO: Tom
-        data = np.concatenate([np.random.randn(50, 2) * -5, np.random.randn(50, 2) * 5])
-        m = Manifold(data, 'euclidean')
-        m.build(MinNeighborhood(starting_depth=1, threshold=1))
-        # self.assertEqual(2, len(m.graphs))
-        # self.assertEqual(1, len(next(iter(m.graphs[-1])).neighbors))
-        return
-
-
 class TestManifold(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.data = np.random.randn(100, 100)
+        cls.data = np.random.randn(100, 10)
+        cls.manifold = Manifold(cls.data, 'euclidean').build()
         return
 
     def test_init(self):
-        Manifold(self.data, 'euclidean')
+        m = Manifold(self.data, 'euclidean')
+        self.assertEqual(1, len(m.graphs))
 
         m = Manifold(self.data, 'euclidean', [1, 2, 3])
         self.assertListEqual([1, 2, 3], m.argpoints)
@@ -98,68 +30,85 @@ class TestManifold(unittest.TestCase):
         return
 
     def test_eq(self):
-        m1 = Manifold(self.data, 'euclidean')
-        m2 = Manifold(self.data, 'euclidean')
-        self.assertEqual(m1, m2)
-        m2.metric = 'boop'
-        self.assertNotEqual(m1, m2)
+        self.assertEqual(self.manifold, self.manifold)
+        other = Manifold(self.data, 'euclidean')
+        self.assertNotEqual(self.manifold, other)
+        other.build()
+        self.assertNotEqual(self.manifold, other)
+        self.assertEqual(other, other)
         return
 
     def test_getitem(self):
-        m = Manifold(self.data, 'euclidean')
-        self.assertEqual(m[0], m.graphs[0])
+        self.assertEqual(self.manifold.graphs[0], self.manifold[0])
+        with self.assertRaises(IndexError):
+            _ = self.manifold[100]
         return
 
     def test_iter(self):
-        m = Manifold(self.data, 'euclidean')
-        self.assertListEqual(m.graphs, list(iter(m)))
+        self.assertListEqual(self.manifold.graphs, list(iter(self.manifold)))
         return
 
     def test_str(self):
-        m = Manifold(self.data, 'euclidean')
-        self.assertIsInstance(str(m), str)
+        self.assertIsInstance(str(self.manifold), str)
         return
 
     def test_repr(self):
-        m = Manifold(self.data, 'euclidean')
-        # TODO
-        self.assertIsInstance(repr(m), str)
+        self.assertIsInstance(repr(self.manifold), str)
         return
 
-    # noinspection DuplicatedCode
-    def test_json(self):
-        original = Manifold(self.data, 'euclidean')
-        with tempfile.TemporaryDirectory() as d:
-            with open(os.path.join(d, 'dump'), 'w') as outfile:
-                original.json_dump(outfile)
-            with open(os.path.join(d, 'dump'), 'r') as infile:
-                loaded: Manifold = Manifold.json_load(infile, self.data)
-        self.assertEqual(original, loaded)
+    def test_find_points(self):
+        self.assertEqual(1, len(self.manifold.find_points(self.data[0], radius=0.0)))
+        self.assertGreaterEqual(1, len(self.manifold.find_points(self.data[0], radius=1.0)))
+        return
 
-        original.build()
-        with tempfile.TemporaryDirectory() as d:
-            with open(os.path.join(d, 'dump'), 'w') as outfile:
-                original.json_dump(outfile)
-            with open(os.path.join(d, 'dump'), 'r') as infile:
-                loaded: Manifold = Manifold.json_load(infile, self.data)
-        self.assertEqual(len(original.graphs), len(loaded.graphs))
-        self.assertEqual(original, loaded)
+    def test_find_clusters(self):
+        self.assertEqual(1, len(self.manifold.find_clusters(self.data[0], radius=0.0, depth=-1)))
+        return
 
-    # noinspection DuplicatedCode
-    def test_pickle(self):
-        original = Manifold(self.data, 'euclidean')
-        with tempfile.TemporaryDirectory() as d:
-            with open(os.path.join(d, 'dump'), 'wb') as outfile:
-                original.pickle_dump(outfile)
-            with open(os.path.join(d, 'dump'), 'rb') as infile:
-                loaded: Manifold = Manifold.pickle_load(infile, self.data)
-        self.assertEqual(original, loaded)
+    def test_build(self):
+        m = Manifold(self.data, 'euclidean').build(MaxDepth(1))
+        self.assertEqual(2, len(m.graphs))
+        m.build(MaxDepth(2))
+        self.assertEqual(3, len(m.graphs))
+        m.build()
+        self.assertEqual(len(self.data), len(m.graphs[-1]))
+        return
 
-        original.build()
-        with tempfile.TemporaryDirectory() as d:
-            with open(os.path.join(d, 'dump'), 'wb') as outfile:
-                original.pickle_dump(outfile)
-            with open(os.path.join(d, 'dump'), 'rb') as infile:
-                loaded: Manifold = Manifold.pickle_load(infile, self.data)
-        self.assertEqual(len(original.graphs), len(loaded.graphs))
+    def test_deepen(self):
+        m = Manifold(self.data, 'euclidean')
+        self.assertEqual(1, len(m.graphs))
+
+        m.deepen(AddLevels(2))
+        self.assertEqual(3, len(m.graphs))
+
+        # MaxDepth shouldn't do anything in deepen if we're beyond that depth already.
+        m.deepen(MaxDepth(1))
+        self.assertEqual(3, len(m.graphs))
+
+        m.deepen()
+        self.assertEqual(len(self.data), len(m.graphs[-1]))
+        return
+
+    def test_select(self):
+        cluster = None
+        for cluster in self.manifold.graphs[-1]:
+            self.assertIsInstance(self.manifold.select(cluster.name), Cluster)
+        else:
+            with self.assertRaises(AssertionError):
+                self.manifold.select(cluster.name + '1')
+        return
+
+    def test_dump(self):
+        with TemporaryFile() as fp:
+            self.manifold.dump(fp)
+        return
+
+    def test_load(self):
+        original = Manifold(self.data, 'euclidean').build(MinPoints(100))
+        with TemporaryFile() as fp:
+            original.dump(fp)
+            fp.seek(0)
+            loaded = Manifold.load(fp, self.data)
         self.assertEqual(original, loaded)
+        self.assertEqual(original[0], loaded[0])
+        return
