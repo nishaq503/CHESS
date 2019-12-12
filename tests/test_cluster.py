@@ -208,7 +208,6 @@ class TestCluster(unittest.TestCase):
         return
 
     def test_from_json(self):
-        # TODO: This probably shouldn't be legal, since children have to be created
         c = Cluster.from_json(self.manifold, self.cluster.json())
         self.assertEqual(self.cluster, c)
         return

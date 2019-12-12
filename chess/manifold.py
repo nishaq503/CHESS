@@ -396,7 +396,8 @@ class Cluster:
 
     @staticmethod
     def from_json(manifold, data):
-        return Cluster(manifold, **data)
+        children = set([Cluster.from_json(manifold, c) for c in data.pop('children', [])])
+        return Cluster(manifold, children=children, **data)
 
 
 class Graph:
@@ -422,12 +423,12 @@ class Graph:
         return len(self.clusters)
 
     def __str__(self) -> str:
-        return ', '.join(sorted([str(c) for c in self.clusters]))
+        return ';'.join(sorted([str(c) for c in self.clusters]))
 
     def __repr__(self) -> str:
         return '\t'.join(sorted([repr(c) for c in self.clusters]))
 
-    def __contains__(self, cluster: 'Cluster') -> bool:  # TODO: Cover
+    def __contains__(self, cluster: 'Cluster') -> bool:
         return cluster in self.clusters
 
     @property
@@ -439,16 +440,16 @@ class Graph:
         return next(iter(self.clusters)).depth if len(self.clusters) > 0 else None
 
     @property
-    def edges(self) -> Set[Set['Cluster']]:  # TODO: Cover
+    def edges(self) -> Set[Set['Cluster']]:
         """ Returns all edges within the graph.
         """
         if '_edges' not in self.__dict__:
             logging.debug(f'building cache for {self.clusters}')
-            self.__dict__['_edges'] = set({c, n} for c in self.clusters for n in c.neighbors.keys())
+            self.__dict__['_edges'] = set(frozenset([c, n]) for c in self.clusters for n in c.neighbors.keys())
         return self.__dict__['_edges']
 
     @property
-    def subgraphs(self) -> List['Graph']:  # TODO: Cover
+    def subgraphs(self) -> List['Graph']:
         """ Returns all subgraphs within the graph.
         """
         if '_subgraphs' not in self.__dict__:
@@ -457,10 +458,9 @@ class Graph:
         return self.__dict__['_subgraphs']
 
     @property
-    def components(self) -> List[Set['Cluster']]:  # TODO: Cover
+    def components(self) -> List[Set['Cluster']]:
         """ Returns all components within the graph.
         """
-        # TODO: Isn't this the same thing as subgraphs?
         if '_components' not in self.__dict__:
             logging.debug(f'building cache for {self.clusters}')
             unvisited = set(self.clusters)
@@ -471,7 +471,7 @@ class Graph:
                 self.__dict__['_components'].append(component)
         return self.__dict__['_components']
 
-    def clear_cache(self) -> None:  # TODO: Cover
+    def clear_cache(self) -> None:
         """ Clears the cache of the graph. """
         for prop in ['_components', '_subgraphs', '_edges']:
             logging.debug(str(self.clusters))
@@ -480,12 +480,12 @@ class Graph:
             except KeyError:
                 pass
 
-    def component(self, cluster: 'Cluster') -> Set['Cluster']:  # TODO: Cover
+    def component(self, cluster: 'Cluster') -> Set['Cluster']:
         """ Returns the component to which cluster belongs. """
         return next(filter(lambda component: cluster in component, self.components))
 
     @staticmethod
-    def bft(start: 'Cluster'):  # TODO: Cover
+    def bft(start: 'Cluster'):
         """ Breadth-First Search starting at start. """
         logging.debug(f'starting from {start}')
         visited = set()
@@ -639,12 +639,9 @@ class Manifold:
     def load(fp: TextIO, data: Data) -> 'Manifold':
         d = pickle.load(fp)
         manifold = Manifold(data, metric=d['metric'], argpoints=d['argpoints'])
-
-        def build(node):
-            children = set([build(c) for c in node.pop('children', [])])
-            return Cluster(manifold=manifold, children=children, **node)
-
-        graphs = [Graph(*[build(r) for r in d['root']])]
+        graphs = [
+            Graph(*[Cluster.from_json(manifold, r) for r in d['root']])  # Graphs contains only root layer.
+        ]
         while True:
             layer = Graph(*(child for cluster in graphs[-1] for child in cluster.children))
             if not layer:
