@@ -62,7 +62,7 @@ class LeavesComponent:
         return
 
     def __call__(self, cluster: _Cluster):
-        parent_component = self.manifold.graphs[cluster.depth].component(cluster)
+        parent_component = self.manifold.graphs[cluster.depth - 1].component(self.manifold.select(cluster.name[:-1]))
         return any((c.overlaps(cluster.medoid, cluster.radius) for c in parent_component))
 
 
