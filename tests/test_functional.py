@@ -24,10 +24,7 @@ class TestManifoldFunctional(unittest.TestCase):
         for _ in range(10):
             point = int(np.random.choice(3))
             linear_results = linear_search(data[point], 0.5, data, m.metric)
-            self.assertEqual(len(linear_results), len(m.find_points(data[point], 0.5, mode='iterative')))
-            self.assertEqual(len(linear_results), len(m.find_points(data[point], 0.5, mode='recursive')))
-            self.assertEqual(len(linear_results), len(m.find_points(data[point], 0.5, mode='dfs')))
-            self.assertEqual(len(linear_results), len(m.find_points(data[point], 0.5, mode='bfs')))
+            self.assertEqual(len(linear_results), len(m.find_points(data[point], 0.5)))
         return
 
     def test_all_same(self):
