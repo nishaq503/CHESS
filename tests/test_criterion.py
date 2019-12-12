@@ -19,6 +19,19 @@ class TestCriterion(unittest.TestCase):
         self.manifold.build(MinRadius(min_radius))
         self.assertTrue(all((c.radius >= min_radius for g in self.manifold for c in g)))
         [self.assertLessEqual(len(c.children), 1) for g in self.manifold for c in g if c.radius <= min_radius]
+        return
+
+    def test_leaves_component(self):
+        self.manifold.build(LeavesComponent(self.manifold))
+
+    def test_min_cardinality(self):
+        pass
+
+    def test_min_neighborhood(self):
+        pass
+
+    def test_new_component(self):
+        pass
 
     def test_combinations(self):
         min_radius, min_points, max_depth = 0.15, 10, 20

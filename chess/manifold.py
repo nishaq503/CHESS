@@ -414,7 +414,8 @@ class Graph:
     """
     def __init__(self, *clusters):
         logging.debug(f'Graph(clusters={[str(c) for c in clusters]})')
-        assert all([c.depth == clusters[0].depth for c in clusters[1:]])  # TODO: Does this return False when there is only one cluster?
+        assert all(isinstance(c, Cluster) for c in clusters)
+        assert all([c.depth == clusters[0].depth for c in clusters[1:]])
         self.clusters = set(clusters)
         return
 
@@ -504,7 +505,7 @@ class Graph:
         return visited
 
     @staticmethod
-    def dft(start: 'Cluster'):  # TODO: Cover
+    def dft(start: 'Cluster'):
         """ Depth-First Traversal starting at start. """
         logging.debug(f'starting from {start}')
         visited = set()

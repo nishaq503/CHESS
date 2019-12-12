@@ -53,7 +53,7 @@ class MinRadius:
         return True
 
 
-class LeavesComponent:  # TODO: Cover
+class LeavesComponent:
     """ Allows clustering until the cluster has left the component of the parent.
     """
 
@@ -66,7 +66,7 @@ class LeavesComponent:  # TODO: Cover
         return any((c.overlaps(cluster.medoid, cluster.radius) for c in parent_component))
 
 
-class MinCardinality:  # TODO: Cover
+class MinCardinality:
     """ Allows clustering until cardinality of cluster's component is less than given.
     """
 

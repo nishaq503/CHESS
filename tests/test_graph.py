@@ -14,7 +14,11 @@ class TestGraph(unittest.TestCase):
         return
 
     def test_init(self):
-        Graph(c for c in self.manifold.graphs[-1])
+        Graph(*[c for c in self.manifold.graphs[-1]])
+        with self.assertRaises(AssertionError):
+            Graph('1')
+        with self.assertRaises(AssertionError):
+            Graph('1', '2', '3')
         return
 
     def test_eq(self):
