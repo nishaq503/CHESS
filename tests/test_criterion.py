@@ -1,4 +1,8 @@
 import unittest
+from inspect import stack
+from itertools import cycle
+
+from matplotlib import pyplot as plt
 
 from chess.criterion import *
 from chess.manifold import *
@@ -48,3 +52,27 @@ class TestCriterion(unittest.TestCase):
         self.assertTrue(all((c.radius >= min_radius for g in self.manifold for c in g)))
         [self.assertLessEqual(len(c.children), 1) for g in self.manifold.graphs for c in g
          if c.radius <= min_radius or len(c.argpoints) <= min_points or c.depth >= max_depth]
+        self.plot()
+
+    def test_medoid_near_centroid(self):
+        self.manifold.build(MedoidNearCentroid())
+        self.plot()
+        return
+
+    def plot(self):
+        colors = cycle('bgrcmy')
+        shapes = cycle('.ov^<>1234spP*+xXD|')
+        for graph in self.manifold.graphs:
+            fig, ax = plt.subplots()
+            for cluster in graph:
+                marker = next(colors) + next(shapes)
+
+                # The points themselves.
+                [plt.plot(batch[:, 0], batch[:, 1], marker, alpha=0.7) for batch in cluster.data]
+                # plt.plot(*[d for batch in cluster.data for d in (batch[:, 0], batch[:, 1], marker)])
+
+                # Centroid
+                c = plt.Circle(tuple(cluster.medoid), cluster.radius, fill=False, color='k', zorder=10)
+                ax.add_artist(c)
+            plt.title(stack()[1].function)
+            plt.show()

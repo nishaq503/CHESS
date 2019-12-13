@@ -1,3 +1,5 @@
+import numpy as np
+
 import chess
 from chess.manifold import Cluster as _Cluster, Manifold as _Manifold
 
@@ -104,3 +106,11 @@ class NewComponent:
 
     def __call__(self, _):
         return len(self.manifold.graphs[-1].components) == self.starting
+
+
+class MedoidNearCentroid:
+    def __init__(self):
+        return
+
+    def __call__(self, cluster: _Cluster) -> bool:
+        return cluster.depth < 1 or not all(np.isclose(cluster.centroid, cluster.medoid, rtol=1e-01))

@@ -16,8 +16,12 @@ from chess.types import *
 
 SUBSAMPLE_LIMIT = 10
 BATCH_SIZE = 100
+LOG_LEVEL = logging.INFO
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s:%(levelname)s:%(name)s:%(module)s.%(funcName)s:%(message)s")
+logging.basicConfig(
+    level=LOG_LEVEL,
+    format="%(asctime)s:%(levelname)s:%(name)s:%(module)s.%(funcName)s:%(message)s"
+)
 
 
 class Cluster:
