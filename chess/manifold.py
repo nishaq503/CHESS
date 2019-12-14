@@ -373,22 +373,37 @@ class Cluster:
         logging.debug(f'{self} was partitioned.')
         return self.children
 
-    def update_neighbors(self) -> Dict['Cluster', Radius]:
-        """ Find neighbors, update them, return the set. """
-        logging.debug(self.name)
-        neighbors = list(self.manifold.find_clusters(self.medoid, self.radius, self.depth) - {self})
-        if len(neighbors) == 0:
-            self.neighbors = dict()
-        else:
-            assert all((self.depth == n.depth) for n in neighbors)
-            distances = self.distance(np.asarray([n.medoid for n in neighbors]))
-            self.neighbors = {n: d for n, d in zip(neighbors, distances)}
-            [n.neighbors.update({self: d}) for n, d in self.neighbors.items()]
-        return self.neighbors
-
     def distance(self, points: Data) -> np.ndarray:
         """ Returns the distance from self.medoid to every point in points. """
         return cdist(np.expand_dims(self.medoid, 0), points, self.metric)[0]
+
+    def update_neighbors(self, threshold: int) -> Dict['Cluster', float]:
+        """ Finds all neighbors of self.
+
+        :param threshold: how far to look back in the tree to find potential neighbors.
+        :return: dictionary of neighbor cluster and distance to that cluster.
+        """
+        logging.debug(self.name)
+        threshold: int = min(self.depth, threshold) + 1
+        ancestor_depth = max(0, self.depth - threshold)
+        ancestor: Cluster = self.manifold.select(self.name[:ancestor_depth])
+
+        potential_neighbors: List[Cluster] = [ancestor]
+        potential_neighbors.extend(ancestor.neighbors.keys())
+        while self not in potential_neighbors:
+            potential_neighbors = [child for cluster in potential_neighbors for child in cluster.children]
+
+        if self.depth > 5:
+            print('hello')
+        potential_neighbors: Set[Cluster] = set(potential_neighbors) - {self}
+        centers = np.asarray([c.medoid for c in potential_neighbors])
+        if centers.shape[0] < 1:
+            return self.neighbors
+        distances = cdist(np.expand_dims(self.medoid, 0), centers, self.metric)[0]
+        radii = [self.radius + c.radius for c in potential_neighbors]
+
+        self.neighbors = {c: float(d) for c, d, r in zip(potential_neighbors, distances, radii) if d <= r}
+        return self.neighbors
 
     def overlaps(self, point: Data, radius: Radius) -> bool:
         """ Checks if point is within radius + self.radius of cluster. """
@@ -456,6 +471,23 @@ class Graph:
     @property
     def depth(self) -> int:
         return next(iter(self.clusters)).depth if len(self.clusters) > 0 else None
+
+    def update_neighbors(self, threshold: int = None) -> None:
+        """ Calculates and assigns neighbors for each cluster in the graph.
+
+        A cluster can only be a neighbor with another cluster at the same depth.
+        Two clusters are neighbors if and only if the two clusters have overlap.
+
+        :param threshold: number of generations to look back to guarantee that all overlaps are found.
+        """
+        if threshold is None:  # assume manifold dimension (d) is less than the square root of embedding dimension (D).
+            threshold = int(np.ceil(np.sqrt(self.manifold.data.shape[1])))  # Change this for when len(shape) > 2
+        if threshold < 1:
+            raise ValueError(f'threshold must be a positive integer. Got {threshold}')
+
+        for cluster in self.clusters:
+            cluster.neighbors = cluster.update_neighbors(threshold=threshold)
+        return
 
     @property
     def edges(self) -> Set[Set['Cluster']]:
@@ -605,8 +637,9 @@ class Manifold:
             clusters = self._partition_threaded(criterion)
             if len(self.graphs[-1]) < len(clusters):
                 g = Graph(*clusters)
+                g.update_neighbors()
                 self.graphs.append(g)
-                [c.update_neighbors() for c in g]
+                # [c.update_neighbors() for c in g]
             else:
                 [c.children.clear() for c in self.graphs[-1]]
                 break
