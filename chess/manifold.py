@@ -223,6 +223,40 @@ class Cluster:
             except KeyError:
                 pass
 
+    def update_neighbors(self, threshold: int) -> Dict['Cluster', float]:
+        """ Finds all neighbors of self.
+
+        :param threshold: how far to look back in the tree to find potential neighbors.
+        :return: dictionary of neighbor cluster and distance to that cluster.
+        """
+        logging.debug(self.name)
+        root: Cluster = self.manifold.select('')
+
+        potential_neighbors: Dict[Cluster, float] = {root: 0}
+        for depth in range(1, self.depth + 1):
+            potential_neighbors = {child: t for c, t in potential_neighbors.items() for child in c.children}
+            logging.debug(f'depth: {depth}, number of potential_neighbors: {len(potential_neighbors.keys())}\n')
+            centers = np.asarray([c.medoid for c in potential_neighbors.keys()])
+            distances = cdist(np.expand_dims(self.medoid, 0), centers, self.metric)[0]
+            radii = [self.radius + c.radius for c in potential_neighbors.keys()]
+            potential_neighbors = {c: (0 if d <= 2 * r else t + 1) for (c, t), d, r in zip(potential_neighbors.items(), distances, radii)}
+            potential_neighbors = {c: t for c, t in potential_neighbors.items() if t < threshold}
+            logging.debug(f'depth: {depth}, number of potential_neighbors: {len(potential_neighbors.keys())}\n')
+
+        if self not in potential_neighbors:
+            assert self in potential_neighbors, f'{self.name} not in potential neighbors'
+        del potential_neighbors[self]
+
+        potential_neighbors: List[Cluster] = [c for c in potential_neighbors.keys()]
+        centers = np.asarray([c.medoid for c in potential_neighbors])
+        if centers.shape[0] < 1:
+            return self.neighbors
+        distances = cdist(np.expand_dims(self.medoid, 0), centers, self.metric)[0]
+        radii = [self.radius + c.radius for c in potential_neighbors]
+
+        self.neighbors = {c: float(d) for c, d, r in zip(potential_neighbors, distances, radii) if d <= r}
+        return self.neighbors
+
     def tree_search(self, point: Data, radius: Radius, depth: int) -> List['Cluster']:
         """ Searches down the tree for clusters that overlap point with radius at depth.
         """
@@ -244,7 +278,7 @@ class Cluster:
         # results ONLY contains clusters that have overlap with point
         results: List[Cluster] = []
         candidates: List[Cluster] = [self]
-        for d in range(self.depth, depth):
+        for d_ in range(self.depth, depth):
             results.extend([c for c in candidates if len(c.children) < 1])
             candidates = [c for c in candidates if len(c.children) > 0]
             children: List[Cluster] = [c for candidate in candidates for c in candidate.children]
@@ -256,7 +290,7 @@ class Cluster:
             candidates = [c for c, d, r in zip(children, distances, radii) if d <= r]
             if 'search_stats_file' in self.manifold.__dict__:
                 with open(self.manifold.__dict__['search_stats_file'], 'a') as search_stats_file:
-                    line = f'{self.manifold.__dict__["argquery"]}, {radius}, {d}'
+                    line = f'{self.manifold.__dict__["argquery"]}, {radius}, {d_}'
                     cluster_names = ';'.join([c.name for c in children])
                     search_stats_file.write(f'{line}, {cluster_names}\n')
                     cluster_names = ';'.join([c.name for c in results])
@@ -377,34 +411,6 @@ class Cluster:
         """ Returns the distance from self.medoid to every point in points. """
         return cdist(np.expand_dims(self.medoid, 0), points, self.metric)[0]
 
-    def update_neighbors(self, threshold: int) -> Dict['Cluster', float]:
-        """ Finds all neighbors of self.
-
-        :param threshold: how far to look back in the tree to find potential neighbors.
-        :return: dictionary of neighbor cluster and distance to that cluster.
-        """
-        logging.debug(self.name)
-        threshold: int = min(self.depth, threshold) + 1
-        ancestor_depth = max(0, self.depth - threshold)
-        ancestor: Cluster = self.manifold.select(self.name[:ancestor_depth])
-
-        potential_neighbors: List[Cluster] = [ancestor]
-        potential_neighbors.extend(ancestor.neighbors.keys())
-        while self not in potential_neighbors:
-            potential_neighbors = [child for cluster in potential_neighbors for child in cluster.children]
-
-        if self.depth > 5:
-            print('hello')
-        potential_neighbors: Set[Cluster] = set(potential_neighbors) - {self}
-        centers = np.asarray([c.medoid for c in potential_neighbors])
-        if centers.shape[0] < 1:
-            return self.neighbors
-        distances = cdist(np.expand_dims(self.medoid, 0), centers, self.metric)[0]
-        radii = [self.radius + c.radius for c in potential_neighbors]
-
-        self.neighbors = {c: float(d) for c, d, r in zip(potential_neighbors, distances, radii) if d <= r}
-        return self.neighbors
-
     def overlaps(self, point: Data, radius: Radius) -> bool:
         """ Checks if point is within radius + self.radius of cluster. """
         return self.distance(np.expand_dims(point, axis=0))[0] <= (self.radius + radius)
@@ -472,7 +478,7 @@ class Graph:
     def depth(self) -> int:
         return next(iter(self.clusters)).depth if len(self.clusters) > 0 else None
 
-    def update_neighbors(self, threshold: int = None) -> None:
+    def build_edges(self, threshold: int = None) -> None:
         """ Calculates and assigns neighbors for each cluster in the graph.
 
         A cluster can only be a neighbor with another cluster at the same depth.
@@ -633,13 +639,12 @@ class Manifold:
     def deepen(self, *criterion) -> 'Manifold':
         """ Iteratively deepens the stack of graphs whilst checking criterion. """
         while True:
-            logging.info(f'current depth: {len(self.graphs)}')
+            logging.info(f'current depth: {len(self.graphs) - 1}')
             clusters = self._partition_threaded(criterion)
             if len(self.graphs[-1]) < len(clusters):
                 g = Graph(*clusters)
-                g.update_neighbors()
+                g.build_edges()
                 self.graphs.append(g)
-                # [c.update_neighbors() for c in g]
             else:
                 [c.children.clear() for c in self.graphs[-1]]
                 break

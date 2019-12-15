@@ -174,12 +174,11 @@ class TestCluster(unittest.TestCase):
             [self.assertEqual(parent.depth + i, c.depth) for c in children]
         return
 
-    # @unittest.skip
     def test_neighbors_more(self):
         data, labels = bullseye()
         np.random.seed(42)
         manifold = Manifold(data, 'euclidean')
-        manifold.build(MinRadius(0.), MaxDepth(8))
+        manifold.build(MaxDepth(10))
         for depth, graph in enumerate(manifold.graphs):
             for cluster in graph:
                 potential_neighbors = [c for c in graph if c.name != cluster.name]
@@ -202,7 +201,7 @@ class TestCluster(unittest.TestCase):
                     print(depth, cluster.name, 'missed:', [n.name for n in (potential_neighbors - set(cluster.neighbors.keys()))])
                 self.assertTrue(len(potential_neighbors) >= len(set(cluster.neighbors.keys())))
                 self.assertSetEqual(set(), set(cluster.neighbors.keys()) - potential_neighbors)
-                # self.assertSetEqual(set(), potential_neighbors - set(cluster.neighbors.keys()))
+                self.assertSetEqual(set(), potential_neighbors - set(cluster.neighbors.keys()))
         return
 
     def test_distance(self):
