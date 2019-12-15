@@ -238,8 +238,8 @@ class Cluster:
             logging.debug(f'depth: {depth}, number of potential_neighbors: {len(potential_neighbors.keys())}\n')
             centers = np.asarray([c.medoid for c in potential_neighbors.keys()])
             distances = cdist(np.expand_dims(self.medoid, 0), centers, self.metric)[0]
-            radii = [self.radius + c.radius for c in potential_neighbors.keys()]
-            potential_neighbors = {c: (0 if d <= 2 * r else t + 1) for (c, t), d, r in zip(potential_neighbors.items(), distances, radii)}
+            radii = [self.radius + 2 * c.radius for c in potential_neighbors.keys()]
+            potential_neighbors = {c: (0 if d <= r else t + 1) for (c, t), d, r in zip(potential_neighbors.items(), distances, radii)}
             potential_neighbors = {c: t for c, t in potential_neighbors.items() if t < threshold}
             logging.debug(f'depth: {depth}, number of potential_neighbors: {len(potential_neighbors.keys())}\n')
 
