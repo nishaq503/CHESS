@@ -125,7 +125,7 @@ class Cluster:
                 indices = list(np.random.choice(self.argpoints, n, replace=False))
 
             # Handle Duplicates.
-            if pdist(self.manifold.data[indices], self.metric).max(initial=0.) == 0.:  # TODO: Handle in batches.
+            if pdist(self.manifold.data[indices], self.metric).max(initial=0.) == 0.:
                 indices = np.unique(self.manifold.data[self.argpoints], return_index=True, axis=0)[1]
                 if len(indices) > n:
                     indices = np.random.choice(indices, n, replace=False)
@@ -146,22 +146,21 @@ class Cluster:
         return np.average(self.samples, axis=0)
 
     @property
-    def medoid(self) -> Data:  # TODO: slow
+    def medoid(self) -> Data:
         """ The medoid of the cluster. (Geometric Median) """
         return self.manifold.data[self.argmedoid]
 
     @property
-    def argmedoid(self) -> int:  # TODO: slow
+    def argmedoid(self) -> int:
         """ The index used to retrieve the medoid. """
-        # TODO: Benchmark squareform(pdist) vs cdist
         if '_argmedoid' not in self.__dict__:
             logging.debug(f"building cache for {self}")
-            self.__dict__['_argmedoid'] = self.argsamples[
-                int(np.argmin(cdist(self.samples, self.samples, self.metric).sum(axis=1)))]
+            _argmedoid = np.argmin(cdist(self.samples, self.samples, self.metric).sum(axis=1))
+            self.__dict__['_argmedoid'] = self.argsamples[int(_argmedoid)]
         return self.__dict__['_argmedoid']
 
     @property
-    def radius(self) -> Radius:  # TODO: Slow
+    def radius(self) -> Radius:
         """ The radius of the cluster.
 
         Computed as distance from medoid to farthest point.
@@ -183,13 +182,12 @@ class Cluster:
 
             def argmax_max(b):
                 distances = self.distance(self.manifold.data[b])
-                argmax = np.argmax(distances)
+                argmax = int(np.argmax(distances))
                 return b[argmax], distances[argmax]
 
-            # noinspection PyTypeChecker
-            argradii_radii = [argmax_max(batch) for batch in self]
-            self.__dict__['_argradius'], self.__dict__['_radius'] = max(argradii_radii, key=itemgetter(1))
-            self.__dict__['_argradius'], self.__dict__['_radius'] = int(self.__dict__['_argradius']), float(self.__dict__['_radius'])
+            argradii_radii = [argmax_max(batch) for batch in iter(self)]
+            _argradius, _radius = max(argradii_radii, key=itemgetter(1))
+            self.__dict__['_argradius'], self.__dict__['_radius'] = int(_argradius), float(_radius)
         return self.__dict__['_argradius']
 
     @property
@@ -231,7 +229,8 @@ class Cluster:
             centers = np.asarray([c.medoid for c in potential_neighbors.keys()])
             distances = cdist(np.expand_dims(self.medoid, 0), centers, self.metric)[0]
             radii = [self.radius + 2 * c.radius for c in potential_neighbors.keys()]
-            potential_neighbors = {c: (0 if d <= r else t + 1) for (c, t), d, r in zip(potential_neighbors.items(), distances, radii)}
+            potential_neighbors = {c: (0 if d <= r else t + 1)
+                                   for (c, t), d, r in zip(potential_neighbors.items(), distances, radii)}
             potential_neighbors = {c: t for c, t in potential_neighbors.items() if t < threshold}
             logging.debug(f'depth: {depth}, number of potential_neighbors: {len(potential_neighbors.keys())}\n')
 
@@ -332,10 +331,9 @@ class Cluster:
         ])
 
         p1_idx, p2_idx = list(), list()
-        for batch in self:  # TODO: Comprehension? np.concatenate((batch, distances))
-            distances = cdist(poles, self.manifold.data[batch], self.metric)
-            # noinspection PyTypeChecker
-            [(p1_idx if p1 < p2 else p2_idx).append(i) for i, p1, p2 in zip(batch, distances[0], distances[1])]
+        [(p1_idx if p1 < p2 else p2_idx).append(i)
+         for batch in iter(self)
+         for i, p1, p2 in zip(batch, *cdist(poles, self.manifold.data[batch], self.metric)[0])]
 
         # Ensure that p1 contains fewer points than p2
         p1_idx, p2_idx = (p1_idx, p2_idx) if len(p1_idx) < len(p2_idx) else (p2_idx, p1_idx)
@@ -346,7 +344,7 @@ class Cluster:
         logging.debug(f'{self} was partitioned.')
         return self.children
 
-    def distance(self, points: Data) -> Radius:
+    def distance(self, points: Data) -> List[Radius]:
         """ Returns the distance from self.medoid to every point in points. """
         return cdist(np.expand_dims(self.medoid, 0), points, self.metric)[0]
 
@@ -462,7 +460,6 @@ class Graph:
 
     def subgraph(self, cluster: 'Cluster') -> 'Graph':
         """ Returns the subgraph to which the cluster belongs. """
-        # TODO: Cover
         if cluster not in self:
             raise ValueError(f'Cluster {cluster} not a member of {self}')
 
@@ -664,3 +661,9 @@ class Manifold:
 
         manifold.graphs = graphs
         return manifold
+
+
+def _partition_helper(cluster, criterion, queue):
+    # TODO: Move this inside of the class.
+    [queue.put(c) for c in cluster.partition(*criterion)]
+    return
