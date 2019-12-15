@@ -2,6 +2,7 @@ import unittest
 from tempfile import TemporaryFile
 
 from chess.criterion import *
+from chess.datasets import *
 from chess.manifold import *
 
 np.random.seed(42)
@@ -10,7 +11,7 @@ np.random.seed(42)
 class TestManifold(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.data = np.random.randn(100, 10)
+        cls.data, cls.labels = random()
         cls.manifold = Manifold(cls.data, 'euclidean').build()
         return
 
@@ -27,11 +28,15 @@ class TestManifold(unittest.TestCase):
         with self.assertRaises(ValueError):
             # noinspection PyTypeChecker
             Manifold(self.data, 'euclidean', ['a', 'b', 'c'])
+
+        with self.assertRaises(ValueError):
+            # noinspection PyTypeChecker
+            Manifold(self.data, 'euclidean', 'apples')
         return
 
     def test_eq(self):
         self.assertEqual(self.manifold, self.manifold)
-        other = Manifold(self.data, 'euclidean')
+        other = Manifold(self.data, 'euclidean', argpoints=0.2)
         self.assertNotEqual(self.manifold, other)
         other.build()
         self.assertNotEqual(self.manifold, other)
@@ -42,6 +47,20 @@ class TestManifold(unittest.TestCase):
         self.assertEqual(self.manifold.graphs[0], self.manifold[0])
         with self.assertRaises(IndexError):
             _ = self.manifold[100]
+        return
+
+    def test_subgraph(self):
+        g = self.manifold.graphs[-1]
+        c = next(iter(g))
+        self.assertIn(self.manifold.subgraph(c), g.subgraphs)
+        self.assertIn(self.manifold.subgraph(c.name), g.subgraphs)
+        return
+
+    def test_graph(self):
+        g = self.manifold.graphs[-1]
+        c = next(iter(g))
+        self.assertEqual(g, self.manifold.graph(c))
+        self.assertEqual(g, self.manifold.graph(c.name))
         return
 
     def test_iter(self):
@@ -74,18 +93,18 @@ class TestManifold(unittest.TestCase):
         self.assertEqual(len(self.data), len(m.graphs[-1]))
         return
 
-    def test_deepen(self):
+    def test_build_tree(self):
         m = Manifold(self.data, 'euclidean')
         self.assertEqual(1, len(m.graphs))
 
-        m.deepen(AddLevels(2))
+        m.build_tree(AddLevels(2))
         self.assertEqual(3, len(m.graphs))
 
-        # MaxDepth shouldn't do anything in deepen if we're beyond that depth already.
-        m.deepen(MaxDepth(1))
+        # MaxDepth shouldn't do anything in build_tree if we're beyond that depth already.
+        m.build_tree(MaxDepth(1))
         self.assertEqual(3, len(m.graphs))
 
-        m.deepen()
+        m.build_tree()
         self.assertEqual(len(self.data), len(m.graphs[-1]))
         return
 
@@ -112,3 +131,9 @@ class TestManifold(unittest.TestCase):
         self.assertEqual(original, loaded)
         self.assertEqual(original[0], loaded[0])
         return
+
+    def test_partition_backends(self):
+        data = random(n=100, dimensions=5)[0]
+        m_single = Manifold(data, 'euclidean')._partition_single([MaxDepth(5)])
+        m_thread = Manifold(data, 'euclidean')._partition_threaded([MaxDepth(5)])
+        self.assertEqual(m_single, m_thread)

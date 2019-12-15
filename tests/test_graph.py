@@ -57,6 +57,12 @@ class TestGraph(unittest.TestCase):
             self.assertIn(c, self.manifold.graphs[5])
         return
 
+    def test_build_edges(self):
+        self.manifold.graphs[-1].build_edges(1)
+        with self.assertRaises(ValueError):
+            self.manifold.graphs[-1].build_edges(0)
+        return
+
     def test_manifold(self):
         self.assertEqual(self.manifold, self.manifold.graphs[0].manifold)
         return
@@ -79,23 +85,19 @@ class TestGraph(unittest.TestCase):
         self.assertEqual(sum(len(g) for g in sgs), len(self.manifold.graphs[-1]))
         return
 
-    def test_components(self):
-        components = self.manifold.graphs[-1].components
-        self.assertEqual(len(self.manifold.graphs[-1]), sum(len(c) for c in components))
+    def test_subgraph(self):
+        root = self.manifold.select('')
+        self.assertTrue(self.manifold.graphs[0].subgraph(root))
+        with self.assertRaises(ValueError):
+            self.manifold.graphs[1].subgraph(root)
         return
 
     def test_clear_cache(self):
-        _ = self.manifold.graphs[-1].components
-        self.assertIn('_components', self.manifold.graphs[-1].__dict__)
         self.manifold.graphs[-1].clear_cache()
-        self.assertNotIn('_components', self.manifold.graphs[-1].__dict__)
-        return
-
-    def test_component(self):
-        root = self.manifold.select('')
-        self.assertTrue(self.manifold.graphs[0].component(root))
-        with self.assertRaises(StopIteration):
-            self.manifold.graphs[1].component(root)
+        _ = self.manifold.graphs[-1].edges
+        self.assertIn('_edges', self.manifold.graphs[-1].__dict__)
+        self.manifold.graphs[-1].clear_cache()
+        self.assertNotIn('_edges', self.manifold.graphs[-1].__dict__)
         return
 
     def test_bft(self):

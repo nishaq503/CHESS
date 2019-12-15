@@ -1,4 +1,7 @@
+import logging
+
 import numpy as np
+from scipy.spatial.distance import cdist
 
 import chess
 from chess.manifold import Cluster as _Cluster, Manifold as _Manifold
@@ -15,7 +18,7 @@ class MaxDepth:
         return cluster.depth < self.depth
 
 
-class AddLevels:  # TODO: Cover
+class AddLevels:
     """ Allows clustering up until current.depth + depth.
     """
 
@@ -55,8 +58,8 @@ class MinRadius:
         return True
 
 
-class LeavesComponent:
-    """ Allows clustering until the cluster has left the component of the parent.
+class LeavesSubgraph:
+    """ Allows clustering until the cluster has left the subgraph of the parent.
     """
 
     def __init__(self, manifold: _Manifold):
@@ -64,12 +67,12 @@ class LeavesComponent:
         return
 
     def __call__(self, cluster: _Cluster):
-        parent_component = self.manifold.graphs[cluster.depth - 1].component(self.manifold.select(cluster.name[:-1]))
-        return any((c.overlaps(cluster.medoid, cluster.radius) for c in parent_component))
+        parent_subgraph = self.manifold.graphs[cluster.depth - 1].subgraph(self.manifold.select(cluster.name[:-1]))
+        return any((c.overlaps(cluster.medoid, cluster.radius) for c in parent_subgraph))
 
 
 class MinCardinality:
-    """ Allows clustering until cardinality of cluster's component is less than given.
+    """ Allows clustering until cardinality of cluster's subgraph is less than given.
     """
 
     def __init__(self, cardinality):
@@ -79,7 +82,7 @@ class MinCardinality:
         return any((
             # If there are fewer points than needed, we don't check cardinality.
             len(cluster.manifold.graphs[cluster.depth]) <= self.cardinality,
-            len(cluster.manifold.graphs[cluster.depth].component(cluster)) >= self.cardinality
+            len(cluster.manifold.graphs[cluster.depth].subgraph(cluster)) >= self.cardinality
         ))
 
 
@@ -96,16 +99,16 @@ class MinNeighborhood:
         return cluster.depth < self.starting_depth or len(cluster.neighbors) >= self.threshold
 
 
-class NewComponent:
-    """ Cluster until a new component is created. """
+class NewSubgraph:
+    """ Cluster until a new subgraph is created. """
 
     def __init__(self, manifold: _Manifold):
         self.manifold = manifold
-        self.starting = len(manifold.graphs[-1].components)
+        self.starting = len(manifold.graphs[-1].subgraphs)
         return
 
     def __call__(self, _):
-        return len(self.manifold.graphs[-1].components) == self.starting
+        return len(self.manifold.graphs[-1].subgraphs) == self.starting
 
 
 class MedoidNearCentroid:
@@ -113,4 +116,26 @@ class MedoidNearCentroid:
         return
 
     def __call__(self, cluster: _Cluster) -> bool:
-        return cluster.depth < 1 or not all(np.isclose(cluster.centroid, cluster.medoid, rtol=1e-01))
+        distance = cdist(np.expand_dims(cluster.centroid, 0), np.expand_dims(cluster.medoid, 0), cluster.metric)[0][0]
+        logging.debug(f'Cluster {str(cluster)} distance: {distance}')
+        return any((
+            cluster.depth < 1,
+            distance > (cluster.radius * 0.1)
+        ))
+
+
+class UniformDistribution:
+    def __init__(self):
+        return
+
+    def __call__(self, cluster: _Cluster) -> bool:
+        distances = cdist(np.expand_dims(cluster.medoid, 0), cluster.samples)[0] / (cluster.radius + 1e-15)
+        logging.debug(f'Cluster: {cluster}. Distances: {distances}')
+        freq, bins = np.histogram(distances, bins=[i / 10 for i in range(1, 10)])
+        ideal = np.full_like(freq, distances.shape[0] / bins.shape[0])
+        from scipy.stats import wasserstein_distance
+        distance = wasserstein_distance(freq, ideal)
+        return distance > 0.25
+
+# TODO: class ChildTooSmall which checks % of parent owned by child, relative populations of child parent and root.
+# TODO: RE above, Sparseness which looks at % owned / radius or similar
