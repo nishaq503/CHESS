@@ -333,7 +333,7 @@ class Cluster:
         p1_idx, p2_idx = list(), list()
         [(p1_idx if p1 < p2 else p2_idx).append(i)
          for batch in iter(self)
-         for i, p1, p2 in zip(batch, *cdist(poles, self.manifold.data[batch], self.metric)[0])]
+         for i, p1, p2 in zip(batch, *cdist(poles, self.manifold.data[batch], self.metric))]
 
         # Ensure that p1 contains fewer points than p2
         p1_idx, p2_idx = (p1_idx, p2_idx) if len(p1_idx) < len(p2_idx) else (p2_idx, p1_idx)
@@ -520,7 +520,7 @@ class Manifold:
     """
 
     def __init__(self, data: Data, metric: Metric, argpoints: Union[Vector, float] = None, **kwargs):
-        logging.debug(f'Manifold(data={data.shape}, metric={metric}, npoints={len(argpoints)})')
+        logging.debug(f'Manifold(data={data.shape}, metric={metric}, npoints={len(argpoints or [])})')
         self.data: Data = data
         self.metric: Metric = metric
 
@@ -575,7 +575,9 @@ class Manifold:
     def build(self, *criterion) -> 'Manifold':
         """ Rebuilds the stack of graphs. """
         self.graphs = [Graph(Cluster(self, self.argpoints, ''))]
-        return self.build_tree(*criterion).build_graphs()
+        self.build_tree(*criterion)
+        self.build_graphs()
+        return self
 
     def build_tree(self, *criterion) -> 'Manifold':
         """ Builds the cluster tree. """
@@ -588,7 +590,7 @@ class Manifold:
             else:
                 [c.children.clear() for c in self.graphs[-1]]
                 break
-            return self
+        return self
 
     def build_graphs(self) -> 'Manifold':
         """ Builds the graphs. """

@@ -9,6 +9,7 @@ from chess.datasets import bullseye
 from chess.manifold import *
 
 
+@unittest.skip
 class TestCriterion(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
