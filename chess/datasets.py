@@ -8,6 +8,10 @@ Data = Union[np.ndarray, np.memmap]
 Label = Union[np.ndarray, List[int]]
 
 
+def random(n: int = 100, dimensions: int = 10) -> Tuple[Data, Label]:
+    return np.random.randn(n, dimensions), np.zeros((n, dimensions), dtype=np.int)
+
+
 def ring_data(num_points: int, radius: float, noise: float) -> np.ndarray:
     theta: np.ndarray = 2 * np.pi * np.random.rand(num_points)
     x: np.ndarray = radius * np.cos(theta) + noise * np.random.randn(num_points)
@@ -16,7 +20,7 @@ def ring_data(num_points: int, radius: float, noise: float) -> np.ndarray:
     return np.asarray(ring, dtype=np.float64)
 
 
-def bullseye(num_rings: int = 4, n: int = 1_000) -> Tuple[np.ndarray, List[int]]:
+def bullseye(num_rings: int = 3, n: int = 500) -> Tuple[np.ndarray, List[int]]:
     data: np.ndarray = np.ndarray(shape=(0, 2))
     labels: List[int] = list()
     for r in range(1, 2 * num_rings, 2):
@@ -26,7 +30,7 @@ def bullseye(num_rings: int = 4, n: int = 1_000) -> Tuple[np.ndarray, List[int]]
     return np.asarray(data, dtype=np.float64), labels
 
 
-def line(num_points: int = 10_000, m: float = 1, c: float = 0., noise: float = 0.05) -> Tuple[np.ndarray, List[int]]:
+def line(num_points: int = 1_000, m: float = 1, c: float = 0., noise: float = 0.05) -> Tuple[np.ndarray, List[int]]:
     x = np.random.rand(num_points)
     y = m * x + c
     data = np.asarray((x, y)).T
@@ -35,13 +39,13 @@ def line(num_points: int = 10_000, m: float = 1, c: float = 0., noise: float = 0
     return np.asarray(data, dtype=np.float64), list(labels)
 
 
-def xor(num_points: int = 10_000) -> Tuple[np.ndarray, List[int]]:
+def xor(num_points: int = 1_000) -> Tuple[np.ndarray, List[int]]:
     data = np.random.rand(num_points, 2)
     labels = [int((x > 0.5) != (y > 0.5)) for x, y, in data]
     return np.asarray(data, dtype=np.float64), labels
 
 
-def spiral_2d(num_points: int = 10_000, noise: float = 0.25) -> Tuple[np.ndarray, List[int]]:
+def spiral_2d(num_points: int = 5_000, noise: float = 0.25) -> Tuple[np.ndarray, List[int]]:
     theta = np.sqrt(np.random.rand(num_points)) * 2 * np.pi
 
     r_a = 2 * theta + np.pi
@@ -66,7 +70,7 @@ def generate_torus(num_points: int, r_tube: float, r_torus: float, noise: float)
     return x, y, z
 
 
-def tori(num_points: int = 20_000, noise: float = 0.1) -> Tuple[np.ndarray, List[int]]:
+def tori(num_points: int = 10_000, noise: float = 0.1) -> Tuple[np.ndarray, List[int]]:
     x, y, z = generate_torus(num_points=num_points // 2, r_tube=1., r_torus=5., noise=noise)
     torus_1 = np.stack([x - 5., y, z], axis=1)
     labels = [0 for _ in x]
@@ -94,7 +98,8 @@ def line_3d(num_points: int, height: float, noise: float) -> np.ndarray:
     return np.stack([x, y, z], axis=1)
 
 
-def skewer(num_points: int = 12_000, radius: float = 1., height: float = 5., num_turns: int = 5, noise: float = 0.05) -> Tuple[np.ndarray, List[int]]:
+def skewer(num_points: int = 5_000, radius: float = 1., height: float = 5., num_turns: int = 5, noise: float = 0.05) -> Tuple[
+    np.ndarray, List[int]]:
     spiral_points, line_points = 5 * num_points // 6, num_points // 6
     spiral_data = spiral_3d(spiral_points, radius, height, num_turns, noise)
     labels = [0 for _ in range(spiral_data.shape[0])]
