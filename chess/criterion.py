@@ -1,4 +1,7 @@
+import logging
+
 import numpy as np
+from scipy.spatial.distance import cdist
 
 import chess
 from chess.manifold import Cluster as _Cluster, Manifold as _Manifold
@@ -113,4 +116,31 @@ class MedoidNearCentroid:
         return
 
     def __call__(self, cluster: _Cluster) -> bool:
-        return cluster.depth < 1 or not all(np.isclose(cluster.centroid, cluster.medoid, rtol=1e-01))
+        logging.debug(f'Cluster {str(cluster)} distance: {cdist([cluster.centroid], [cluster.medoid])}')
+        return any((
+            cluster.depth < 1,
+            cdist(
+                [cluster.centroid],
+                [cluster.medoid],
+                cluster.metric
+            )[0][0] > (cluster.radius * 0.1)
+        ))
+
+
+class UniformDistribution:
+    def __init__(self):
+        return
+
+    def __call__(self, cluster: _Cluster) -> bool:
+        logging.debug(
+            f'Cluster: {cluster}. Distances: {cdist([cluster.medoid], cluster.samples) / cluster.radius}'
+        )
+        distances = cdist([cluster.medoid], cluster.samples)[0] / cluster.radius
+        freq, bins = np.histogram(distances, bins=[i / 10 for i in range(1, 10)])
+        ideal = np.full_like(freq, distances.shape[0] / bins.shape[0])
+        from scipy.stats import wasserstein_distance
+        distance = wasserstein_distance(freq, ideal)
+        return distance > 0.25
+
+# TODO: class ChildTooSmall which checks % of parent owned by child, relative populations of child parent and root.
+# TODO: RE above, Sparseness which looks at % owned / radius or similar

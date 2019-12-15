@@ -5,13 +5,15 @@ from itertools import cycle
 from matplotlib import pyplot as plt
 
 from chess.criterion import *
+from chess.datasets import bullseye
 from chess.manifold import *
 
 
 class TestCriterion(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.data = np.concatenate([np.random.randn(100, 2) + i * 100 for i in range(5)])
+        # cls.data = np.concatenate([np.random.randn(100, 2) + i * 10 for i in range(3)])
+        cls.data = bullseye(n=500)[0]
         return
 
     def setUp(self) -> None:
@@ -31,7 +33,7 @@ class TestCriterion(unittest.TestCase):
         self.assertGreater(len(self.manifold.graphs[-1].components), 1)
         return
 
-    def test_singleton_cardinality(self):
+    def test_min_cardinality(self):
         self.assertEqual(1, len(self.manifold.graphs[-1].components))
         self.manifold.build(MinCardinality(1))
         self.assertGreater(len(self.manifold.graphs[-1].components), 1)
@@ -52,10 +54,17 @@ class TestCriterion(unittest.TestCase):
         self.assertTrue(all((c.radius >= min_radius for g in self.manifold for c in g)))
         [self.assertLessEqual(len(c.children), 1) for g in self.manifold.graphs for c in g
          if c.radius <= min_radius or len(c.argpoints) <= min_points or c.depth >= max_depth]
-        self.plot()
+        # self.plot()
+        return
 
     def test_medoid_near_centroid(self):
-        self.manifold.build(MedoidNearCentroid())
+        self.manifold.build(MaxDepth(7))
+        self.manifold.deepen(MedoidNearCentroid(), MaxDepth(12))
+        self.plot()
+        return
+
+    def test_uniform_distribution(self):
+        self.manifold.build(UniformDistribution())
         self.plot()
         return
 
@@ -69,10 +78,18 @@ class TestCriterion(unittest.TestCase):
 
                 # The points themselves.
                 [plt.plot(batch[:, 0], batch[:, 1], marker, alpha=0.7) for batch in cluster.data]
-                # plt.plot(*[d for batch in cluster.data for d in (batch[:, 0], batch[:, 1], marker)])
 
-                # Centroid
-                c = plt.Circle(tuple(cluster.medoid), cluster.radius, fill=False, color='k', zorder=10)
-                ax.add_artist(c)
-            plt.title(stack()[1].function)
+                # Cluster attributes
+                ax.add_artist(
+                    plt.Circle(
+                        tuple(cluster.medoid),
+                        cluster.radius,
+                        fill=False,
+                        color='k',
+                        zorder=10
+                    )
+                )
+                plt.plot(*cluster.centroid, '.k')
+                plt.plot(*cluster.medoid, '*k')
+            plt.title(f'{graph.depth} - {stack()[1].function}')
             plt.show()
