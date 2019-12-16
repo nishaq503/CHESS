@@ -520,7 +520,7 @@ class Manifold:
     """
 
     def __init__(self, data: Data, metric: Metric, argpoints: Union[Vector, float] = None, **kwargs):
-        logging.debug(f'Manifold(data={data.shape}, metric={metric}, npoints={len(argpoints or [])})')
+        logging.debug(f'Manifold(data={data.shape}, metric={metric}, argpoints={argpoints})')
         self.data: Data = data
         self.metric: Metric = metric
 

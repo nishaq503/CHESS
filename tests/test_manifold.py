@@ -31,7 +31,7 @@ class TestManifold(unittest.TestCase):
 
     def test_eq(self):
         self.assertEqual(self.manifold, self.manifold)
-        other = Manifold(self.data, 'euclidean')
+        other = Manifold(self.data, 'euclidean', argpoints=0.2)
         self.assertNotEqual(self.manifold, other)
         other.build()
         self.assertNotEqual(self.manifold, other)
@@ -74,18 +74,18 @@ class TestManifold(unittest.TestCase):
         self.assertEqual(len(self.data), len(m.graphs[-1]))
         return
 
-    def test_deepen(self):
+    def test_build_tree(self):
         m = Manifold(self.data, 'euclidean')
         self.assertEqual(1, len(m.graphs))
 
-        m.deepen(AddLevels(2))
+        m.build_tree(AddLevels(2))
         self.assertEqual(3, len(m.graphs))
 
-        # MaxDepth shouldn't do anything in deepen if we're beyond that depth already.
-        m.deepen(MaxDepth(1))
+        # MaxDepth shouldn't do anything in build_tree if we're beyond that depth already.
+        m.build_tree(MaxDepth(1))
         self.assertEqual(3, len(m.graphs))
 
-        m.deepen()
+        m.build_tree()
         self.assertEqual(len(self.data), len(m.graphs[-1]))
         return
 
