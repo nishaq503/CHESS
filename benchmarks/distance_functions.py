@@ -1,9 +1,9 @@
 from time import time
 
 import numpy as np
+from matplotlib import pyplot as plt
 from scipy.fftpack import fft
 from scipy.stats import wasserstein_distance
-from matplotlib import pyplot as plt
 
 
 def wave_form_distance(x: np.ndarray, y: np.ndarray):
