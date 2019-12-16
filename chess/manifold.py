@@ -313,7 +313,7 @@ class Cluster:
                     _argmedoid=self.argmedoid,
                     _argradius=self.argradius,
                     _radius=self.radius,
-                    )
+                )
             }
             return self.children
 
@@ -379,6 +379,7 @@ class Graph:
     The graph class is responsible for handling operations that occur
     solely within a layer of Manifold.graphs.
     """
+
     def __init__(self, *clusters):
         logging.debug(f'Graph(clusters={[str(c) for c in clusters]})')
         assert all(isinstance(c, Cluster) for c in clusters)
