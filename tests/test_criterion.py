@@ -5,11 +5,10 @@ from itertools import cycle
 from matplotlib import pyplot as plt
 
 from chess.criterion import *
-from chess.datasets import bullseye
+from chess.datasets import *
 from chess.manifold import *
 
 
-@unittest.skip
 class TestCriterion(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -23,34 +22,36 @@ class TestCriterion(unittest.TestCase):
 
     def test_min_radius(self):
         min_radius = 0.1
-        self.manifold.build(MinRadius(min_radius))
+        self.manifold.build(MinRadius(min_radius), MaxDepth(8))
         self.assertTrue(all((c.radius >= min_radius for g in self.manifold for c in g)))
         [self.assertLessEqual(len(c.children), 1) for g in self.manifold for c in g if c.radius <= min_radius]
         return
 
-    def test_leaves_component(self):
-        self.assertEqual(1, len(self.manifold.graphs[-1].components))
-        self.manifold.build(LeavesComponent(self.manifold))
-        self.assertGreater(len(self.manifold.graphs[-1].components), 1)
+    def test_leaves_subgraph(self):
+        self.assertEqual(1, len(self.manifold.graphs[-1].subgraphs))
+        self.manifold.build(LeavesSubgraph(self.manifold), MaxDepth(8))
+        self.assertGreater(len(self.manifold.graphs[-1].subgraphs), 1)
         return
 
     def test_min_cardinality(self):
-        self.assertEqual(1, len(self.manifold.graphs[-1].components))
+        data = random()[0]
+        self.manifold = Manifold(data, 'euclidean')
+        self.assertEqual(1, len(self.manifold.graphs[-1].subgraphs))
         self.manifold.build(MinCardinality(1))
-        self.assertGreater(len(self.manifold.graphs[-1].components), 1)
+        self.assertGreater(len(self.manifold.graphs[-1].subgraphs), 1)
         self.assertTrue(all((len(c.neighbors) == 0) for c in self.manifold.graphs[-1]))
         return
 
     def test_min_neighborhood(self):
-        self.manifold.build(MinNeighborhood(5, 1))
+        self.manifold.build(MinNeighborhood(5, 1), MaxDepth(8))
         return
 
-    def test_new_component(self):
-        self.manifold.build(NewComponent(self.manifold))
+    def test_new_subgraph(self):
+        self.manifold.build(NewSubgraph(self.manifold))
         return
 
     def test_combinations(self):
-        min_radius, min_points, max_depth = 0.15, 10, 20
+        min_radius, min_points, max_depth = 0.15, 10, 8
         self.manifold.build(MinRadius(min_radius), MinPoints(min_points), MaxDepth(max_depth))
         self.assertTrue(all((c.radius >= min_radius for g in self.manifold for c in g)))
         [self.assertLessEqual(len(c.children), 1) for g in self.manifold.graphs for c in g
@@ -59,14 +60,13 @@ class TestCriterion(unittest.TestCase):
         return
 
     def test_medoid_near_centroid(self):
-        self.manifold.build(MaxDepth(7))
-        self.manifold.deepen(MedoidNearCentroid(), MaxDepth(12))
-        self.plot()
+        self.manifold.build(MedoidNearCentroid(), MaxDepth(8))
+        # self.plot()
         return
 
     def test_uniform_distribution(self):
-        self.manifold.build(UniformDistribution())
-        self.plot()
+        self.manifold.build(UniformDistribution(), MaxDepth(8))
+        # self.plot()
         return
 
     def plot(self):
@@ -78,7 +78,7 @@ class TestCriterion(unittest.TestCase):
                 marker = next(colors) + next(shapes)
 
                 # The points themselves.
-                [plt.plot(batch[:, 0], batch[:, 1], marker, alpha=0.7) for batch in cluster.data]
+                [plt.plot(batch[:, 0], batch[:, 1], marker, alpha=0.7) for batch in cluster.points]
 
                 # Cluster attributes
                 ax.add_artist(
