@@ -57,6 +57,12 @@ class TestGraph(unittest.TestCase):
             self.assertIn(c, self.manifold.graphs[5])
         return
 
+    def test_build_edges(self):
+        self.manifold.graphs[-1].build_edges(1)
+        with self.assertRaises(ValueError):
+            self.manifold.graphs[-1].build_edges(0)
+        return
+
     def test_manifold(self):
         self.assertEqual(self.manifold, self.manifold.graphs[0].manifold)
         return
@@ -87,6 +93,7 @@ class TestGraph(unittest.TestCase):
         return
 
     def test_clear_cache(self):
+        self.manifold.graphs[-1].clear_cache()
         _ = self.manifold.graphs[-1].edges
         self.assertIn('_edges', self.manifold.graphs[-1].__dict__)
         self.manifold.graphs[-1].clear_cache()

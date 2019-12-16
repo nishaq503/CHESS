@@ -130,9 +130,10 @@ class TestCluster(unittest.TestCase):
         return
 
     def test_tree_search(self):
-        data, labels = bullseye()
+        data, labels = line()
         m = Manifold(data, 'euclidean')
         m.build(MinRadius(MIN_RADIUS), MaxDepth(5))
+        # Finding points that are in data.
         for depth, graph in enumerate(m.graphs):
             for cluster in graph:
                 linear = set([c for c in graph if c.overlaps(cluster.medoid, cluster.radius)])
@@ -142,6 +143,13 @@ class TestCluster(unittest.TestCase):
                     parents = set([m.select(cluster.name[:-1]) for cluster in linear])
                     for parent in parents:
                         self.assertIn(parent, parent.tree_search(cluster.medoid, cluster.radius, parent.depth))
+        # Attempting to find points that *may* be in the data
+        c: Cluster = next(iter(m.graphs[0]))
+        results = c.tree_search(np.asarray([0, 1]), 0., -1)
+        self.assertEqual(0, len(results))
+        with self.assertRaises(ValueError):
+            _ = c.tree_search(np.asarray([0, 1]), 0., -5)
+        return
 
     def test_prune(self):
         self.cluster.prune()
@@ -154,7 +162,7 @@ class TestCluster(unittest.TestCase):
         return
 
     def test_neighbors(self):
-        for dataset in [bullseye, spiral_2d, tori, skewer, random]:
+        for dataset in [spiral_2d, tori, skewer, random, line, xor]:
             data, labels = dataset()
             manifold = Manifold(data, 'euclidean')
             manifold.build(MaxDepth(8))

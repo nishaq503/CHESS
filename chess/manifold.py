@@ -127,9 +127,7 @@ class Cluster:
             # Handle Duplicates.
             if pdist(self.manifold.data[indices], self.metric).max(initial=0.) == 0.:
                 indices = np.unique(self.manifold.data[self.argpoints], return_index=True, axis=0)[1]
-                if len(indices) > n:
-                    indices = np.random.choice(indices, n, replace=False)
-                indices = [self.argpoints[i] for i in indices]
+                indices = [self.argpoints[i] for i in indices][:n]
 
             # Cache it.
             self.__dict__['_argsamples'] = indices
@@ -234,8 +232,7 @@ class Cluster:
             potential_neighbors = {c: t for c, t in potential_neighbors.items() if t < threshold}
             logging.debug(f'depth: {depth}, number of potential_neighbors: {len(potential_neighbors.keys())}\n')
 
-        if self not in potential_neighbors:
-            assert self in potential_neighbors, f'{self.name} not in potential neighbors'
+        assert self in potential_neighbors, f'{self.name} not in potential neighbors'
         del potential_neighbors[self]
 
         potential_neighbors: List[Cluster] = [c for c in potential_neighbors.keys()]
@@ -611,19 +608,19 @@ class Manifold:
         return [child for cluster in self.graphs[-1] for child in cluster.partition(*criterion)]
 
     def _partition_threaded(self, criterion):
-        q = Queue()
+        queue = Queue()
         threads = [
             Thread(
-                target=_partition_helper,
-                args=(c, criterion, q),
+                target=lambda cluster: [queue.put(c) for c in cluster.partition(*criterion)],
+                args=(c,),
                 name=c.name
             )
             for c in self.graphs[-1]]
         [t.start() for t in threads]
         [t.join() for t in threads]
         clusters = []
-        while not q.empty():
-            clusters.append(q.get())
+        while not queue.empty():
+            clusters.append(queue.get())
         return clusters
 
     def select(self, name: str) -> Cluster:
@@ -663,9 +660,3 @@ class Manifold:
 
         manifold.graphs = graphs
         return manifold
-
-
-def _partition_helper(cluster, criterion, queue):
-    # TODO: Move this inside of the class.
-    [queue.put(c) for c in cluster.partition(*criterion)]
-    return
