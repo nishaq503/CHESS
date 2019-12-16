@@ -1,6 +1,6 @@
-""" Clustered Hierarchical Entropy-Scaling Search
-"""
+import numpy as np
 
-__all__ = ['CHESS']
+from . import criterion
+from .manifold import Manifold
 
-from .chess import CHESS
+np.random.seed(42)
