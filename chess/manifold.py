@@ -449,7 +449,7 @@ class Graph:
         """ Returns all subgraphs within the graph.
         """
         if any((s is None for s in self.clusters.values())):
-            unvisited = {c for c, s in self.clusters.items() if s is not None}
+            unvisited = {c for c, s in self.clusters.items() if s is None}
             while unvisited:
                 cluster = unvisited.pop()
                 component = self.bft(cluster)
