@@ -555,6 +555,7 @@ class Manifold:
     def __repr__(self) -> str:
         return '\n'.join([self.metric, repr(self.graphs[-1])])
 
+    # TODO: Need a default depth argument
     def find_points(self, point: Data, radius: Radius) -> Dict[Data, Radius]:
         """ Returns all indices of points that are within radius of point. """
         candidates = [p for c in self.find_clusters(point, radius, len(self.graphs)) for p in c.argpoints]
@@ -590,6 +591,7 @@ class Manifold:
                 break
         return self
 
+    # TODO: Need a build_graph (singular) function that takes depth as an argument to only build the graph at that depth.
     def build_graphs(self) -> 'Manifold':
         """ Builds the graphs. """
         [g.build_edges() for g in self.graphs]
@@ -637,6 +639,7 @@ class Manifold:
         assert name == cluster.name, f'wanted {name} but got {cluster.name}.'
         return cluster
 
+    # TODO: dump and load should have BinaryIO as type of fp.
     def dump(self, fp: TextIO) -> None:
         pickle.dump({
             'metric': self.metric,
