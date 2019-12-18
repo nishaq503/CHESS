@@ -178,6 +178,10 @@ class TestCluster(unittest.TestCase):
                     distances = list(cluster.distance(centers))
                     radii = [cluster.radius + c.radius for c in potential_neighbors]
                     potential_neighbors = {c for c, d, r in zip(potential_neighbors, distances, radii) if d <= r}
+                    if (potential_neighbors - set(cluster.neighbors.keys())) or (set(cluster.neighbors.keys()) - potential_neighbors):
+                        print(depth, cluster.name, 'truth:', [n.name for n in potential_neighbors])
+                        print(depth, cluster.name, 'missed:', [n.name for n in (potential_neighbors - set(cluster.neighbors.keys()))])
+                        print(depth, cluster.name, 'extra:', [n.name for n in (set(cluster.neighbors.keys()) - potential_neighbors)])
                     self.assertFalse(cluster.neighbors.keys() - potential_neighbors)
                     self.assertFalse(potential_neighbors - cluster.neighbors.keys())
         return

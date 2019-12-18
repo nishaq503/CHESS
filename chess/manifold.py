@@ -411,13 +411,17 @@ class Graph:
 
     @property
     def manifold(self) -> 'Manifold':
-        return next(iter(self.clusters.keys())).manifold if len(self.clusters.keys()) > 0 else None
+        return next(iter(self.clusters.keys())).manifold
 
     @property
     def depth(self) -> int:
-        return next(iter(self.clusters.keys())).depth if len(self.clusters.keys()) > 0 else None
+        return next(iter(self.clusters.keys())).depth
 
-    def build_edges(self, threshold: int = None) -> None:
+    @property
+    def metric(self) -> Metric:
+        return next(iter(self.clusters.keys())).metric
+
+    def _build_edges_tree(self, threshold: int = None) -> None:
         """ Calculates and assigns neighbors for each cluster in the graph.
 
         A cluster can only be a neighbor with another cluster at the same depth.
@@ -432,6 +436,25 @@ class Graph:
 
         [cluster.update_neighbors(threshold) for cluster in self.clusters.keys()]
         return
+
+    def _build_edges_matrix(self) -> None:
+        """ Calculates overlap for clusters in self in the naive way.
+        """
+        clusters: List[Cluster] = list(self.clusters.keys())
+
+        centers = np.asarray([c.medoid for c in clusters])
+        radii = np.asarray([c.radius for c in clusters])
+
+        distances = cdist(centers, centers, self.metric)
+        differences = (distances.T - radii).T - radii
+        left, right = tuple(map(list, np.where(differences < 0.)))
+
+        [(clusters[l].neighbors.update({clusters[r]: distances[l, r]}), clusters[r].neighbors.update({clusters[l]: distances[l, r]}))
+         for l, r in zip(left, right) if l != r]
+        return
+
+    def build_edges(self) -> None:
+        return self._build_edges_matrix()
 
     @property
     def edges(self) -> Dict[Set['Cluster'], float]:
