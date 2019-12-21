@@ -5,7 +5,7 @@
 import logging
 import pickle
 import random
-from collections import deque
+from collections import deque, defaultdict, Counter
 from operator import itemgetter
 from queue import Queue
 from threading import Thread
@@ -488,16 +488,27 @@ class Graph:
         :param int walks: number of walks to perform
         :returns a Dict of cluster names to visit counts
         """
-        results: Dict[str, int] = {c.name: 0 for c in self.clusters}
-        starts = random.sample(self.clusters.keys(), walks)
-        for cluster in starts:
-            for s in range(steps):
-                results[cluster.name] += 1
+        q = Queue()
+
+        def walk(cluster):
+            for _ in range(steps):
+                q.put(cluster.name)
                 if not cluster.neighbors:
                     break
                 cluster = random.sample(cluster.neighbors.keys(), 1)[0]
-        return results
 
+        # Perform parallel walks.
+        starts = random.sample(self.clusters.keys(), walks)
+        threads = [Thread(target=walk, args=(s,)) for s in starts]
+        [t.start() for t in threads]
+        [t.join() for t in threads]
+
+        # Gather the results.
+        results = Counter()
+        while not q.empty():
+            results[q.get()] += 1
+
+        return results
 
     @staticmethod
     def bft(start: 'Cluster'):
