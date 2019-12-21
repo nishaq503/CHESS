@@ -504,7 +504,7 @@ class Graph:
         [t.join() for t in threads]
 
         # Gather the results.
-        results = {c: len(results[c]) for c in self.clusters}
+        results = {k: len(v) for k, v in results.items()}
         return results
 
     @staticmethod
