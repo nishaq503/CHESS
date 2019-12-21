@@ -5,19 +5,19 @@ from itertools import cycle
 from matplotlib import pyplot as plt
 
 from chess.criterion import *
-from chess.datasets import *
-from chess.manifold import *
+import chess.datasets as d
+import chess.manifold as m
 
 
 class TestCriterion(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # cls.data = np.concatenate([np.random.randn(100, 2) + i * 10 for i in range(3)])
-        cls.data = bullseye(n=500)[0]
+        cls.data = d.bullseye(n=500)[0]
         return
 
     def setUp(self) -> None:
-        self.manifold = Manifold(self.data, 'euclidean')
+        self.manifold = m.Manifold(self.data, 'euclidean')
         return
 
     def test_min_radius(self):
@@ -34,8 +34,8 @@ class TestCriterion(unittest.TestCase):
         return
 
     def test_min_cardinality(self):
-        data = random()[0]
-        self.manifold = Manifold(data, 'euclidean')
+        data = d.random()[0]
+        self.manifold = m.Manifold(data, 'euclidean')
         self.assertEqual(1, len(self.manifold.graphs[-1].subgraphs))
         self.manifold.build(MinCardinality(1))
         self.assertGreater(len(self.manifold.graphs[-1].subgraphs), 1)

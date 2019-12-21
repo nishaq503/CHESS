@@ -1,8 +1,8 @@
 import unittest
 from tempfile import TemporaryFile
 
-from chess.criterion import *
-from chess.datasets import *
+import chess.criterion as criterion
+import chess.datasets as datasets
 from chess.manifold import *
 
 np.random.seed(42)
@@ -11,7 +11,7 @@ np.random.seed(42)
 class TestManifold(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.data, cls.labels = random()
+        cls.data, cls.labels = datasets.random()
         cls.manifold = Manifold(cls.data, 'euclidean').build()
         return
 
@@ -85,9 +85,9 @@ class TestManifold(unittest.TestCase):
         return
 
     def test_build(self):
-        m = Manifold(self.data, 'euclidean').build(MaxDepth(1))
+        m = Manifold(self.data, 'euclidean').build(criterion.MaxDepth(1))
         self.assertEqual(2, len(m.graphs))
-        m.build(MaxDepth(2))
+        m.build(criterion.MaxDepth(2))
         self.assertEqual(3, len(m.graphs))
         m.build()
         self.assertEqual(len(self.data), len(m.graphs[-1]))
@@ -97,11 +97,11 @@ class TestManifold(unittest.TestCase):
         m = Manifold(self.data, 'euclidean')
         self.assertEqual(1, len(m.graphs))
 
-        m.build_tree(AddLevels(2))
+        m.build_tree(criterion.AddLevels(2))
         self.assertEqual(3, len(m.graphs))
 
         # MaxDepth shouldn't do anything in build_tree if we're beyond that depth already.
-        m.build_tree(MaxDepth(1))
+        m.build_tree(criterion.MaxDepth(1))
         self.assertEqual(3, len(m.graphs))
 
         m.build_tree()
@@ -123,7 +123,7 @@ class TestManifold(unittest.TestCase):
         return
 
     def test_load(self):
-        original = Manifold(self.data, 'euclidean').build(MinPoints(len(self.data) / 10))
+        original = Manifold(self.data, 'euclidean').build(criterion.MinPoints(len(self.data) / 10))
         with TemporaryFile() as fp:
             original.dump(fp)
             fp.seek(0)
@@ -133,7 +133,7 @@ class TestManifold(unittest.TestCase):
         return
 
     def test_partition_backends(self):
-        data = random(n=100, dimensions=5)[0]
-        m_single = Manifold(data, 'euclidean')._partition_single([MaxDepth(5)])
-        m_thread = Manifold(data, 'euclidean')._partition_threaded([MaxDepth(5)])
+        data = datasets.random(n=100, dimensions=5)[0]
+        m_single = Manifold(data, 'euclidean')._partition_single([criterion.MaxDepth(5)])
+        m_thread = Manifold(data, 'euclidean')._partition_threaded([criterion.MaxDepth(5)])
         self.assertEqual(m_single, m_thread)

@@ -116,3 +116,10 @@ class TestGraph(unittest.TestCase):
         self.assertGreater(len(g), 0)
         self.assertLessEqual(len(g), len(self.manifold.graphs[-1]))
         return
+
+    def test_random_walk(self):
+        g = self.manifold.graphs[-1]
+        results = g.random_walk()
+        self.assertGreater(len(results), 0)
+        [self.assertGreaterEqual(v, 0) for k, v in results.items()]
+        return

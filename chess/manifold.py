@@ -4,7 +4,8 @@
 """
 import logging
 import pickle
-from collections import deque
+import random
+from collections import deque, defaultdict, Counter
 from operator import itemgetter
 from queue import Queue
 from threading import Thread
@@ -479,6 +480,32 @@ class Graph:
         # Clear all cached subgraphs.
         self.clusters = {c: None for c in self.clusters.keys()}
         return
+
+    def random_walk(self, steps: int = 5, walks: int = 1) -> Dict[Cluster, int]:
+        """ Performs a random walk, returning a modified graph instance.
+
+        :param int steps: number of steps per walk
+        :param int walks: number of walks to perform
+        :returns a Dict of cluster names to visit counts
+        """
+        results = {c: list() for c in self.clusters}
+
+        def walk(cluster):
+            for _ in range(steps):
+                results[cluster].append(1)
+                if not cluster.neighbors:
+                    break
+                cluster = random.sample(cluster.neighbors.keys(), 1)[0]
+
+        # Perform parallel walks.
+        starts = random.sample(self.clusters.keys(), walks)
+        threads = [Thread(target=walk, args=(s,)) for s in starts]
+        [t.start() for t in threads]
+        [t.join() for t in threads]
+
+        # Gather the results.
+        results = {k: len(v) for k, v in results.items()}
+        return results
 
     @staticmethod
     def bft(start: 'Cluster'):
