@@ -1,7 +1,7 @@
 import unittest
 
-from chess.criterion import *
-from chess.datasets import *
+import chess.criterion as criterion
+import chess.datasets as datasets
 from chess.manifold import *
 
 MIN_RADIUS = 0.1
@@ -130,9 +130,9 @@ class TestCluster(unittest.TestCase):
         return
 
     def test_tree_search(self):
-        data, labels = line()
+        data, labels = datasets.line()
         m = Manifold(data, 'euclidean')
-        m.build(MinRadius(MIN_RADIUS), MaxDepth(5))
+        m.build(criterion.MinRadius(MIN_RADIUS), criterion.MaxDepth(5))
         # Finding points that are in data.
         for depth, graph in enumerate(m.graphs):
             for cluster in graph:
@@ -162,10 +162,10 @@ class TestCluster(unittest.TestCase):
         return
 
     def test_neighbors(self):
-        for dataset in [spiral_2d, tori, skewer, random, line, xor]:
+        for dataset in [datasets.spiral_2d, datasets.tori, datasets.skewer, datasets.random, datasets.line, datasets.xor]:
             data, labels = dataset()
             manifold = Manifold(data, 'euclidean')
-            manifold.build(MaxDepth(8))
+            manifold.build(criterion.MaxDepth(8))
             for depth, graph in enumerate(manifold.graphs):
                 for cluster in graph:
                     potential_neighbors = [c for c in graph if c.name != cluster.name]
