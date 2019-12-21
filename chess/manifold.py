@@ -481,18 +481,19 @@ class Graph:
         self.clusters = {c: None for c in self.clusters.keys()}
         return
 
-    def random_walk(self, steps: int = 5, walks: int = 1) -> Dict[str, int]:
+    def random_walk(self, steps: int = 5, walks: int = 1) -> Dict[Cluster, int]:
         """ Performs a random walk, returning a modified graph instance.
 
         :param int steps: number of steps per walk
         :param int walks: number of walks to perform
         :returns a Dict of cluster names to visit counts
         """
-        q = Queue()
+        q = list()
+        results = defaultdict(list)
 
         def walk(cluster):
             for _ in range(steps):
-                q.put(cluster.name)
+                results[cluster].append(1)
                 if not cluster.neighbors:
                     break
                 cluster = random.sample(cluster.neighbors.keys(), 1)[0]
@@ -504,10 +505,7 @@ class Graph:
         [t.join() for t in threads]
 
         # Gather the results.
-        results = Counter()
-        while not q.empty():
-            results[q.get()] += 1
-
+        results = {c: len(results[c]) for c in self.clusters}
         return results
 
     @staticmethod
