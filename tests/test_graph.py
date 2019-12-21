@@ -58,8 +58,8 @@ class TestGraph(unittest.TestCase):
         return
 
     def test_build_edges(self):
-        self.manifold.graphs[-1].build_edges(1)
-        with self.assertRaises(ValueError):
+        self.manifold.graphs[-1].build_edges()
+        with self.assertRaises(TypeError):
             self.manifold.graphs[-1].build_edges(0)
         return
 

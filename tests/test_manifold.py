@@ -11,7 +11,7 @@ np.random.seed(42)
 class TestManifold(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.data, cls.labels = datasets.random()
+        cls.data, cls.labels = datasets.random(n=1000, dimensions=3)
         cls.manifold = Manifold(cls.data, 'euclidean').build()
         return
 
@@ -23,7 +23,7 @@ class TestManifold(unittest.TestCase):
         self.assertListEqual([1, 2, 3], m.argpoints)
 
         m = Manifold(self.data, 'euclidean', 0.2)
-        self.assertEqual(20, len(m.argpoints))
+        self.assertEqual(len(self.data) // 5, len(m.argpoints))
 
         with self.assertRaises(ValueError):
             # noinspection PyTypeChecker
@@ -77,7 +77,16 @@ class TestManifold(unittest.TestCase):
 
     def test_find_points(self):
         self.assertEqual(1, len(self.manifold.find_points(self.data[0], radius=0.0)))
-        self.assertGreaterEqual(1, len(self.manifold.find_points(self.data[0], radius=1.0)))
+        self.assertLessEqual(1, len(self.manifold.find_points(self.data[0], radius=1.0)))
+
+        point = self.data[0]
+        distances = [(p, d) for p, d in zip(range(self.data.shape[0]), cdist(np.asarray([point]), self.data, self.manifold.metric)[0])]
+
+        for radius in [0.25, 0.5, 1.0, 2.0, 5.0]:
+            naive_results = {p: d for p, d in distances if d <= radius}
+            results = self.manifold.find_points(point, radius)
+            self.assertDictEqual(naive_results, results)
+
         return
 
     def test_find_clusters(self):
@@ -123,13 +132,20 @@ class TestManifold(unittest.TestCase):
         return
 
     def test_load(self):
-        original = Manifold(self.data, 'euclidean').build(criterion.MinPoints(len(self.data) / 10))
+        original = Manifold(self.data, 'euclidean').build(criterion.MinPoints(10))
         with TemporaryFile() as fp:
             original.dump(fp)
             fp.seek(0)
             loaded = Manifold.load(fp, self.data)
         self.assertEqual(original, loaded)
         self.assertEqual(original[0], loaded[0])
+
+        loaded_root = loaded.select('')
+        self.assertIn('_radius', loaded_root.__dict__)
+        self.assertIn('_argradius', loaded_root.__dict__)
+        self.assertIn('_argsamples', loaded_root.__dict__)
+        self.assertIn('_argmedoid', loaded_root.__dict__)
+        self.assertIn('_local_fractal_dimension', loaded_root.__dict__)
         return
 
     def test_partition_backends(self):
@@ -137,3 +153,17 @@ class TestManifold(unittest.TestCase):
         m_single = Manifold(data, 'euclidean')._partition_single([criterion.MaxDepth(5)])
         m_thread = Manifold(data, 'euclidean')._partition_threaded([criterion.MaxDepth(5)])
         self.assertEqual(m_single, m_thread)
+        return
+
+    def test_find_knn(self):
+        data, _ = datasets.spiral_2d()
+        point = data[0]
+        points = sorted([(d, p) for p, d in zip(range(data.shape[0]), cdist(np.asarray([point]), data, 'euclidean')[0])])
+
+        m = Manifold(data, 'euclidean')
+        m.build_tree(criterion.MinPoints(10), criterion.MaxDepth(10))
+
+        for k in [1, 10, 100, 1000]:
+            naive_results = points[:k]
+            results = m.find_knn(point, k)
+            self.assertSetEqual({p for _, p in naive_results}, set(results.keys()))

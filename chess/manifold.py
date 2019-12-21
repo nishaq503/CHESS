@@ -5,7 +5,7 @@
 import logging
 import pickle
 import random
-from collections import deque, defaultdict, Counter
+from collections import deque
 from operator import itemgetter
 from queue import Queue
 from threading import Thread
@@ -246,7 +246,7 @@ class Cluster:
         self.neighbors = {c: float(d) for c, d, r in zip(potential_neighbors, distances, radii) if d <= r}
         return self.neighbors
 
-    def tree_search(self, point: Data, radius: Radius, depth: int) -> List['Cluster']:
+    def tree_search(self, point: Data, radius: Radius, depth: int) -> Dict['Cluster', Radius]:
         """ Searches down the tree for clusters that overlap point with radius at depth.
         """
         logging.debug(f'tree_search(point={point}, radius={radius}, depth={depth}')
@@ -254,33 +254,35 @@ class Cluster:
             depth = len(self.manifold.graphs)
         if depth < self.depth:
             raise ValueError('depth must not be less than cluster.depth')
-        results = []
+        results: Dict['Cluster', Radius] = dict()
         if self.depth == depth:
-            results = [self]
+            results = {self: self.distance(np.asarray([point]))[0]}
         elif self.overlaps(point, radius):
             results = self._tree_search(point, radius, depth)
         return results
 
-    def _tree_search(self, point, radius, depth):
-        assert self.overlaps(point, radius), f'_tree_search was started with no overlap.'
+    def _tree_search(self, point: Data, radius: Radius, depth: int) -> Dict['Cluster', Radius]:
+        distance = self.distance(np.asarray([point]))[0]
+        assert distance <= radius + self.radius, f'_tree_search was started with no overlap.'
         assert self.depth < depth, f'_tree_search needs to have depth ({depth}) > self.depth ({self.depth}). '
         # results and candidates ONLY contain clusters that have overlap with point
-        results: List[Cluster] = []
-        candidates: List[Cluster] = [self]
+        results: Dict['Cluster', Radius] = dict()
+        candidates: Dict['Cluster', Radius] = {self: distance}
         for d_ in range(self.depth, depth):
-            results.extend([c for c in candidates if len(c.children) < 1])
-            candidates = [c for c in candidates if len(c.children) > 0]
-            children: List[Cluster] = [c for candidate in candidates for c in candidate.children]
+            results.update({c: d for c, d in candidates.items() if len(c.children) < 1})
+            candidates = {c: d for c, d in candidates.items() if len(c.children) > 0}
+            children: List[Cluster] = [c for candidate in candidates.keys() for c in candidate.children]
             if len(children) == 0:
                 break
             centers = np.asarray([c.medoid for c in children])
             distances = cdist(np.expand_dims(point, 0), centers, self.metric)[0]
             radii = [radius + c.radius for c in children]
-            candidates = [c for c, d, r in zip(children, distances, radii) if d <= r]
+            candidates = {c: d for c, d, r in zip(children, distances, radii) if d <= r}
             if len(candidates) == 0:
                 break
         assert all((depth >= r.depth for r in results))
         assert all((depth == c.depth for c in candidates))
+        results.update(candidates)
         return results
 
     def prune(self) -> None:
@@ -314,6 +316,7 @@ class Cluster:
                     _argmedoid=self.argmedoid,
                     _argradius=self.argradius,
                     _radius=self.radius,
+                    _local_fractal_dimension=self.local_fractal_dimension,
                 )
             }
             return self.children
@@ -448,10 +451,10 @@ class Graph:
 
         distances = cdist(centers, centers, self.metric)
         differences = (distances.T - radii).T - radii
-        left, right = tuple(map(list, np.where(differences < 0.)))
+        left, right = tuple(map(list, np.where(differences <= 0.)))
 
-        [(clusters[l].neighbors.update({clusters[r]: distances[l, r]}), clusters[r].neighbors.update({clusters[l]: distances[l, r]}))
-         for l, r in zip(left, right) if l != r]
+        [(clusters[l_].neighbors.update({clusters[r_]: distances[l_, r_]}), clusters[r_].neighbors.update({clusters[l_]: distances[l_, r_]}))
+         for l_, r_ in zip(left, right) if l_ != r_]
         return
 
     def build_edges(self) -> None:
@@ -605,10 +608,14 @@ class Manifold:
     def __repr__(self) -> str:
         return '\n'.join([self.metric, repr(self.graphs[-1])])
 
+    @property
+    def depth(self) -> int:
+        return len(self.graphs) - 1
+
     # TODO: Need a default depth argument
     def find_points(self, point: Data, radius: Radius) -> Dict[Data, Radius]:
         """ Returns all indices of points that are within radius of point. """
-        candidates = [p for c in self.find_clusters(point, radius, len(self.graphs)) for p in c.argpoints]
+        candidates = [p for c in self.find_clusters(point, radius, len(self.graphs)).keys() for p in c.argpoints]
         results: Dict[Data, Radius] = dict()
         point = np.expand_dims(point, axis=0)
         for i in range(0, len(candidates), BATCH_SIZE):
@@ -617,9 +624,39 @@ class Manifold:
             results.update({p: d for p, d in zip(batch, distances) if d <= radius})
         return results
 
-    def find_clusters(self, point: Data, radius: Radius, depth: int) -> Set['Cluster']:
+    def find_clusters(self, point: Data, radius: Radius, depth: int) -> Dict['Cluster', Radius]:
         """ Returns all clusters that contain points within radius of point at depth. """
-        return {r for c in self.graphs[0] for r in c.tree_search(point, radius, depth)}
+        return {r: d for c in self.graphs[0] for r, d in c.tree_search(point, radius, depth).items()}
+
+    def find_knn(self, point: Data, k: int) -> Dict[Data, Radius]:
+        """ Finds and returns the k-nearest neighbors of point.
+        """
+        radius: Radius = np.float64(np.mean([c.radius for c in self.graphs[-1].clusters]))
+        radius = np.float64(max(radius, 1e-16))
+        candidate_clusters: Dict['Cluster', Radius] = self.find_clusters(point, radius, self.depth)
+
+        while len(candidate_clusters.keys()) < 1:  # make sure to have at least one cluster
+            radius *= 2.
+            candidate_clusters = self.find_clusters(point, radius, self.depth)
+
+        num_points: int = sum((len(c.argpoints) for c in candidate_clusters.keys()))
+
+        while num_points < k:  # Make sure to have at least k points in the candidate clusters
+            count = max(sum([1. for c, d in candidate_clusters.items() if d <= radius / 2]), 1e-16)
+            lfd = np.log2(len(candidate_clusters.keys()) / count)
+            radius *= (k / num_points) * 2 ** (1. / lfd)
+            candidate_clusters = self.find_clusters(point, radius, self.depth)
+            num_points = sum((len(c.argpoints) for c in candidate_clusters.keys()))
+
+        results: Dict[Data, Radius] = dict()
+        point = np.expand_dims(point, axis=0)
+        candidates = [p for c in candidate_clusters for p in c.argpoints]
+        for i in range(0, num_points, BATCH_SIZE):
+            batch = candidates[i:i + BATCH_SIZE]
+            distances = cdist(point, self.data[batch], self.metric)[0]
+            results.update({p: d for p, d in zip(batch, distances)})
+
+        return {p: d for d, p in sorted([(d_, p_) for p_, d_ in results.items()])[:k]}
 
     def build(self, *criterion) -> 'Manifold':
         """ Rebuilds the stack of graphs. """
