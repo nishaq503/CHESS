@@ -488,7 +488,6 @@ class Graph:
         :param int walks: number of walks to perform
         :returns a Dict of cluster names to visit counts
         """
-        q = list()
         results = defaultdict(list)
 
         def walk(cluster):
