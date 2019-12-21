@@ -9,7 +9,7 @@ from collections import deque
 from operator import itemgetter
 from queue import Queue
 from threading import Thread
-from typing import Set, Dict, Iterable, TextIO
+from typing import Set, Dict, Iterable, BinaryIO
 
 from scipy.spatial.distance import pdist, cdist
 
@@ -726,8 +726,7 @@ class Manifold:
         assert name == cluster.name, f'wanted {name} but got {cluster.name}.'
         return cluster
 
-    # TODO: dump and load should have BinaryIO as type of fp.
-    def dump(self, fp: TextIO) -> None:
+    def dump(self, fp: BinaryIO) -> None:
         pickle.dump({
             'metric': self.metric,
             'argpoints': self.argpoints,
@@ -736,7 +735,7 @@ class Manifold:
         return
 
     @staticmethod
-    def load(fp: TextIO, data: Data) -> 'Manifold':
+    def load(fp: BinaryIO, data: Data) -> 'Manifold':
         d = pickle.load(fp)
         manifold = Manifold(data, metric=d['metric'], argpoints=d['argpoints'])
         graphs = [
