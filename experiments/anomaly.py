@@ -15,7 +15,11 @@ def outrank_anomalies(data: Data) -> Dict[int, float]:
     :param data: data in which to find anomalies.
     :return: Dictionary of indexes in the data with the confidence (in the range 0. to 1.) that the point is an anomaly.
     """
-    manifold: Manifold = Manifold(data, 'euclidean').build(criterion.MaxDepth(10))
+    manifold: Manifold = Manifold(data, 'euclidean')
+    manifold.build(
+        criterion.MinRadius(0.25),
+        criterion.MaxDepth(15)
+    )
     graph: Graph = manifold.graphs[-1]
 
     subgraphs: Set[Graph] = graph.subgraphs
@@ -23,7 +27,7 @@ def outrank_anomalies(data: Data) -> Dict[int, float]:
     for subgraph in subgraphs:
         results: Dict[Cluster, int] = subgraph.random_walk(steps=len(subgraph.clusters.keys()), walks=len(subgraph.clusters.keys()))
         num_steps = sum(results.values())
-        results = {k: v / num_steps for k, v in results.items()}
+        results = {k: (1. - v / num_steps) for k, v in results.items()}
         anomalies.update({p: v for c, v in results.items() for p in c.argpoints})
 
     return anomalies
@@ -36,7 +40,11 @@ def k_neighborhood_anomalies(data: Data, k: int) -> Dict[int, float]:
     :param k: size of neighborhood to consider.
     :return: Dictionary of indexes in the data with the confidence (in the range 0. to 1.) that the point is an anomaly.
     """
-    manifold: Manifold = Manifold(data, 'euclidean').build(criterion.MaxDepth(10))
+    manifold: Manifold = Manifold(data, 'euclidean')
+    manifold.build(
+        criterion.MinRadius(0.25),
+        criterion.MaxDepth(15)
+    )
     graph: Graph = manifold.graphs[-1]
 
     def bft(start: Cluster) -> int:
@@ -64,7 +72,11 @@ def cardinality_anomalies(data: Data) -> Dict[int, float]:
     :param data: data in which to find anomalies.
     :return: Dictionary of indexes in the data with the confidence (in the range 0. to 1.) that the point is an anomaly.
     """
-    manifold: Manifold = Manifold(data, 'euclidean').build(criterion.MaxDepth(10))
+    manifold: Manifold = Manifold(data, 'euclidean')
+    manifold.build(
+        criterion.MinRadius(0.25),
+        criterion.MaxDepth(15)
+    )
     graph: Graph = manifold.graphs[-1]
 
     min_points: int = int(np.percentile((len(c.argpoints) for c in graph.clusters), 0.02))
@@ -85,11 +97,14 @@ def main():
     anomalies = outrank_anomalies(data)
     anomalies = sorted([(p, c) for p, c in anomalies.items()])
     anomalies = [c for _, c in anomalies]
+    min_a, max_a = min(anomalies), max(anomalies)
+    anomalies = [(a - min_a) / (max_a - min_a) for a in anomalies]
 
-    differences = [abs(l - a) for l, a in zip(labels, anomalies) if a > 0.5]
-    successes = [d < 0.5 for d in differences]
+    differences = [l * a for l, a in zip(labels, anomalies)]
+    num_successes = sum([1 for a in anomalies if a > 0.98])
+    print(noise.shape, len(anomalies), len(differences), num_successes)
 
-    print(f'{len(successes) / len(differences)} of the noisy points were correctly identified as anomalies.')
+    print(f'{num_successes / noise.shape[0]} of the noisy points were correctly identified as anomalies.')
 
 
 if __name__ == '__main__':
