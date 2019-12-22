@@ -1,8 +1,7 @@
 import unittest
 from tempfile import TemporaryFile
 
-import chess.criterion as criterion
-import chess.datasets as datasets
+from chess import datasets, criterion
 from chess.manifold import *
 
 np.random.seed(42)
@@ -12,7 +11,7 @@ class TestManifold(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.data, cls.labels = datasets.random(n=1000, dimensions=3)
-        cls.manifold = Manifold(cls.data, 'euclidean').build()
+        cls.manifold = Manifold(cls.data, 'euclidean').build(criterion.MaxDepth(12))
         return
 
     def test_init(self):
@@ -22,8 +21,9 @@ class TestManifold(unittest.TestCase):
         m = Manifold(self.data, 'euclidean', [1, 2, 3])
         self.assertListEqual([1, 2, 3], m.argpoints)
 
-        m = Manifold(self.data, 'euclidean', 0.2)
-        self.assertEqual(len(self.data) // 5, len(m.argpoints))
+        fraction = 0.2
+        m = Manifold(self.data, 'euclidean', fraction)
+        self.assertEqual(int(len(self.data) * fraction), len(m.argpoints))
 
         with self.assertRaises(ValueError):
             # noinspection PyTypeChecker
@@ -90,6 +90,7 @@ class TestManifold(unittest.TestCase):
         return
 
     def test_find_clusters(self):
+        self.manifold.build_tree()
         self.assertEqual(1, len(self.manifold.find_clusters(self.data[0], radius=0.0, depth=-1)))
         return
 
@@ -140,12 +141,13 @@ class TestManifold(unittest.TestCase):
         self.assertEqual(original, loaded)
         self.assertEqual(original[0], loaded[0])
 
-        loaded_root = loaded.select('')
-        self.assertIn('_radius', loaded_root.__dict__)
-        self.assertIn('_argradius', loaded_root.__dict__)
-        self.assertIn('_argsamples', loaded_root.__dict__)
-        self.assertIn('_argmedoid', loaded_root.__dict__)
-        self.assertIn('_local_fractal_dimension', loaded_root.__dict__)
+        for graph in loaded.graphs:
+            for cluster in graph.clusters:
+                self.assertIn('_radius', cluster.__dict__)
+                self.assertIn('_argradius', cluster.__dict__)
+                self.assertIn('_argsamples', cluster.__dict__)
+                self.assertIn('_argmedoid', cluster.__dict__)
+                self.assertIn('_local_fractal_dimension', cluster.__dict__)
         return
 
     def test_partition_backends(self):

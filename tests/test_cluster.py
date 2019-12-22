@@ -1,7 +1,6 @@
 import unittest
 
-import chess.criterion as criterion
-import chess.datasets as datasets
+from chess import criterion, datasets
 from chess.manifold import *
 
 MIN_RADIUS = 0.1
