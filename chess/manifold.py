@@ -581,34 +581,16 @@ class Manifold:
     def find_knn(self, point: Data, k: int) -> Dict[Data, Radius]:
         """ Finds and returns the k-nearest neighbors of point.
         """
-        radius: Radius = np.float64(np.median([c.radius for c in self.graphs[-1].clusters]))
+        radius: Radius = np.float64(np.mean([c.radius for c in self.graphs[-1].clusters]))
         radius = np.float64(max(radius, 1e-16))
-        candidate_clusters: Dict['Cluster', Radius] = self.find_clusters(point, radius, self.depth)
+        results = self.find_points(point, radius)
+        while len(results.keys()) < k:
+            radius *= 2
+            results = self.find_points(point, radius)
 
-        # make sure to have at least one cluster
-        while len(candidate_clusters.keys()) < 1:  # TODO: Cover
-            radius *= 2.
-            candidate_clusters = self.find_clusters(point, radius, self.depth)
-
-        num_points: int = sum((len(c.argpoints) for c in candidate_clusters.keys()))
-
-        # Make sure to have at least k points in the candidate clusters
-        while num_points < k:  # TODO: Cover
-            count = max(sum([1. for c, d in candidate_clusters.items() if d <= radius / 2]), 1e-16)
-            lfd = np.log2(len(candidate_clusters.keys()) / count)
-            radius *= (k / num_points) * 2 ** (1. / lfd)
-            candidate_clusters = self.find_clusters(point, radius, self.depth)
-            num_points = sum((len(c.argpoints) for c in candidate_clusters.keys()))
-
-        results: Dict[Data, Radius] = dict()
-        point = np.expand_dims(point, axis=0)
-        candidates = [p for c in candidate_clusters.keys() for p in c.argpoints]
-        for i in range(0, num_points, BATCH_SIZE):
-            batch = candidates[i:i + BATCH_SIZE]
-            distances = cdist(point, self.data[batch], self.metric)[0]
-            results.update({p: d for p, d in zip(batch, distances)})
-
-        return {p: d for d, p in sorted([(d_, p_) for p_, d_ in results.items()])[:k]}
+        sorted_results = sorted([(d, p) for p, d in results.items()])[:k]
+        results = {p: d for d, p in sorted_results}
+        return results
 
     def build(self, *criterion) -> 'Manifold':
         """ Rebuilds the stack of graphs. """

@@ -165,24 +165,10 @@ class TestManifold(unittest.TestCase):
         m = Manifold(data, 'euclidean')
         m.build_tree(criterion.MinPoints(10), criterion.MaxDepth(10))
 
-        ks = list(range(25))
-        ks.extend(range(25, 251, 25))
+        ks = list(range(100))
+        ks.extend(range(100, data.shape[0], 100))
         for k in ks:
             naive_results = {p: d for d, p in points[:k]}
             results = m.find_knn(point, k)
             self.assertEqual(k, len(results.keys()))
-
-            if set(naive_results) ^ set(results):  # check within floating point imprecision
-                missed = sorted([(d, p) for p, d in naive_results.items() if p not in results])
-                extras = sorted([(d, p) for p, d in results.items() if p not in naive_results])
-                self.assertEqual(len(missed), len(extras))
-
-                missed, extras = [p for _, p in missed], [p for _, p in extras]
-                distances = cdist(data[missed], data[extras])
-                for pm, pe in zip(missed, extras):
-                    left, right = np.expand_dims(data[pm], 0), np.expand_dims(data[pe], 0)
-                    distance: float = float(cdist(left, right, 'euclidean')[0][0])
-                    self.assertAlmostEqual(0.,
-                                           distance,
-                                           places=5,
-                                           msg=f'failed with k = {k}')
+            self.assertSetEqual(set(naive_results.keys()), set(results.keys()))
