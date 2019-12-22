@@ -158,14 +158,31 @@ class TestManifold(unittest.TestCase):
         return
 
     def test_find_knn(self):
-        data, _ = datasets.spiral_2d()
+        data = datasets.bullseye()[0]
         point = data[0]
         points = sorted([(d, p) for p, d in zip(range(data.shape[0]), cdist(np.asarray([point]), data, 'euclidean')[0])])
 
         m = Manifold(data, 'euclidean')
         m.build_tree(criterion.MinPoints(10), criterion.MaxDepth(10))
 
-        for k in [1, 10, 100, 1000]:
-            naive_results = points[:k]
+        ks = list(range(25))
+        ks.extend(range(25, 251, 25))
+        for k in ks:
+            naive_results = {p: d for d, p in points[:k]}
             results = m.find_knn(point, k)
-            self.assertSetEqual({p for _, p in naive_results}, set(results.keys()))
+            self.assertEqual(k, len(results.keys()))
+
+            if set(naive_results) ^ set(results):  # check within floating point imprecision
+                missed = sorted([(d, p) for p, d in naive_results.items() if p not in results])
+                extras = sorted([(d, p) for p, d in results.items() if p not in naive_results])
+                self.assertEqual(len(missed), len(extras))
+
+                missed, extras = [p for _, p in missed], [p for _, p in extras]
+                distances = cdist(data[missed], data[extras])
+                for pm, pe in zip(missed, extras):
+                    left, right = np.expand_dims(data[pm], 0), np.expand_dims(data[pe], 0)
+                    distance: float = float(cdist(left, right, 'euclidean')[0][0])
+                    self.assertAlmostEqual(0.,
+                                           distance,
+                                           places=5,
+                                           msg=f'failed with k = {k}')
