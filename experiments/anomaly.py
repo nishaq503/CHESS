@@ -9,6 +9,8 @@ import numpy as np
 from chess import criterion
 from chess.datasets import bullseye, spiral_2d, tori, skewer
 from chess.manifold import Manifold, Graph, Cluster
+# noinspection PyUnresolvedReferences
+from mpl_toolkits.mplot3d import Axes3D
 
 
 def min_max_normalize(measures: Dict[int, float]) -> Dict[int, float]:
@@ -96,7 +98,7 @@ def k_neighborhood_anomalies(
     return {k: 1. - v for k, v in anomalies.items()}
 
 
-def cardinality_anomalies(
+def cluster_cardinality_anomalies(
         graph: Graph,
         normalization: str,
 ) -> Dict[int, float]:
@@ -107,6 +109,23 @@ def cardinality_anomalies(
     :return: Dictionary of indexes in the data with the confidence (in the range 0. to 1.) that the point is an anomaly.
     """
     results = {c: len(c.argpoints) for c in graph.clusters.keys()}
+    anomalies: Dict[int, float] = {p: v for c, v in results.items() for p in c.argpoints}
+    anomalies = normalize(anomalies, normalization)
+    return {p: 1. - v for p, v in anomalies.items()}
+
+
+def subgraph_cardinality_anomalies(
+        graph: Graph,
+        normalization: str,
+) -> Dict[int, float]:
+    """ Determines anomalies by the considering the cardinality of connected components in the graph.
+
+    :param graph: Manifold in which to find anomalies.
+    :param normalization: which method to use for normalization.
+    :return: Dictionary of indexes in the data with the confidence (in the range 0. to 1.) that the point is an anomaly.
+    """
+    results = {subgraph: len(subgraph.clusters.keys()) for subgraph in graph.subgraphs}
+    results = {c: v for subgraph, v in results.items() for c in subgraph.clusters.keys()}
     anomalies: Dict[int, float] = {p: v for c, v in results.items() for p in c.argpoints}
     anomalies = normalize(anomalies, normalization)
     return {p: 1. - v for p, v in anomalies.items()}
@@ -198,6 +217,31 @@ def make_folders(dataset, method, mode):
     return
 
 
+def plot_data(data: np.ndarray, labels: List[int], name: str):
+    plt.clf()
+    fig = plt.figure(figsize=(6, 6), dpi=300)
+    title = name.split('/')[-1][:-4]
+    if data.shape[1] == 2:
+        ax = fig.add_subplot(111)
+        plt.title(title)
+        plt.scatter(data[:, 0], data[:, 1], c=labels, cmap='Dark2', s=5.)
+        ax.set_xlim([np.min(data[:, 0]), np.max(data[:, 0])])
+        ax.set_ylim([np.min(data[:, 1]), np.max(data[:, 1])])
+    elif data.shape[1] == 3:
+        ax = fig.add_subplot(111, projection='3d')
+        plt.title(title)
+        ax.scatter(data[:, 0], data[:, 1], data[:, 2], c=labels, s=5., cmap='Dark2')
+        ax.set_xlim([np.min(data[:, 0]), np.max(data[:, 0])])
+        ax.set_ylim([np.min(data[:, 1]), np.max(data[:, 1])])
+        ax.set_zlim([np.min(data[:, 2]), np.max(data[:, 2])])
+        ax.view_init(elev=20, azim=60)
+
+    plt.savefig(name, bbox_inches='tight', pad_inches=0)
+    plt.show()
+    plt.close('all')
+    return
+
+
 def main():
     datasets = {
         'bullseye': bullseye,
@@ -206,9 +250,10 @@ def main():
         'skewer': skewer,
     }
     methods = {
-        'outrank': outrank_anomalies,
-        'cardinality': cardinality_anomalies,
-        'k_neighborhood': k_neighborhood_anomalies,
+        # 'outrank': outrank_anomalies,
+        # 'cluster_cardinality': cluster_cardinality_anomalies,
+        'subgraph_cardinality': subgraph_cardinality_anomalies,
+        # 'k_neighborhood': k_neighborhood_anomalies,
     }
     for dataset in datasets.keys():
         np.random.seed(42)
@@ -216,19 +261,15 @@ def main():
         data, _ = datasets[dataset]()
         labels = [0 for _ in range(data.shape[0])]
 
-        num_noise_points = data.shape[0] // 50
+        num_noise_points = (data.shape[0] // 100) * (data.shape[1] ** 2)
         noise: np.ndarray = np.zeros(shape=(num_noise_points, data.shape[1]))
         for axis in range(noise.shape[1]):
-            line = np.random.rand(num_noise_points, )
             min_v, max_v = np.min(data[:, axis]), np.max(data[:, axis])
-            line = line * (max_v - min_v) + min_v
-            noise[:, axis] = line
+            noise[:, axis] = np.random.rand(num_noise_points, ) * (max_v - min_v) + min_v
 
         noisy_data = np.concatenate([data, noise], axis=0)
         labels.extend([1 for _ in range(num_noise_points)])
-        # fig = plt.figure()
-        # plt.scatter(x=noisy_data[:, 0], y=noisy_data[:, 1], c=labels, cmap='Dark2', s=5.)
-        # plt.show()
+
         manifold: Manifold = Manifold(noisy_data, 'euclidean')
         if not os.path.exists(f'logs'):
             os.mkdir(f'logs')
@@ -267,6 +308,8 @@ def main():
                         save=True,
                     )
                     plt.close('all')
+
+        plot_data(noisy_data, labels, f'../plots/anomaly/{dataset}.png')
     return
 
 
