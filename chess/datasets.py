@@ -61,7 +61,8 @@ def spiral_2d(n: int = 6_000, noise: float = 0.1) -> Tuple[np.ndarray, List[int]
     return np.asarray(data, dtype=np.float64), labels
 
 
-def generate_torus(n: int, r_tube: float, r_torus: float, noise: float) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def generate_torus(n: int, r_torus: float, noise: float) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    r_tube: float = r_torus / 5
     u, v = np.random.rand(n), np.random.rand(n)
     u, v = u * 2 * np.pi, v * 2 * np.pi
     x = (r_torus + r_tube * np.cos(v)) * np.cos(u) + (np.random.randn(n) * noise)
@@ -70,12 +71,12 @@ def generate_torus(n: int, r_tube: float, r_torus: float, noise: float) -> Tuple
     return x, y, z
 
 
-def tori(n: int = 10_000, noise: float = 0.05) -> Tuple[np.ndarray, List[int]]:
-    x, y, z = generate_torus(n=n // 2, r_tube=1., r_torus=5., noise=noise)
-    torus_1 = np.stack([x - 5., y, z], axis=1)
+def tori(n: int = 7_500, noise: float = 0.015, r_torus: float = 1.) -> Tuple[np.ndarray, List[int]]:
+    x, y, z = generate_torus(n=n // 2, r_torus=r_torus, noise=noise)
+    torus_1 = np.stack([x - r_torus, y, z], axis=1)
     labels = [0 for _ in x]
 
-    x, y, z = generate_torus(n=n // 2, r_tube=1., r_torus=5., noise=noise)
+    x, y, z = generate_torus(n=n // 2, r_torus=r_torus, noise=noise)
     torus_2 = np.stack([x, z, y], axis=1)
     labels.extend([1 for _ in x])
 

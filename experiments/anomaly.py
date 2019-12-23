@@ -269,6 +269,7 @@ def main():
         labels = [0 for _ in range(data.shape[0])]
 
         num_noise_points = (data.shape[0] // 100) * min((data.shape[1] ** 2), 10)
+        # num_noise_points = num_noise_points // num_noise_points
         noise: np.ndarray = np.zeros(shape=(num_noise_points, data.shape[1]))
         for axis in range(noise.shape[1]):
             min_v, max_v = np.min(data[:, axis]), np.max(data[:, axis])
@@ -283,7 +284,7 @@ def main():
         if not os.path.exists(f'logs'):
             os.mkdir(f'logs')
 
-        min_radius, max_depth, min_points = 0.1, 20, 10
+        min_radius, max_depth, min_points = 0.1, 20, 1
         manifold.build(
             criterion.MinRadius(min_radius),
             criterion.MaxDepth(max_depth),
