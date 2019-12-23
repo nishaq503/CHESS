@@ -688,5 +688,6 @@ class Manifold:
             else:
                 graphs.append(layer)
 
+        [graph.clear_cache() for graph in graphs]
         manifold.graphs = graphs
         return manifold

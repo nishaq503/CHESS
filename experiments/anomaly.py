@@ -278,50 +278,57 @@ def main():
         noisy_data = np.concatenate([data, noise], axis=0)
         labels.extend([1 for _ in range(num_noise_points)])
 
+        plot_data(noisy_data, labels, f'../plots/anomaly/{dataset}.png')
+
         manifold: Manifold = Manifold(noisy_data, 'euclidean')
         if not os.path.exists(f'logs'):
             os.mkdir(f'logs')
 
-        min_radius, max_depth, min_points = 0.25, 20, 5
-        filepath = f'logs/{dataset}_{noisy_data.shape[0]}_{min_radius}_{max_depth}_{min_points}.pickle'
-        if os.path.exists(filepath):
-            with open(filepath, 'rb') as infile:
-                manifold = manifold.load(infile, noisy_data)
-        else:
-            manifold.build(
-                criterion.MinRadius(min_radius),
-                criterion.MaxDepth(max_depth),
-                criterion.MinPoints(min_points),
-            )
-            with open(filepath, 'wb') as infile:
-                manifold.dump(infile)
+        min_radius, max_depth, min_points = 0.1, 20, 10
+        manifold.build(
+            criterion.MinRadius(min_radius),
+            criterion.MaxDepth(max_depth),
+            criterion.MinPoints(min_points),
+        )
+        # filepath = f'logs/{dataset}_{noisy_data.shape[0]}_{min_radius}_{max_depth}_{min_points}.pickle'
+        # if os.path.exists(filepath):
+        #     with open(filepath, 'rb') as infile:
+        #         manifold = manifold.load(infile, noisy_data)
+        # else:
+        #     manifold.build(
+        #         criterion.MinRadius(min_radius),
+        #         criterion.MaxDepth(max_depth),
+        #         criterion.MinPoints(min_points),
+        #     )
+        #     with open(filepath, 'wb') as infile:
+        #         manifold.dump(infile)
 
         print(f'\ndataset: {dataset}')
         for depth in range(6, manifold.depth + 1):
             print(f'depth: {depth},'
                   f' num_subgraphs: {len(manifold.graphs[depth].subgraphs)},'
                   f' num_clusters: {len(manifold.graphs[depth].clusters.keys())}')
-            # for method in methods.keys():
-            #     for normalization in ['min-max', 'mean', 'z-score', None]:
-            #         anomalies = methods[method](manifold.graphs[depth], normalization)
-            #         plot_histogram(
-            #             x=[v for _, v in anomalies.items()],
-            #             dataset=dataset,
-            #             method=method,
-            #             depth=depth,
-            #             mode=normalization,
-            #             save=True,
-            #         )
-            #         plot_confusion_matrix(
-            #             true_labels=labels,
-            #             anomalies=anomalies,
-            #             dataset=dataset,
-            #             method=method,
-            #             depth=depth,
-            #             mode=normalization,
-            #             save=True,
-        plot_data(noisy_data, labels, f'../plots/anomaly/{dataset}.png')
-            #         plt.close('all')
+            for method in methods.keys():
+                for normalization in ['min-max', 'mean', 'z-score', None]:
+                    anomalies = methods[method](manifold.graphs[depth], normalization)
+                    plot_histogram(
+                        x=[v for _, v in anomalies.items()],
+                        dataset=dataset,
+                        method=method,
+                        depth=depth,
+                        mode=normalization,
+                        save=True,
+                    )
+                    plot_confusion_matrix(
+                        true_labels=labels,
+                        anomalies=anomalies,
+                        dataset=dataset,
+                        method=method,
+                        depth=depth,
+                        mode=normalization,
+                        save=True,
+                    )
+                    plt.close('all')
     return
 
 
