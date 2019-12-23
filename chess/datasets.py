@@ -45,7 +45,7 @@ def xor(n: int = 1_000) -> Tuple[np.ndarray, List[int]]:
     return np.asarray(data, dtype=np.float64), labels
 
 
-def spiral_2d(n: int = 2_000, noise: float = 0.25) -> Tuple[np.ndarray, List[int]]:
+def spiral_2d(n: int = 1_000, noise: float = 0.25) -> Tuple[np.ndarray, List[int]]:
     theta = np.sqrt(np.random.rand(n)) * 2 * np.pi
 
     r_a = 2 * theta + np.pi
@@ -70,7 +70,7 @@ def generate_torus(n: int, r_tube: float, r_torus: float, noise: float) -> Tuple
     return x, y, z
 
 
-def tori(n: int = 10_000, noise: float = 0.1) -> Tuple[np.ndarray, List[int]]:
+def tori(n: int = 2_000, noise: float = 0.1) -> Tuple[np.ndarray, List[int]]:
     x, y, z = generate_torus(n=n // 2, r_tube=1., r_torus=5., noise=noise)
     torus_1 = np.stack([x - 5., y, z], axis=1)
     labels = [0 for _ in x]
@@ -98,8 +98,7 @@ def line_3d(n: int, height: float, noise: float) -> np.ndarray:
     return np.stack([x, y, z], axis=1)
 
 
-def skewer(n: int = 10_000, radius: float = 1., height: float = 5., num_turns: int = 5, noise: float = 0.05) -> Tuple[
-    np.ndarray, List[int]]:
+def skewer(n: int = 2_000, radius: float = 1., height: float = 5., num_turns: int = 5, noise: float = 0.05) -> Tuple[np.ndarray, List[int]]:
     spiral_points, line_points = 5 * n // 6, n // 6
     spiral_data = spiral_3d(spiral_points, radius, height, num_turns, noise)
     labels = [0 for _ in range(spiral_data.shape[0])]
