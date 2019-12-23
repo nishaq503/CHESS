@@ -1,3 +1,5 @@
+import os
+import random
 from collections import deque
 from typing import Dict, Set, List
 
@@ -5,22 +7,30 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from chess import criterion
-from chess.datasets import bullseye
+from chess.datasets import bullseye, spiral_2d, tori, skewer
 from chess.manifold import Manifold, Graph, Cluster
 
 
 def min_max_normalize(measures: Dict[int, float]) -> Dict[int, float]:
-    min_v, max_v = min(measures.values()), max(measures.values())
+    min_v, max_v = np.min(list(measures.values())), np.max(list(measures.values()))
+    min_v, max_v, = float(min_v), float(max_v)
+    if min_v == max_v:
+        max_v += 1.
     return {k: (v - min_v) / (max_v - min_v) for k, v in measures.items()}
 
 
 def mean_normalize(measures: Dict[int, float]) -> Dict[int, float]:
-    min_v, max_v, mean_v = min(measures.values()), max(measures.values()), np.mean(list(measures.values()))
+    min_v, max_v, mean_v = np.min(list(measures.values())), np.max(list(measures.values())), np.mean(list(measures.values()))
+    min_v, max_v, mean_v = float(min_v), float(max_v), float(mean_v)
+    if min_v == max_v:
+        max_v += 1.
     return {k: (v - mean_v) / (max_v - min_v) for k, v in measures.items()}
 
 
 def z_score_normalization(measures: Dict[int, float]) -> Dict[int, float]:
     mean_v, std_v = np.mean(list(measures.values())), np.std(list(measures.values()))
+    mean_v, std_v = float(mean_v), float(std_v)
+    std_v = max(std_v, 1.)
     return {k: (v - mean_v) / std_v for k, v in measures.items()}
 
 
@@ -36,15 +46,16 @@ def normalize(anomalies: Dict[int, float], normalization: str) -> Dict[int, floa
     return anomalies
 
 
-def outrank_anomalies(manifold: Manifold, normalization: str) -> Dict[int, float]:
+def outrank_anomalies(
+        graph: Graph,
+        normalization: str,
+) -> Dict[int, float]:
     """ Determines anomalies by the Outrank algorithm.
 
-    :param manifold: manifold in which to find anomalies.
+    :param graph: manifold in which to find anomalies.
     :param normalization: type of normalization to use on the measures of anomalousness.
     :return: Dictionary of indexes in the data with the confidence (in the range 0. to 1.) that the point is an anomaly.
     """
-    graph: Graph = manifold.graphs[-1]
-
     subgraphs: Set[Graph] = graph.subgraphs
     anomalies: Dict[int, float] = dict()
     for subgraph in subgraphs:
@@ -55,15 +66,18 @@ def outrank_anomalies(manifold: Manifold, normalization: str) -> Dict[int, float
     return {k: 1. - v for k, v in anomalies.items()}
 
 
-def k_neighborhood_anomalies(manifold: Manifold, k: int) -> Dict[int, float]:
+def k_neighborhood_anomalies(
+        graph: Graph,
+        normalization: str,
+        k: int = 5,
+) -> Dict[int, float]:
     """ Determines anomalies by the considering the graph-neighborhood of clusters.
 
-    :param manifold: manifold in which to find anomalies.
+    :param graph: manifold in which to find anomalies.
+    :param normalization: which method to use for normalization.
     :param k: size of neighborhood to consider.
     :return: Dictionary of indexes in the data with the confidence (in the range 0. to 1.) that the point is an anomaly.
     """
-    graph: Graph = manifold.graphs[-1]
-
     def bft(start: Cluster) -> int:
         visited = set()
         queue = deque([start])
@@ -78,78 +92,180 @@ def k_neighborhood_anomalies(manifold: Manifold, k: int) -> Dict[int, float]:
         return len(visited)
 
     results = {c: bft(c) for c in graph.clusters}
-    max_neighborhood = max(results.values())
-    anomalies: Dict[int, float] = {p: (1. - v / max_neighborhood) for c, v in results.items() for p in c.argpoints}
-    return anomalies
+    anomalies = normalize(results, normalization)
+    return {k: 1. - v for k, v in anomalies.items()}
 
 
-def cardinality_anomalies(manifold: Manifold, normalization: str) -> Dict[int, float]:
+def cardinality_anomalies(
+        graph: Graph,
+        normalization: str,
+) -> Dict[int, float]:
     """ Determines anomalies by the considering the cardinality of clusters in the graph.
 
-    :param manifold: Manifold in which to find anomalies.
+    :param graph: Manifold in which to find anomalies.
     :param normalization: which method to use for normalization.
     :return: Dictionary of indexes in the data with the confidence (in the range 0. to 1.) that the point is an anomaly.
     """
-    graph = manifold.graphs[-1]
     results = {c: len(c.argpoints) for c in graph.clusters.keys()}
     anomalies: Dict[int, float] = {p: v for c, v in results.items() for p in c.argpoints}
     anomalies = normalize(anomalies, normalization)
     return {p: 1. - v for p, v in anomalies.items()}
 
 
-def plot_histogram(x: List[float], method: str, depth: int, mode: str):
+def plot_histogram(
+        x: List[float],
+        dataset: str,
+        method: str,
+        depth: int,
+        mode: str,
+        save: bool,
+):
     plt.clf()
     fig = plt.figure()
-    n, bins, patches = plt.hist(x=x, bins=20, color='#0504aa', alpha=0.7, rwidth=0.85)
+    n, bins, patches = plt.hist(x=x, bins='auto', color='#0504aa', alpha=0.7, rwidth=0.85)
     plt.grid(axis='y', alpha=0.75)
     plt.xlabel('Anomalousness')
     plt.ylabel('Counts')
-    plt.title(f'method: {method}, depth: {depth}, mode: {mode}.')
+    plt.title(f'dataset: {dataset}, method: {method}, depth: {depth}, mode: {mode}')
     max_freq = n.max()
-    # Set a clean upper y-axis limit.
     plt.ylim(ymax=np.ceil(max_freq / 10) * 10 if max_freq % 10 else max_freq + 10)
-    # plt.show()
-    fig.savefig(f'../plots/anomaly/{method}_{depth}_{mode}.png')
+    if save is True:
+        filepath = f'../plots/anomaly/{dataset}/{method}/{mode}/{depth}_histogram.png'
+        make_folders(dataset, method, mode)
+        fig.savefig(filepath)
+    else:
+        plt.show()
+    return
+
+
+def plot_confusion_matrix(
+        true_labels: List[int],
+        anomalies: Dict[int, float],
+        dataset: str,
+        method: str,
+        depth: int,
+        mode: str,
+        save: bool,
+):
+    p = float(sum(true_labels))
+    n = float(len(true_labels) - p)
+
+    tp_mean = float(np.mean([v for k, v in anomalies.items() if true_labels[k] == 1]))
+    tn_mean = float(np.mean([v for k, v in anomalies.items() if true_labels[k] == 0]))
+    tp = float(sum([1 if v > tp_mean else 0 for k, v in anomalies.items() if true_labels[k] == 1]))
+    tn = float(sum([1 if v < tn_mean else 0 for k, v in anomalies.items() if true_labels[k] == 0]))
+
+    tpr, tnr = tp / p, tn / n
+    fpr, fnr = 1 - tnr, 1 - tpr
+
+    confusion_matrix = [[tpr, fpr], [fnr, tnr]]
+
+    plt.clf()
+    fig = plt.figure()
+    plt.imshow(confusion_matrix, interpolation='nearest', cmap=plt.cm.Wistia)
+    class_names = ['Normal', 'Anomaly']
+    plt.title(f'dataset: {dataset}, method: {method}, depth: {depth}, mode: {mode}')
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    tick_marks = np.arange(len(class_names))
+    plt.xticks(tick_marks, class_names, rotation=45)
+    plt.yticks(tick_marks, class_names)
+
+    s = [['TPR', 'FPR'], ['FNR', 'TNR']]
+    [plt.text(j, i, f'{s[i][j]} = {confusion_matrix[i][j]:.3f}', position=(-0.2 + j, 0.03 + i))
+     for i in range(2)
+     for j in range(2)]
+
+    if save is True:
+        filepath = f'../plots/anomaly/{dataset}/{method}/{mode}/{depth}_confusion_matrix.png'
+        make_folders(dataset, method, mode)
+        fig.savefig(filepath)
+    else:
+        plt.show()
+    return
+
+
+def make_folders(dataset, method, mode):
+    dir_paths = [f'../plots',
+                 f'../plots/anomaly',
+                 f'../plots/anomaly/{dataset}',
+                 f'../plots/anomaly/{dataset}/{method}',
+                 f'../plots/anomaly/{dataset}/{method}/{mode}']
+    for dir_path in dir_paths:
+        if not os.path.exists(dir_path):
+            os.mkdir(dir_path)
     return
 
 
 def main():
-    data, _ = bullseye(n=1000, num_rings=3)
+    datasets = {
+        'bullseye': bullseye,
+        'spiral': spiral_2d,
+        'tori': tori,
+        'skewer': skewer,
+    }
+    methods = {
+        'outrank': outrank_anomalies,
+        'cardinality': cardinality_anomalies,
+        'k_neighborhood': k_neighborhood_anomalies,
+    }
+    for dataset in datasets.keys():
+        np.random.seed(42)
+        random.seed(42)
+        data, _ = datasets[dataset]()
+        labels = [0 for _ in range(data.shape[0])]
 
-    num_noise_points = data.shape[0] // 50
-    noise: np.ndarray = np.random.rand(num_noise_points, data.shape[1])
+        num_noise_points = data.shape[0] // 50
+        noise: np.ndarray = np.zeros(shape=(num_noise_points, data.shape[1]))
+        for axis in range(noise.shape[1]):
+            line = np.random.rand(num_noise_points, )
+            min_v, max_v = np.min(data[:, axis]), np.max(data[:, axis])
+            line = line * (max_v - min_v) + min_v
+            noise[:, axis] = line
 
-    noisy_data = np.concatenate([data, noise], axis=0)
+        noisy_data = np.concatenate([data, noise], axis=0)
+        labels.extend([1 for _ in range(num_noise_points)])
+        # fig = plt.figure()
+        # plt.scatter(x=noisy_data[:, 0], y=noisy_data[:, 1], c=labels, cmap='Dark2', s=5.)
+        # plt.show()
+        manifold: Manifold = Manifold(noisy_data, 'euclidean')
+        if not os.path.exists(f'logs'):
+            os.mkdir(f'logs')
 
-    manifold: Manifold = Manifold(noisy_data, 'euclidean')
-    manifold.build(
-        criterion.MinRadius(0.05),
-        criterion.MaxDepth(6)
-    )
-
-    for depth in range(6, 15):
-        manifold.build_tree(criterion.MinRadius(0.1), criterion.MaxDepth(depth))
-        manifold.build_graph(depth)
-
-        for normalization in ['min-max', 'mean', 'z-score', None]:
-            anomalies = cardinality_anomalies(manifold, normalization)
-            plot_histogram(
-                x=[v for _, v in anomalies.items()],
-                method='cardinality',
-                depth=depth,
-                mode=normalization,
+        filepath = f'logs/{dataset}_manifold.pickle'
+        if os.path.exists(filepath):
+            with open(filepath, 'rb') as infile:
+                manifold = manifold.load(infile, noisy_data)
+        else:
+            manifold.build(
+                criterion.MinRadius(0.05),
+                criterion.MaxDepth(20)
             )
+            with open(filepath, 'wb') as infile:
+                manifold.dump(infile)
 
-    # anomalies = sorted([(v, p) for p, v in anomalies.items()])
-    # anomalies = [(0, p) if i < data.shape[0] else (1, p) for i, (p, _) in enumerate(anomalies)]
-    # anomalies = sorted([(p, v) for v, p in anomalies])
-
-    # true_labels = [0 if i < data.shape[0] else 1 for i in range(noisy_data.shape[0])]
-    # pred_labels = [v for _, v in anomalies]
-
-    # matrix = confusion_matrix(true_labels, pred_labels)
-    # print(matrix)
-
+        for depth in range(6, manifold.depth + 1):
+            for method in methods.keys():
+                for normalization in ['min-max', 'mean', 'z-score', None]:
+                    anomalies = methods[method](manifold.graphs[depth], normalization)
+                    plot_histogram(
+                        x=[v for _, v in anomalies.items()],
+                        dataset=dataset,
+                        method=method,
+                        depth=depth,
+                        mode=normalization,
+                        save=True,
+                    )
+                    plot_confusion_matrix(
+                        true_labels=labels,
+                        anomalies=anomalies,
+                        dataset=dataset,
+                        method=method,
+                        depth=depth,
+                        mode=normalization,
+                        save=True,
+                    )
+                    plt.close('all')
     return
 
 
