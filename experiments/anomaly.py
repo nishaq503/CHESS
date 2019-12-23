@@ -176,10 +176,10 @@ def plot_confusion_matrix(
     p = float(sum(true_labels))
     n = float(len(true_labels) - p)
 
-    tp_mean = float(np.mean([v for k, v in anomalies.items() if true_labels[k] == 1]))
-    tn_mean = float(np.mean([v for k, v in anomalies.items() if true_labels[k] == 0]))
-    tp = float(sum([1 if v > tp_mean else 0 for k, v in anomalies.items() if true_labels[k] == 1]))
-    tn = float(sum([1 if v < tn_mean else 0 for k, v in anomalies.items() if true_labels[k] == 0]))
+    tp_median = float(np.median([v for k, v in anomalies.items() if true_labels[k] == 1]))
+    tn_median = float(np.median([v for k, v in anomalies.items() if true_labels[k] == 0]))
+    tp = float(sum([1 if v > tp_median else 0 for k, v in anomalies.items() if true_labels[k] == 1]))
+    tn = float(sum([1 if v <= tn_median else 0 for k, v in anomalies.items() if true_labels[k] == 0]))
 
     tpr, tnr = tp / p, tn / n
     fpr, fnr = 1 - tnr, 1 - tpr
@@ -269,6 +269,7 @@ def main():
         labels = [0 for _ in range(data.shape[0])]
 
         num_noise_points = (data.shape[0] // 100) * min((data.shape[1] ** 2), 10)
+        num_noise_points = num_noise_points // num_noise_points
         noise: np.ndarray = np.zeros(shape=(num_noise_points, data.shape[1]))
         for axis in range(noise.shape[1]):
             min_v, max_v = np.min(data[:, axis]), np.max(data[:, axis])
@@ -281,7 +282,7 @@ def main():
         if not os.path.exists(f'logs'):
             os.mkdir(f'logs')
 
-        min_radius, max_depth, min_points = 0.2, 20, 1
+        min_radius, max_depth, min_points = 0.25, 20, 5
         filepath = f'logs/{dataset}_{noisy_data.shape[0]}_{min_radius}_{max_depth}_{min_points}.pickle'
         if os.path.exists(filepath):
             with open(filepath, 'rb') as infile:
@@ -295,30 +296,32 @@ def main():
             with open(filepath, 'wb') as infile:
                 manifold.dump(infile)
 
+        print(f'\ndataset: {dataset}')
         for depth in range(6, manifold.depth + 1):
-            for method in methods.keys():
-                for normalization in ['min-max', 'mean', 'z-score', None]:
-                    anomalies = methods[method](manifold.graphs[depth], normalization)
-                    plot_histogram(
-                        x=[v for _, v in anomalies.items()],
-                        dataset=dataset,
-                        method=method,
-                        depth=depth,
-                        mode=normalization,
-                        save=True,
-                    )
-                    plot_confusion_matrix(
-                        true_labels=labels,
-                        anomalies=anomalies,
-                        dataset=dataset,
-                        method=method,
-                        depth=depth,
-                        mode=normalization,
-                        save=True,
-                    )
-                    plt.close('all')
-
+            print(f'depth: {depth},'
+                  f' num_subgraphs: {len(manifold.graphs[depth].subgraphs)},'
+                  f' num_clusters: {len(manifold.graphs[depth].clusters.keys())}')
+            # for method in methods.keys():
+            #     for normalization in ['min-max', 'mean', 'z-score', None]:
+            #         anomalies = methods[method](manifold.graphs[depth], normalization)
+            #         plot_histogram(
+            #             x=[v for _, v in anomalies.items()],
+            #             dataset=dataset,
+            #             method=method,
+            #             depth=depth,
+            #             mode=normalization,
+            #             save=True,
+            #         )
+            #         plot_confusion_matrix(
+            #             true_labels=labels,
+            #             anomalies=anomalies,
+            #             dataset=dataset,
+            #             method=method,
+            #             depth=depth,
+            #             mode=normalization,
+            #             save=True,
         plot_data(noisy_data, labels, f'../plots/anomaly/{dataset}.png')
+            #         plt.close('all')
     return
 
 
