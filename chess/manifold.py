@@ -464,7 +464,8 @@ class Graph:
         :param int walks: number of walks to perform
         :returns a Dict of cluster names to visit counts
         """
-        results = {c: list() for c in self.clusters}
+        clusters = list(self.clusters.keys())
+        results = {c: list() for c in clusters}
 
         def walk(cluster):
             for _ in range(steps):
@@ -474,7 +475,7 @@ class Graph:
                 cluster = random.sample(cluster.neighbors.keys(), 1)[0]
 
         # Perform parallel walks.
-        starts = random.sample(self.clusters.keys(), walks)
+        starts = random.sample(clusters, min(walks, len(clusters)))
         threads = [Thread(target=walk, args=(s,)) for s in starts]
         [t.start() for t in threads]
         [t.join() for t in threads]
