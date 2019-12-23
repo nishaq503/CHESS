@@ -5,12 +5,12 @@ from typing import Dict, Set, List
 
 import matplotlib.pyplot as plt
 import numpy as np
+# noinspection PyUnresolvedReferences
+from mpl_toolkits.mplot3d import Axes3D
 
 from chess import criterion
 from chess.datasets import bullseye, spiral_2d, tori, skewer
 from chess.manifold import Manifold, Graph, Cluster
-# noinspection PyUnresolvedReferences
-from mpl_toolkits.mplot3d import Axes3D
 
 
 def min_max_normalize(measures: Dict[int, float]) -> Dict[int, float]:
@@ -269,7 +269,6 @@ def main():
         labels = [0 for _ in range(data.shape[0])]
 
         num_noise_points = (data.shape[0] // 100) * min((data.shape[1] ** 2), 10)
-        num_noise_points = num_noise_points // num_noise_points
         noise: np.ndarray = np.zeros(shape=(num_noise_points, data.shape[1]))
         for axis in range(noise.shape[1]):
             min_v, max_v = np.min(data[:, axis]), np.max(data[:, axis])
