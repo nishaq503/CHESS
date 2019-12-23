@@ -162,6 +162,7 @@ def plot_confusion_matrix(
 
     plt.clf()
     fig = plt.figure()
+    # noinspection PyUnresolvedReferences
     plt.imshow(confusion_matrix, interpolation='nearest', cmap=plt.cm.Wistia)
     class_names = ['Normal', 'Anomaly']
     plt.title(f'dataset: {dataset}, method: {method}, depth: {depth}, mode: {mode}')
