@@ -250,10 +250,10 @@ def main():
         'skewer': skewer,
     }
     methods = {
-        # 'outrank': outrank_anomalies,
-        # 'cluster_cardinality': cluster_cardinality_anomalies,
+        'outrank': outrank_anomalies,
+        'cluster_cardinality': cluster_cardinality_anomalies,
         'subgraph_cardinality': subgraph_cardinality_anomalies,
-        # 'k_neighborhood': k_neighborhood_anomalies,
+        'k_neighborhood': k_neighborhood_anomalies,
     }
     for dataset in datasets.keys():
         np.random.seed(42)
@@ -261,7 +261,7 @@ def main():
         data, _ = datasets[dataset]()
         labels = [0 for _ in range(data.shape[0])]
 
-        num_noise_points = (data.shape[0] // 100) * (data.shape[1] ** 2)
+        num_noise_points = (data.shape[0] // 100) * min((data.shape[1] ** 2), 10)
         noise: np.ndarray = np.zeros(shape=(num_noise_points, data.shape[1]))
         for axis in range(noise.shape[1]):
             min_v, max_v = np.min(data[:, axis]), np.max(data[:, axis])
