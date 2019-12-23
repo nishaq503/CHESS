@@ -71,7 +71,7 @@ def outrank_anomalies(
 def k_neighborhood_anomalies(
         graph: Graph,
         normalization: str,
-        k: int = 5,
+        k: int = 3,
 ) -> Dict[int, float]:
     """ Determines anomalies by the considering the graph-neighborhood of clusters.
 
@@ -94,7 +94,8 @@ def k_neighborhood_anomalies(
         return len(visited)
 
     results = {c: bft(c) for c in graph.clusters}
-    anomalies = normalize(results, normalization)
+    anomalies: Dict[int, float] = {p: v for c, v in results.items() for p in c.argpoints}
+    anomalies = normalize(anomalies, normalization)
     return {k: 1. - v for k, v in anomalies.items()}
 
 
@@ -108,8 +109,11 @@ def cluster_cardinality_anomalies(
     :param normalization: which method to use for normalization.
     :return: Dictionary of indexes in the data with the confidence (in the range 0. to 1.) that the point is an anomaly.
     """
-    results = {c: len(c.argpoints) for c in graph.clusters.keys()}
-    anomalies: Dict[int, float] = {p: v for c, v in results.items() for p in c.argpoints}
+    anomalies: Dict[int, float] = {
+        p: len(c.argpoints)
+        for c in graph.clusters.keys()
+        for p in c.argpoints
+    }
     anomalies = normalize(anomalies, normalization)
     return {p: 1. - v for p, v in anomalies.items()}
 
@@ -124,9 +128,12 @@ def subgraph_cardinality_anomalies(
     :param normalization: which method to use for normalization.
     :return: Dictionary of indexes in the data with the confidence (in the range 0. to 1.) that the point is an anomaly.
     """
-    results = {subgraph: len(subgraph.clusters.keys()) for subgraph in graph.subgraphs}
-    results = {c: v for subgraph, v in results.items() for c in subgraph.clusters.keys()}
-    anomalies: Dict[int, float] = {p: v for c, v in results.items() for p in c.argpoints}
+    anomalies: Dict[int, float] = {
+        p: len(subgraph.clusters.keys())
+        for subgraph in graph.subgraphs
+        for c in subgraph.clusters.keys()
+        for p in c.argpoints
+    }
     anomalies = normalize(anomalies, normalization)
     return {p: 1. - v for p, v in anomalies.items()}
 
@@ -236,7 +243,7 @@ def plot_data(data: np.ndarray, labels: List[int], name: str):
         ax.set_zlim([np.min(data[:, 2]), np.max(data[:, 2])])
         ax.view_init(elev=20, azim=60)
 
-    plt.savefig(name, bbox_inches='tight', pad_inches=0)
+    plt.savefig(name, bbox_inches='tight', pad_inches=0.25)
     plt.show()
     plt.close('all')
     return
@@ -246,7 +253,7 @@ def main():
     datasets = {
         'bullseye': bullseye,
         'spiral': spiral_2d,
-        'tori': tori,
+        'interlocking_tori': tori,
         'skewer': skewer,
     }
     methods = {
@@ -274,14 +281,16 @@ def main():
         if not os.path.exists(f'logs'):
             os.mkdir(f'logs')
 
-        filepath = f'logs/{dataset}_manifold.pickle'
+        min_radius, max_depth, min_points = 0.2, 20, 1
+        filepath = f'logs/{dataset}_{noisy_data.shape[0]}_{min_radius}_{max_depth}_{min_points}.pickle'
         if os.path.exists(filepath):
             with open(filepath, 'rb') as infile:
                 manifold = manifold.load(infile, noisy_data)
         else:
             manifold.build(
-                criterion.MinRadius(0.05),
-                criterion.MaxDepth(20)
+                criterion.MinRadius(min_radius),
+                criterion.MaxDepth(max_depth),
+                criterion.MinPoints(min_points),
             )
             with open(filepath, 'wb') as infile:
                 manifold.dump(infile)
