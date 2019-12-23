@@ -1,7 +1,7 @@
 from collections import deque
-from typing import Dict, Set
+from typing import Dict, Set, List
 
-from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
 import numpy as np
 
 from chess import criterion
@@ -15,12 +15,12 @@ def min_max_normalize(measures: Dict[int, float]) -> Dict[int, float]:
 
 
 def mean_normalize(measures: Dict[int, float]) -> Dict[int, float]:
-    min_v, max_v, mean_v = min(measures.values()), max(measures.values()), np.mean(measures.values())
+    min_v, max_v, mean_v = min(measures.values()), max(measures.values()), np.mean(list(measures.values()))
     return {k: (v - mean_v) / (max_v - min_v) for k, v in measures.items()}
 
 
 def z_score_normalization(measures: Dict[int, float]) -> Dict[int, float]:
-    mean_v, std_v = np.mean(measures.values()), np.std(measures.values())
+    mean_v, std_v = np.mean(list(measures.values())), np.std(list(measures.values()))
     return {k: (v - mean_v) / std_v for k, v in measures.items()}
 
 
@@ -83,17 +83,34 @@ def k_neighborhood_anomalies(manifold: Manifold, k: int) -> Dict[int, float]:
     return anomalies
 
 
-def cardinality_anomalies(manifold: Manifold) -> Dict[int, float]:
+def cardinality_anomalies(manifold: Manifold, normalization: str) -> Dict[int, float]:
     """ Determines anomalies by the considering the cardinality of clusters in the graph.
 
     :param manifold: Manifold in which to find anomalies.
+    :param normalization: which method to use for normalization.
     :return: Dictionary of indexes in the data with the confidence (in the range 0. to 1.) that the point is an anomaly.
     """
     graph = manifold.graphs[-1]
-    min_points: int = int(np.percentile((len(c.argpoints) for c in graph.clusters), 0.02))
-    results = {c: min_points / len(c.argpoints) for c in graph.clusters}
+    results = {c: len(c.argpoints) for c in graph.clusters.keys()}
     anomalies: Dict[int, float] = {p: v for c, v in results.items() for p in c.argpoints}
-    return anomalies
+    anomalies = normalize(anomalies, normalization)
+    return {p: 1. - v for p, v in anomalies.items()}
+
+
+def plot_histogram(x: List[float], method: str, depth: int, mode: str):
+    plt.clf()
+    fig = plt.figure()
+    n, bins, patches = plt.hist(x=x, bins=20, color='#0504aa', alpha=0.7, rwidth=0.85)
+    plt.grid(axis='y', alpha=0.75)
+    plt.xlabel('Anomalousness')
+    plt.ylabel('Counts')
+    plt.title(f'method: {method}, depth: {depth}, mode: {mode}.')
+    max_freq = n.max()
+    # Set a clean upper y-axis limit.
+    plt.ylim(ymax=np.ceil(max_freq / 10) * 10 if max_freq % 10 else max_freq + 10)
+    # plt.show()
+    fig.savefig(f'../plots/anomaly/{method}_{depth}_{mode}.png')
+    return
 
 
 def main():
@@ -106,20 +123,32 @@ def main():
 
     manifold: Manifold = Manifold(noisy_data, 'euclidean')
     manifold.build(
-        criterion.MinRadius(0.25),
-        criterion.MaxDepth(15)
+        criterion.MinRadius(0.05),
+        criterion.MaxDepth(6)
     )
 
-    anomalies = outrank_anomalies(manifold, 'min-max')
-    anomalies = sorted([(v, p) for p, v in anomalies.items()])
-    anomalies = [(0, p) if i < data.shape[0] else (1, p) for i, (p, _) in enumerate(anomalies)]
-    anomalies = sorted([(p, v) for v, p in anomalies])
+    for depth in range(6, 15):
+        manifold.build_tree(criterion.MinRadius(0.1), criterion.MaxDepth(depth))
+        manifold.build_graph(depth)
 
-    true_labels = [0 if i < data.shape[0] else 1 for i in range(noisy_data.shape[0])]
-    pred_labels = [v for _, v in anomalies]
+        for normalization in ['min-max', 'mean', 'z-score', None]:
+            anomalies = cardinality_anomalies(manifold, normalization)
+            plot_histogram(
+                x=[v for _, v in anomalies.items()],
+                method='cardinality',
+                depth=depth,
+                mode=normalization,
+            )
 
-    matrix = confusion_matrix(true_labels, pred_labels)
-    print(matrix)
+    # anomalies = sorted([(v, p) for p, v in anomalies.items()])
+    # anomalies = [(0, p) if i < data.shape[0] else (1, p) for i, (p, _) in enumerate(anomalies)]
+    # anomalies = sorted([(p, v) for v, p in anomalies])
+
+    # true_labels = [0 if i < data.shape[0] else 1 for i in range(noisy_data.shape[0])]
+    # pred_labels = [v for _, v in anomalies]
+
+    # matrix = confusion_matrix(true_labels, pred_labels)
+    # print(matrix)
 
     return
 
