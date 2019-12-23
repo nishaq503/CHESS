@@ -61,7 +61,10 @@ def outrank_anomalies(
     subgraphs: Set[Graph] = graph.subgraphs
     anomalies: Dict[int, float] = dict()
     for subgraph in subgraphs:
-        results: Dict[Cluster, int] = subgraph.random_walk(steps=len(subgraph.clusters.keys()), walks=len(subgraph.clusters.keys()))
+        results: Dict[Cluster, int] = subgraph.random_walk(
+            steps=max(len(subgraph.clusters.keys()) // 10, 10),
+            walks=max(len(subgraph.clusters.keys()) // 10, 10),
+        )
         anomalies.update({p: v for c, v in results.items() for p in c.argpoints})
 
     anomalies = normalize(anomalies, normalization)
@@ -176,8 +179,8 @@ def plot_confusion_matrix(
     p = float(sum(true_labels))
     n = float(len(true_labels) - p)
 
-    tp_median = float(np.median([v for k, v in anomalies.items() if true_labels[k] == 1]))
-    tn_median = float(np.median([v for k, v in anomalies.items() if true_labels[k] == 0]))
+    tp_median = float(np.mean([v for k, v in anomalies.items() if true_labels[k] == 1]))
+    tn_median = float(np.mean([v for k, v in anomalies.items() if true_labels[k] == 0]))
     tp = float(sum([1 if v > tp_median else 0 for k, v in anomalies.items() if true_labels[k] == 1]))
     tn = float(sum([1 if v <= tn_median else 0 for k, v in anomalies.items() if true_labels[k] == 0]))
 
@@ -268,7 +271,7 @@ def main():
         data, _ = datasets[dataset]()
         labels = [0 for _ in range(data.shape[0])]
 
-        num_noise_points = (data.shape[0] // 100) * min((data.shape[1] ** 2), 10)
+        num_noise_points = (data.shape[0] // 250) * min((data.shape[1] ** 2), 10)
         # num_noise_points = num_noise_points // num_noise_points
         noise: np.ndarray = np.zeros(shape=(num_noise_points, data.shape[1]))
         for axis in range(noise.shape[1]):
