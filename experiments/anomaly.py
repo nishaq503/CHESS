@@ -48,6 +48,21 @@ def normalize(anomalies: Dict[int, float], normalization: str) -> Dict[int, floa
     return anomalies
 
 
+def k_nearest_neighbors_anomalies(
+        graph: Graph,
+        normalization: str,
+) -> Dict[int, float]:
+    """ Determines anomalies by considering the kNearestNeighbors
+    """
+    manifold = graph.manifold
+    knn = [list(manifold.find_knn(manifold.data[point], 100).items())
+           for cluster in graph
+           for batch in iter(cluster)
+           for point in batch]
+    scores = {i: sum([distances[k] for k in range(0, 100 + 1, 10)]) for i, distances in enumerate(knn)}
+    return normalize(scores, normalization)
+
+
 def outrank_anomalies(
         graph: Graph,
         normalization: str,
@@ -260,6 +275,7 @@ def main():
         'skewer': skewer,
     }
     methods = {
+        'k_nearest': k_nearest_neighbors_anomalies,
         'outrank': outrank_anomalies,
         'cluster_cardinality': cluster_cardinality_anomalies,
         'subgraph_cardinality': subgraph_cardinality_anomalies,
