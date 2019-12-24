@@ -63,18 +63,18 @@ def outrank_anomalies(
     for subgraph in subgraphs:
         results: Dict[Cluster, int] = subgraph.random_walk(
             steps=max(len(subgraph.clusters.keys()) // 10, 10),
-            walks=max(len(subgraph.clusters.keys()) // 10, 10),
+            walks=max(len(subgraph.clusters.keys()) * 10, 10),
         )
         anomalies.update({p: v for c, v in results.items() for p in c.argpoints})
 
     anomalies = normalize(anomalies, normalization)
-    return {k: 1. - v for k, v in anomalies.items()}
+    return {k: 1 - v for k, v in anomalies.items()}
 
 
 def k_neighborhood_anomalies(
         graph: Graph,
         normalization: str,
-        k: int = 3,
+        k: int = 10,
 ) -> Dict[int, float]:
     """ Determines anomalies by the considering the graph-neighborhood of clusters.
 
@@ -178,10 +178,9 @@ def plot_confusion_matrix(
     p = float(sum(true_labels))
     n = float(len(true_labels) - p)
 
-    tp_threshold = float(np.percentile([v for k, v in anomalies.items() if true_labels[k] == 1], 0.9))
-    tn_threshold = float(np.percentile([v for k, v in anomalies.items() if true_labels[k] == 0], 0.9))
-    tp = float(sum([1 if v > tp_threshold else 0 for k, v in anomalies.items() if true_labels[k] == 1]))
-    tn = float(sum([1 if v > tn_threshold else 0 for k, v in anomalies.items() if true_labels[k] == 0]))
+    threshold = float(np.percentile(list(anomalies.values()), 0.95))
+    tp = float(sum([1 if v > threshold else 0 for k, v in anomalies.items() if true_labels[k] == 1]))
+    tn = float(sum([1 if v > threshold else 0 for k, v in anomalies.items() if true_labels[k] == 0]))
 
     tpr, tnr = tp / p, tn / n
     fpr, fnr = 1 - tnr, 1 - tpr
@@ -266,7 +265,7 @@ def main():
         data, _ = datasets[dataset]()
         labels = [0 for _ in range(data.shape[0])]
 
-        num_noise_points = (data.shape[0] // 250) * min((data.shape[1] ** 2), 10)
+        num_noise_points = int(data.shape[0] * (1 / 0.95 - 1))  # adds 5% noise
         # num_noise_points = num_noise_points // num_noise_points
         noise: np.ndarray = np.zeros(shape=(num_noise_points, data.shape[1]))
         for axis in range(noise.shape[1]):
