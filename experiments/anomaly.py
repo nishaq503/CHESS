@@ -1,7 +1,6 @@
-import logging
 import os
 import random
-from collections import deque, Counter
+from collections import deque
 from typing import Dict, Set, List
 
 import matplotlib.pyplot as plt
@@ -200,7 +199,7 @@ def plot_histogram(
 ):
     plt.clf()
     fig = plt.figure()
-    n, bins, patches = plt.hist(x=x, bins='auto', color='#0504aa', alpha=0.7, rwidth=0.85)
+    n, bins, patches = plt.hist(x=x, bins=10, color='#0504aa', alpha=0.7, rwidth=0.85)
     plt.grid(axis='y', alpha=0.75)
     plt.xlabel('Anomalousness')
     plt.ylabel('Counts')
@@ -224,10 +223,11 @@ def plot_confusion_matrix(
         mode: str,
         save: bool,
 ):
-    p = float(sum(true_labels))
-    n = float(len(true_labels) - p)
+    p = float(sum([1 for k in anomalies.keys() if true_labels[k] == 1]))
+    n = float(sum([1 for k in anomalies.keys() if true_labels[k] == 0]))
 
     threshold = float(np.percentile(list(anomalies.values()), 0.95))
+    # threshold = 0.8
     tp = float(sum([1 if v > threshold else 0 for k, v in anomalies.items() if true_labels[k] == 1]))
     tn = float(sum([1 if v > threshold else 0 for k, v in anomalies.items() if true_labels[k] == 0]))
 
@@ -358,7 +358,7 @@ def main():
                   f' num_subgraphs: {len(manifold.graphs[depth].subgraphs)},'
                   f' num_clusters: {len(manifold.graphs[depth].clusters.keys())}')
             for method in methods.keys():
-                for normalization in ['min-max', 'mean', 'z-score', None]:
+                for normalization in ['min-max']:  # , 'mean', 'z-score', None]:
                     anomalies = methods[method](manifold.graphs[depth], normalization)
                     plot_histogram(
                         x=[v for _, v in anomalies.items()],
