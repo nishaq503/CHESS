@@ -1,6 +1,7 @@
+import logging
 import os
 import random
-from collections import deque
+from collections import deque, Counter
 from typing import Dict, Set, List
 
 import matplotlib.pyplot as plt
@@ -46,6 +47,55 @@ def normalize(anomalies: Dict[int, float], normalization: str) -> Dict[int, floa
     elif normalization is not None:
         raise ValueError(f'normalization mode must be one of "min-max", "mean", "z-score", or None. Got {normalization} instead.')
     return anomalies
+
+
+def n_points_in_ball(graph: Graph, normalization: str) -> Dict[int, float]:
+    manifold = graph.manifold
+    data = manifold.data
+
+    radius = 0.5
+    results = {i: 0 for i in range(data.shape[0])}
+    while len(results) > 5:
+        results = {i: len(manifold.find_points(data[i], radius)) for i, _ in results.items()}
+        results = dict(sorted(results.items(), key=lambda e: e[1])[:len(results) // 2 + 1])
+        radius /= 2
+    return normalize(results, normalization)
+
+
+def k_nearest_neighbors_anomalies(
+        graph: Graph,
+        normalization: str,
+) -> Dict[int, float]:
+    """ Determines anomalies by considering the kNearestNeighbors
+    """
+    manifold = graph.manifold
+    knn = [list(manifold.find_knn(manifold.data[point], 100).items())
+           for cluster in graph
+           for batch in iter(cluster)
+           for point in batch]
+    scores = {i: sum([distances[k][1] for k in range(0, 100, 10)]) for i, distances in enumerate(knn)}
+    return normalize(scores, normalization)
+
+
+def hierarchical_anomalies(graph: Graph, normalization: str) -> Dict[int, float]:
+    manifold = graph.manifold
+    cluster = next(iter(manifold.graphs[0]))
+    results = Counter()
+    while cluster:
+        if len(cluster.children) != 2:
+            break
+
+        left, right = tuple(cluster.children)
+        f = float(len(left)) / float(len(cluster))
+        if f < 0.25:
+            logging.debug(f'Found anomalies in {left.name}')
+            for batch in left:
+                for point in batch:
+                    results[point] += 1
+
+        cluster = left
+
+    return normalize(results, normalization) if results else {}
 
 
 def outrank_anomalies(
@@ -254,10 +304,13 @@ def main():
         'skewer': skewer,
     }
     methods = {
+        'n_points_in_ball': n_points_in_ball,
+        'k_nearest': k_nearest_neighbors_anomalies,
+        'hierarchical': hierarchical_anomalies,
         'outrank': outrank_anomalies,
-        # 'cluster_cardinality': cluster_cardinality_anomalies,
-        'subgraph_cardinality': subgraph_cardinality_anomalies,
         'k_neighborhood': k_neighborhood_anomalies,
+        'cluster_cardinality': cluster_cardinality_anomalies,
+        'subgraph_cardinality': subgraph_cardinality_anomalies,
     }
     for dataset in datasets.keys():
         np.random.seed(42)
