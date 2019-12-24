@@ -308,11 +308,13 @@ def main():
         'skewer': skewer,
     }
     methods = {
+        'n_points_in_ball': n_points_in_ball,
         'k_nearest': k_nearest_neighbors_anomalies,
+        'hierarchical': hierarchical_anomalies,
         'outrank': outrank_anomalies,
+        'k_neighborhood': k_neighborhood_anomalies,
         'cluster_cardinality': cluster_cardinality_anomalies,
         'subgraph_cardinality': subgraph_cardinality_anomalies,
-        'k_neighborhood': k_neighborhood_anomalies,
     }
     for dataset in datasets.keys():
         np.random.seed(42)
