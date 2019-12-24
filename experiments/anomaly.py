@@ -81,7 +81,7 @@ def hierarchical_anomalies(graph: Graph, normalization: str) -> Dict[int, float]
     cluster = next(iter(manifold.graphs[0]))
     results = Counter()
     while cluster:
-        if not cluster.children:
+        if len(cluster.children) != 2:
             break
 
         left, right = tuple(cluster.children)
