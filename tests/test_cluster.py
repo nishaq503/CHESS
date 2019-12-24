@@ -1,7 +1,6 @@
 import unittest
 
-import chess.criterion as criterion
-import chess.datasets as datasets
+from chess import criterion, datasets
 from chess.manifold import *
 
 MIN_RADIUS = 0.1
@@ -130,15 +129,16 @@ class TestCluster(unittest.TestCase):
         return
 
     def test_tree_search(self):
+        np.random.seed(42)
         data, labels = datasets.line()
         m = Manifold(data, 'euclidean')
-        m.build(criterion.MinRadius(MIN_RADIUS), criterion.MaxDepth(5))
+        m.build_tree(criterion.MinPoints(10), criterion.MaxDepth(5))
         # Finding points that are in data.
         for depth, graph in enumerate(m.graphs):
             for cluster in graph:
                 linear = set([c for c in graph if c.overlaps(cluster.medoid, cluster.radius)])
-                tree = set(next(iter(m.graphs[0])).tree_search(cluster.medoid, cluster.radius, cluster.depth))
-                self.assertEqual(0, len(tree - linear))
+                tree = set(next(iter(m.graphs[0])).tree_search(cluster.medoid, cluster.radius, cluster.depth).keys())
+                self.assertSetEqual(set(), tree - linear)
                 for d in range(depth, 0, -1):
                     parents = set([m.select(cluster.name[:-1]) for cluster in linear])
                     for parent in parents:
@@ -178,6 +178,10 @@ class TestCluster(unittest.TestCase):
                     distances = list(cluster.distance(centers))
                     radii = [cluster.radius + c.radius for c in potential_neighbors]
                     potential_neighbors = {c for c, d, r in zip(potential_neighbors, distances, radii) if d <= r}
+                    if (potential_neighbors - set(cluster.neighbors.keys())) or (set(cluster.neighbors.keys()) - potential_neighbors):
+                        print(depth, cluster.name, 'truth:', [n.name for n in potential_neighbors])
+                        print(depth, cluster.name, 'missed:', [n.name for n in (potential_neighbors - set(cluster.neighbors.keys()))])
+                        print(depth, cluster.name, 'extra:', [n.name for n in (set(cluster.neighbors.keys()) - potential_neighbors)])
                     self.assertFalse(cluster.neighbors.keys() - potential_neighbors)
                     self.assertFalse(potential_neighbors - cluster.neighbors.keys())
         return
