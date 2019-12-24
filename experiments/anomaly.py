@@ -48,6 +48,19 @@ def normalize(anomalies: Dict[int, float], normalization: str) -> Dict[int, floa
     return anomalies
 
 
+def n_points_in_ball(graph: Graph, normalization: str) -> Dict[int, float]:
+    manifold = graph.manifold
+    data = manifold.data
+
+    radius = 0.5
+    results = {i: 0 for i in range(data.shape[0])}
+    while len(results) > 5:
+        results = {i: len(manifold.find_points(data[i], radius)) for i, _ in results.items()}
+        results = dict(sorted(results.items(), key=lambda e: e[1])[:len(results) // 2 + 1])
+        radius /= 2
+    return normalize(results, normalization)
+
+
 def k_nearest_neighbors_anomalies(
         graph: Graph,
         normalization: str,
@@ -59,7 +72,7 @@ def k_nearest_neighbors_anomalies(
            for cluster in graph
            for batch in iter(cluster)
            for point in batch]
-    scores = {i: sum([distances[k] for k in range(0, 100 + 1, 10)]) for i, distances in enumerate(knn)}
+    scores = {i: sum([distances[k] for k in range(0, 100, 10)]) for i, distances in enumerate(knn)}
     return normalize(scores, normalization)
 
 
