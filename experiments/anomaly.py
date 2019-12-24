@@ -155,7 +155,7 @@ def plot_histogram(
     plt.grid(axis='y', alpha=0.75)
     plt.xlabel('Anomalousness')
     plt.ylabel('Counts')
-    plt.title(f'dataset: {dataset}, method: {method}, depth: {depth}, mode: {mode}')
+    # plt.title(f'dataset: {dataset}, method: {method}, depth: {depth}, mode: {mode}')
     max_freq = n.max()
     plt.ylim(ymax=np.ceil(max_freq / 10) * 10 if max_freq % 10 else max_freq + 10)
     if save is True:
@@ -179,10 +179,10 @@ def plot_confusion_matrix(
     p = float(sum(true_labels))
     n = float(len(true_labels) - p)
 
-    tp_median = float(np.mean([v for k, v in anomalies.items() if true_labels[k] == 1]))
-    tn_median = float(np.mean([v for k, v in anomalies.items() if true_labels[k] == 0]))
-    tp = float(sum([1 if v > tp_median else 0 for k, v in anomalies.items() if true_labels[k] == 1]))
-    tn = float(sum([1 if v <= tn_median else 0 for k, v in anomalies.items() if true_labels[k] == 0]))
+    tp_threshold = float(np.percentile([v for k, v in anomalies.items() if true_labels[k] == 1], 0.9))
+    tn_threshold = float(np.percentile([v for k, v in anomalies.items() if true_labels[k] == 0], 0.9))
+    tp = float(sum([1 if v > tp_threshold else 0 for k, v in anomalies.items() if true_labels[k] == 1]))
+    tn = float(sum([1 if v > tn_threshold else 0 for k, v in anomalies.items() if true_labels[k] == 0]))
 
     tpr, tnr = tp / p, tn / n
     fpr, fnr = 1 - tnr, 1 - tpr
@@ -194,11 +194,11 @@ def plot_confusion_matrix(
     # noinspection PyUnresolvedReferences
     plt.imshow(confusion_matrix, interpolation='nearest', cmap=plt.cm.Wistia)
     class_names = ['Normal', 'Anomaly']
-    plt.title(f'dataset: {dataset}, method: {method}, depth: {depth}, mode: {mode}')
+    # plt.title(f'dataset: {dataset}, method: {method}, depth: {depth}, mode: {mode}')
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
     tick_marks = np.arange(len(class_names))
-    plt.xticks(tick_marks, class_names, rotation=45)
+    plt.xticks(tick_marks, class_names)
     plt.yticks(tick_marks, class_names)
 
     s = [['TPR', 'FPR'], ['FNR', 'TNR']]
@@ -261,7 +261,7 @@ def main():
     }
     methods = {
         'outrank': outrank_anomalies,
-        'cluster_cardinality': cluster_cardinality_anomalies,
+        # 'cluster_cardinality': cluster_cardinality_anomalies,
         'subgraph_cardinality': subgraph_cardinality_anomalies,
         'k_neighborhood': k_neighborhood_anomalies,
     }
