@@ -8,9 +8,9 @@ from chess.manifold import *
 class TestGraph(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.data = np.random.randn(100, 10)
+        cls.data = np.random.randn(1000, 10)
         cls.manifold = Manifold(cls.data, 'euclidean')
-        cls.manifold.build(MaxDepth(5))
+        cls.manifold.build(MaxDepth(10))
         return
 
     def test_init(self):
@@ -58,9 +58,10 @@ class TestGraph(unittest.TestCase):
         return
 
     def test_build_edges(self):
-        self.manifold.graphs[-1].build_edges(1)
+        self.manifold.graphs[-1].build_edges()
+        self.manifold.build_graph(5)
         with self.assertRaises(ValueError):
-            self.manifold.graphs[-1].build_edges(0)
+            self.manifold.build_graph(25)
         return
 
     def test_manifold(self):
