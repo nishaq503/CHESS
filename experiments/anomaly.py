@@ -155,7 +155,6 @@ def plot_histogram(
     plt.grid(axis='y', alpha=0.75)
     plt.xlabel('Anomalousness')
     plt.ylabel('Counts')
-    # plt.title(f'dataset: {dataset}, method: {method}, depth: {depth}, mode: {mode}')
     max_freq = n.max()
     plt.ylim(ymax=np.ceil(max_freq / 10) * 10 if max_freq % 10 else max_freq + 10)
     if save is True:
@@ -194,7 +193,6 @@ def plot_confusion_matrix(
     # noinspection PyUnresolvedReferences
     plt.imshow(confusion_matrix, interpolation='nearest', cmap=plt.cm.Wistia)
     class_names = ['Normal', 'Anomaly']
-    # plt.title(f'dataset: {dataset}, method: {method}, depth: {depth}, mode: {mode}')
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
     tick_marks = np.arange(len(class_names))
@@ -230,16 +228,13 @@ def make_folders(dataset, method, mode):
 def plot_data(data: np.ndarray, labels: List[int], name: str):
     plt.clf()
     fig = plt.figure(figsize=(6, 6), dpi=300)
-    title = name.split('/')[-1][:-4]
     if data.shape[1] == 2:
         ax = fig.add_subplot(111)
-        plt.title(title)
         plt.scatter(data[:, 0], data[:, 1], c=labels, cmap='Dark2', s=5.)
         ax.set_xlim([np.min(data[:, 0]), np.max(data[:, 0])])
         ax.set_ylim([np.min(data[:, 1]), np.max(data[:, 1])])
     elif data.shape[1] == 3:
         ax = fig.add_subplot(111, projection='3d')
-        plt.title(title)
         ax.scatter(data[:, 0], data[:, 1], data[:, 2], c=labels, s=5., cmap='Dark2')
         ax.set_xlim([np.min(data[:, 0]), np.max(data[:, 0])])
         ax.set_ylim([np.min(data[:, 1]), np.max(data[:, 1])])
