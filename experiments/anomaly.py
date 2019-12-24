@@ -72,7 +72,7 @@ def k_nearest_neighbors_anomalies(
            for cluster in graph
            for batch in iter(cluster)
            for point in batch]
-    scores = {i: sum([distances[k] for k in range(0, 100, 10)]) for i, distances in enumerate(knn)}
+    scores = {i: sum([distances[k][1] for k in range(0, 100, 10)]) for i, distances in enumerate(knn)}
     return normalize(scores, normalization)
 
 
