@@ -69,32 +69,31 @@ def k_nearest_neighbors_anomalies(
     """ Determines anomalies by considering the kNearestNeighbors
     """
     manifold = graph.manifold
-    knn = [list(manifold.find_knn(manifold.data[point], 100).items())
-           for cluster in graph
-           for batch in iter(cluster)
-           for point in batch]
-    scores = {i: sum([distances[k][1] for k in range(0, 100, 10)]) for i, distances in enumerate(knn)}
+    data = manifold.data
+    sample = list(map(int, np.random.choice(data.shape[0], 100)))
+    sample.extend([i for i in range(int(data.shape[0] * 0.99), int(data.shape[0]))])
+    sample = sorted(list(set(sample)))
+    knn = {s: list(manifold.find_knn(manifold.data[s], 100).items()) for s in sample}
+    scores = {i: sum([distances[k][1] for k in range(0, 100, 10)]) for i, distances in knn.items()}
     return normalize(scores, normalization)
 
 
 def hierarchical_anomalies(graph: Graph, normalization: str) -> Dict[int, float]:
     manifold = graph.manifold
-    cluster = next(iter(manifold.graphs[0]))
-    results = Counter()
-    while cluster:
-        if len(cluster.children) != 2:
-            break
+    data = manifold.data
 
-        left, right = tuple(cluster.children)
-        f = float(len(left)) / float(len(cluster))
-        if f < 0.25:
-            logging.debug(f'Found anomalies in {left.name}')
-            for batch in left:
-                for point in batch:
-                    results[point] += 1
+    results = {i: list() for i in range(data.shape[0])}
+    for graph in manifold.graphs[1:]:
+        for cluster in graph.clusters.keys():
+            if cluster.name[-1] == '1':
+                parent = manifold.select(cluster.name[:-1])
+                f = float(len(cluster.argpoints)) / len(parent.argpoints)
+                if f < 0.25:
+                    [results[p].append(1) for p in cluster.argpoints]
+            elif cluster.name[-1] == '0':
+                [results[p].append(1) for p in cluster.argpoints]
 
-        cluster = left
-
+    results = {k: len(v) for k, v in results.items()}
     return normalize(results, normalization) if results else {}
 
 
