@@ -1,6 +1,6 @@
 import os
 import random
-from collections import deque
+from collections import deque, Counter
 from typing import Dict, Set, List
 
 import matplotlib.pyplot as plt
@@ -74,6 +74,26 @@ def k_nearest_neighbors_anomalies(
            for point in batch]
     scores = {i: sum([distances[k] for k in range(0, 100, 10)]) for i, distances in enumerate(knn)}
     return normalize(scores, normalization)
+
+
+def hierarchical_anomalies(graph: Graph, normalization: str) -> Dict[int, float]:
+    manifold = graph.manifold
+    cluster = next(iter(manifold.graphs[0]))
+    results = Counter()
+    while cluster:
+        if not cluster.children:
+            break
+
+        left, right = tuple(cluster.children)
+        f = len(left) / len(cluster)
+        if f < 0.25:
+            for batch in left:
+                for point in batch:
+                    results[point] += 1
+
+        cluster = left
+
+    return normalize(results, normalization)
 
 
 def outrank_anomalies(
