@@ -1,3 +1,4 @@
+import logging
 import os
 import random
 from collections import deque, Counter
@@ -85,15 +86,16 @@ def hierarchical_anomalies(graph: Graph, normalization: str) -> Dict[int, float]
             break
 
         left, right = tuple(cluster.children)
-        f = len(left) / len(cluster)
+        f = float(len(left)) / float(len(cluster))
         if f < 0.25:
+            logging.debug(f'Found anomalies in {left.name}')
             for batch in left:
                 for point in batch:
                     results[point] += 1
 
         cluster = left
 
-    return normalize(results, normalization)
+    return normalize(results, normalization) if results else {}
 
 
 def outrank_anomalies(
