@@ -59,7 +59,6 @@ class Cluster:
         # This is used during Cluster.from_json().
         if not argpoints and self.children:
             self.argpoints = [p for child in self.children for p in child.argpoints]
-            self.neighbors = {manifold.select(n): d for n, d in self.__dict__['neighbors'].items()}
         elif not argpoints:
             raise ValueError(f"Cluster {name} needs argpoints.")
         return
@@ -716,6 +715,8 @@ class Manifold:
             else:
                 graphs.append(layer)
 
-        [graph.clear_cache() for graph in graphs]
         manifold.graphs = graphs
+        for graph in graphs:
+            for cluster in graph.clusters.keys():
+                cluster.neighbors = {manifold.select(n): d for n, d in cluster.__dict__['neighbors'].items()}
         return manifold

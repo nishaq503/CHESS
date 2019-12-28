@@ -128,7 +128,7 @@ class TestManifold(unittest.TestCase):
         for cluster in self.manifold.graphs[-1]:
             self.assertIsInstance(self.manifold.select(cluster.name), Cluster)
         else:
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 self.manifold.select(cluster.name + '1')
         return
 
