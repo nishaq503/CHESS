@@ -1,7 +1,9 @@
 import unittest
 
+import numpy as np
+
 from chess import Manifold
-from chess.criterion import *
+from chess.criterion import MinPoints
 from tests.utils import linear_search
 
 

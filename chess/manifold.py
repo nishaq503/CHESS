@@ -678,8 +678,8 @@ class Manifold:
 
     def select(self, name: str) -> Cluster:
         """ Returns the cluster with the given name. """
-        if len(name) > len(self.graphs):
-            raise ValueError(f'depth of requested cluster must not be greater than depth of cluster-tree.')
+        if len(name) > self.depth:
+            raise ValueError(f'depth of requested cluster must not be greater than depth of cluster-tree. Got {name}, max-depth: {self.depth}')
 
         # TODO: Consider how to change this for forests.
         cluster: Cluster = next(iter(self.graphs[0]))

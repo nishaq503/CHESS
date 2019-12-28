@@ -1,10 +1,15 @@
+import random
 import unittest
 from tempfile import TemporaryFile
 
+import numpy as np
+from scipy.spatial.distance import cdist
+
 from chess import datasets, criterion
-from chess.manifold import *
+from chess.manifold import Manifold, Cluster
 
 np.random.seed(42)
+random.seed(42)
 
 
 class TestManifold(unittest.TestCase):

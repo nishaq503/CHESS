@@ -1,8 +1,10 @@
 import unittest
 from itertools import combinations
 
-from chess.criterion import *
-from chess.manifold import *
+import numpy as np
+
+from chess.criterion import MaxDepth
+from chess.manifold import Manifold, Graph
 
 
 class TestGraph(unittest.TestCase):

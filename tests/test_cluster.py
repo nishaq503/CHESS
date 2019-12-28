@@ -1,9 +1,9 @@
 import unittest
 
-from chess import criterion, datasets
-from chess.manifold import *
+import numpy as np
 
-MIN_RADIUS = 0.1
+from chess import criterion, datasets
+from chess.manifold import Manifold, Cluster, BATCH_SIZE
 
 
 class TestCluster(unittest.TestCase):
@@ -149,11 +149,6 @@ class TestCluster(unittest.TestCase):
         self.assertEqual(0, len(results))
         with self.assertRaises(ValueError):
             _ = c.tree_search(np.asarray([0, 1]), 0., -5)
-        return
-
-    def test_prune(self):
-        self.cluster.prune()
-        self.assertFalse(self.cluster.children)
         return
 
     def test_partition(self):
