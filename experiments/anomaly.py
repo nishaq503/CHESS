@@ -199,7 +199,7 @@ def plot_histogram(
 ):
     plt.clf()
     fig = plt.figure()
-    n, bins, patches = plt.hist(x=x, bins=10, color='#0504aa', alpha=0.7, rwidth=0.85)
+    n, bins, patches = plt.hist(x=x, bins=100, color='#0504aa', alpha=0.7, rwidth=0.85)
     plt.grid(axis='y', alpha=0.75)
     plt.xlabel('Anomalousness')
     plt.ylabel('Counts')
