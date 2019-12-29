@@ -1,7 +1,6 @@
-import logging
 import os
 import random
-from collections import deque, Counter
+from collections import deque
 from typing import Dict, Set, List
 
 import matplotlib.pyplot as plt
@@ -69,32 +68,31 @@ def k_nearest_neighbors_anomalies(
     """ Determines anomalies by considering the kNearestNeighbors
     """
     manifold = graph.manifold
-    knn = [list(manifold.find_knn(manifold.data[point], 100).items())
-           for cluster in graph
-           for batch in iter(cluster)
-           for point in batch]
-    scores = {i: sum([distances[k][1] for k in range(0, 100, 10)]) for i, distances in enumerate(knn)}
+    data = manifold.data
+    sample = list(map(int, np.random.choice(data.shape[0], 100)))
+    sample.extend([i for i in range(int(data.shape[0] * 0.99), int(data.shape[0]))])
+    sample = sorted(list(set(sample)))
+    knn = {s: list(manifold.find_knn(manifold.data[s], 100).items()) for s in sample}
+    scores = {i: sum([distances[k][1] for k in range(0, 100, 10)]) for i, distances in knn.items()}
     return normalize(scores, normalization)
 
 
 def hierarchical_anomalies(graph: Graph, normalization: str) -> Dict[int, float]:
     manifold = graph.manifold
-    cluster = next(iter(manifold.graphs[0]))
-    results = Counter()
-    while cluster:
-        if len(cluster.children) != 2:
-            break
+    data = manifold.data
 
-        left, right = tuple(cluster.children)
-        f = float(len(left)) / float(len(cluster))
-        if f < 0.25:
-            logging.debug(f'Found anomalies in {left.name}')
-            for batch in left:
-                for point in batch:
-                    results[point] += 1
+    results = {i: list() for i in range(data.shape[0])}
+    for graph in manifold.graphs[1:]:
+        for cluster in graph.clusters.keys():
+            if cluster.name[-1] == '1':
+                parent = manifold.select(cluster.name[:-1])
+                f = float(len(cluster.argpoints)) / len(parent.argpoints)
+                if f < 0.25:
+                    [results[p].append(1) for p in cluster.argpoints]
+            elif cluster.name[-1] == '0':
+                [results[p].append(1) for p in cluster.argpoints]
 
-        cluster = left
-
+    results = {k: len(v) for k, v in results.items()}
     return normalize(results, normalization) if results else {}
 
 
@@ -113,18 +111,18 @@ def outrank_anomalies(
     for subgraph in subgraphs:
         results: Dict[Cluster, int] = subgraph.random_walk(
             steps=max(len(subgraph.clusters.keys()) // 10, 10),
-            walks=max(len(subgraph.clusters.keys()) // 10, 10),
+            walks=max(len(subgraph.clusters.keys()) * 10, 10),
         )
         anomalies.update({p: v for c, v in results.items() for p in c.argpoints})
 
     anomalies = normalize(anomalies, normalization)
-    return {k: 1. - v for k, v in anomalies.items()}
+    return {k: 1 - v for k, v in anomalies.items()}
 
 
 def k_neighborhood_anomalies(
         graph: Graph,
         normalization: str,
-        k: int = 3,
+        k: int = 10,
 ) -> Dict[int, float]:
     """ Determines anomalies by the considering the graph-neighborhood of clusters.
 
@@ -201,11 +199,10 @@ def plot_histogram(
 ):
     plt.clf()
     fig = plt.figure()
-    n, bins, patches = plt.hist(x=x, bins='auto', color='#0504aa', alpha=0.7, rwidth=0.85)
+    n, bins, patches = plt.hist(x=x, bins=100, color='#0504aa', alpha=0.7, rwidth=0.85)
     plt.grid(axis='y', alpha=0.75)
     plt.xlabel('Anomalousness')
     plt.ylabel('Counts')
-    plt.title(f'dataset: {dataset}, method: {method}, depth: {depth}, mode: {mode}')
     max_freq = n.max()
     plt.ylim(ymax=np.ceil(max_freq / 10) * 10 if max_freq % 10 else max_freq + 10)
     if save is True:
@@ -226,13 +223,13 @@ def plot_confusion_matrix(
         mode: str,
         save: bool,
 ):
-    p = float(sum(true_labels))
-    n = float(len(true_labels) - p)
+    p = float(sum([1 for k in anomalies.keys() if true_labels[k] == 1]))
+    n = float(sum([1 for k in anomalies.keys() if true_labels[k] == 0]))
 
-    tp_median = float(np.mean([v for k, v in anomalies.items() if true_labels[k] == 1]))
-    tn_median = float(np.mean([v for k, v in anomalies.items() if true_labels[k] == 0]))
-    tp = float(sum([1 if v > tp_median else 0 for k, v in anomalies.items() if true_labels[k] == 1]))
-    tn = float(sum([1 if v <= tn_median else 0 for k, v in anomalies.items() if true_labels[k] == 0]))
+    threshold = float(np.percentile(list(anomalies.values()), 0.95))
+    # threshold = 0.8
+    tp = float(sum([1 if v > threshold else 0 for k, v in anomalies.items() if true_labels[k] == 1]))
+    tn = float(sum([1 if v > threshold else 0 for k, v in anomalies.items() if true_labels[k] == 0]))
 
     tpr, tnr = tp / p, tn / n
     fpr, fnr = 1 - tnr, 1 - tpr
@@ -244,11 +241,10 @@ def plot_confusion_matrix(
     # noinspection PyUnresolvedReferences
     plt.imshow(confusion_matrix, interpolation='nearest', cmap=plt.cm.Wistia)
     class_names = ['Normal', 'Anomaly']
-    plt.title(f'dataset: {dataset}, method: {method}, depth: {depth}, mode: {mode}')
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
     tick_marks = np.arange(len(class_names))
-    plt.xticks(tick_marks, class_names, rotation=45)
+    plt.xticks(tick_marks, class_names)
     plt.yticks(tick_marks, class_names)
 
     s = [['TPR', 'FPR'], ['FNR', 'TNR']]
@@ -280,16 +276,13 @@ def make_folders(dataset, method, mode):
 def plot_data(data: np.ndarray, labels: List[int], name: str):
     plt.clf()
     fig = plt.figure(figsize=(6, 6), dpi=300)
-    title = name.split('/')[-1][:-4]
     if data.shape[1] == 2:
         ax = fig.add_subplot(111)
-        plt.title(title)
         plt.scatter(data[:, 0], data[:, 1], c=labels, cmap='Dark2', s=5.)
         ax.set_xlim([np.min(data[:, 0]), np.max(data[:, 0])])
         ax.set_ylim([np.min(data[:, 1]), np.max(data[:, 1])])
     elif data.shape[1] == 3:
         ax = fig.add_subplot(111, projection='3d')
-        plt.title(title)
         ax.scatter(data[:, 0], data[:, 1], data[:, 2], c=labels, s=5., cmap='Dark2')
         ax.set_xlim([np.min(data[:, 0]), np.max(data[:, 0])])
         ax.set_ylim([np.min(data[:, 1]), np.max(data[:, 1])])
@@ -324,7 +317,7 @@ def main():
         data, _ = datasets[dataset]()
         labels = [0 for _ in range(data.shape[0])]
 
-        num_noise_points = (data.shape[0] // 250) * min((data.shape[1] ** 2), 10)
+        num_noise_points = int(data.shape[0] * (1 / 0.95 - 1))  # adds 5% noise
         # num_noise_points = num_noise_points // num_noise_points
         noise: np.ndarray = np.zeros(shape=(num_noise_points, data.shape[1]))
         for axis in range(noise.shape[1]):
@@ -365,7 +358,7 @@ def main():
                   f' num_subgraphs: {len(manifold.graphs[depth].subgraphs)},'
                   f' num_clusters: {len(manifold.graphs[depth].clusters.keys())}')
             for method in methods.keys():
-                for normalization in ['min-max', 'mean', 'z-score', None]:
+                for normalization in ['min-max']:  # , 'mean', 'z-score', None]:
                     anomalies = methods[method](manifold.graphs[depth], normalization)
                     plot_histogram(
                         x=[v for _, v in anomalies.items()],

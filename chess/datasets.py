@@ -45,7 +45,7 @@ def xor(n: int = 1_000) -> Tuple[np.ndarray, List[int]]:
     return np.asarray(data, dtype=np.float64), labels
 
 
-def spiral_2d(n: int = 6_000, noise: float = 0.1) -> Tuple[np.ndarray, List[int]]:
+def spiral_2d(n: int = 2_000, noise: float = 0.1) -> Tuple[np.ndarray, List[int]]:
     theta = np.sqrt(np.random.rand(n)) * 2 * np.pi
 
     r_a = 2 * theta + np.pi
@@ -56,7 +56,7 @@ def spiral_2d(n: int = 6_000, noise: float = 0.1) -> Tuple[np.ndarray, List[int]
     data_b = np.array([np.cos(theta) * r_b, np.sin(theta) * r_b]).T
     x_b = data_b + np.random.randn(n, 2) * noise
 
-    data = np.concatenate([x_a, x_b])
+    data = np.concatenate([x_a, x_b]) / 5
     labels = list(np.concatenate([np.zeros(len(x_a)), np.ones(len(x_a))]))
     return np.asarray(data, dtype=np.float64), labels
 
