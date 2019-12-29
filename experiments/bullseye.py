@@ -1,8 +1,8 @@
 from matplotlib import pyplot as plt
 
 from chess import criterion
-from chess.datasets import *
-from chess.manifold import *
+from chess.datasets import bullseye
+from chess.manifold import Manifold
 
 MIN_RADIUS = 0.5
 

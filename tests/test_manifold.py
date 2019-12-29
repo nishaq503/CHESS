@@ -1,10 +1,15 @@
+import random
 import unittest
 from tempfile import TemporaryFile
 
+import numpy as np
+from scipy.spatial.distance import cdist
+
 from chess import datasets, criterion
-from chess.manifold import *
+from chess.manifold import Manifold, Cluster
 
 np.random.seed(42)
+random.seed(42)
 
 
 class TestManifold(unittest.TestCase):
@@ -123,7 +128,7 @@ class TestManifold(unittest.TestCase):
         for cluster in self.manifold.graphs[-1]:
             self.assertIsInstance(self.manifold.select(cluster.name), Cluster)
         else:
-            with self.assertRaises(AssertionError):
+            with self.assertRaises(ValueError):
                 self.manifold.select(cluster.name + '1')
         return
 
