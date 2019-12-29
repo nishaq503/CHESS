@@ -4,15 +4,15 @@ from itertools import cycle
 
 from matplotlib import pyplot as plt
 
-from chess.criterion import *
 import chess.datasets as d
 import chess.manifold as m
+from chess.criterion import MinPoints, MinRadius, MaxDepth, LeavesSubgraph, MinNeighborhood, NewSubgraph, MinCardinality, MedoidNearCentroid, \
+    UniformDistribution
 
 
 class TestCriterion(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        # cls.data = np.concatenate([np.random.randn(100, 2) + i * 10 for i in range(3)])
         cls.data = d.bullseye(n=500)[0]
         return
 
