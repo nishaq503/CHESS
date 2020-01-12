@@ -5,6 +5,11 @@ import numpy as np
 __all__ = [
     "random",
     "bullseye",
+    "line",
+    "xor",
+    "spiral_2d",
+    "tori",
+    "skewer",
 ]
 
 np.random.seed(42)
