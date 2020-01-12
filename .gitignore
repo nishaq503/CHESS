@@ -144,3 +144,4 @@ benchmarks/logs
 benchmarks/manifold_logs
 *.ipynb
 presentation
+benchmarks
