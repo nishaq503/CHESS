@@ -2,6 +2,11 @@ from typing import Union, Tuple, List
 
 import numpy as np
 
+__all__ = [
+    "random",
+    "bullseye",
+]
+
 np.random.seed(42)
 
 Data = Union[np.ndarray, np.memmap]
