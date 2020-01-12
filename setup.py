@@ -14,7 +14,7 @@ setup(
     packages=['chess'],
     url='https://github.com/nishaq503/CHESS',
     license='',
-    author='Najib Ishaq',
+    author='Najib Ishaq, Thomas Howard III',
     author_email='',
     description='Clustered Hierarchical Entropy-Scaling Search',
     long_description=long_description,
