@@ -1,6 +1,4 @@
-import numpy as np
-
 from . import criterion
-from .manifold import Manifold
-
-np.random.seed(42)
+from . import types
+from . import datasets
+from .manifold import Manifold, Graph, Cluster
