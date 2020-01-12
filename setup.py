@@ -18,6 +18,7 @@ setup(
     author_email='',
     description='Clustered Hierarchical Entropy-Scaling Search',
     long_description=long_description,
+    long_description_content_type='text/markdown',
     install_requires=['numpy', 'scipy'],
     python_requires='>=3.6',
 )
